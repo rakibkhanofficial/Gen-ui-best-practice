@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from typing import Dict, Any, List, Optional, AsyncGenerator
@@ -12,6 +13,10 @@ from app.agent.tools.route_tool import calculate_route_distance
 from app.agent.tools.operations_tool import request_sensitive_action, execute_approved_action
 from app.agent.tools.code_tool import generate_code_snippet
 from app.agent.tools.job_tool import search_jobs
+from app.agent.tools.flight_tool import search_flights
+from app.agent.tools.currency_tool import convert_currency
+from app.agent.tools.youtube_tool import search_youtube_videos
+from app.agent.tools.website_tool import fetch_website_info
 
 logger = logging.getLogger("genui.agent")
 
@@ -26,6 +31,10 @@ TOOL_REGISTRY = {
     "execute_approved_action": execute_approved_action,
     "generate_code_snippet": generate_code_snippet,
     "search_jobs": search_jobs,
+    "search_flights": search_flights,
+    "convert_currency": convert_currency,
+    "search_youtube_videos": search_youtube_videos,
+    "fetch_website_info": fetch_website_info,
 }
 
 
@@ -164,6 +173,65 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     }
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_flights",
+                "description": "Search flights between cities with prices, airlines, schedules, and duration.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "origin": {"type": "string", "description": "Origin city, e.g. 'Dhaka'"},
+                        "destination": {"type": "string", "description": "Destination city, e.g. 'Tokyo'"},
+                        "departure_date": {"type": "string", "description": "Departure date YYYY-MM-DD"}
+                    },
+                    "required": ["origin", "destination"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "convert_currency",
+                "description": "Convert currencies and check real-time exchange rates and historical trends.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "from_currency": {"type": "string", "description": "Source currency (e.g. USD, EUR, BDT)"},
+                        "to_currency": {"type": "string", "description": "Target currency (e.g. BDT, JPY, GBP)"},
+                        "amount": {"type": "number", "description": "Amount to convert"}
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_youtube_videos",
+                "description": "Search YouTube for videos with thumbnails, channel details, duration, and embedded preview.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Topic or video search query"}
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "fetch_website_info",
+                "description": "Suggest authoritative websites with favicons, domain metadata, and rich previews.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Domain or subject to recommend sites for"}
+                    },
+                    "required": ["query"]
+                }
+            }
         }
     ]
 
@@ -222,6 +290,73 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
         amount = 1250.00
         order_id = "ORD-8921"
         return {"tool": "request_sensitive_action", "args": {"action_type": "customer_refund", "target_id": order_id, "amount": amount, "reason": "Customer billing adjustment"}}
+
+    # Flight search and details
+    if any(k in p for k in ["flight", "flights", "fly to", "airline", "booking", "plane ticket", "airfare", "aviation"]):
+        origin = "Dhaka"
+        destination = "Tokyo"
+        to_splits = re.split(r"\bto\b", p, flags=re.IGNORECASE)
+        if len(to_splits) > 1:
+            dest_candidate = to_splits[-1].strip().rstrip("?.,!").title()
+            if dest_candidate:
+                destination = dest_candidate
+            from_candidate = to_splits[0].strip().split()[-1].title() if to_splits[0].strip() else "Dhaka"
+            if from_candidate and from_candidate not in ["Flights", "Flight", "Find", "Search", "Show", "Book", "Get", "Cheap", "The", "From"]:
+                origin = from_candidate
+        return {"tool": "search_flights", "args": {"origin": origin, "destination": destination}}
+
+    # Currency conversion & exchange rates
+    if any(k in p for k in ["currency", "convert", "exchange rate", "forex", "usd", "bdt", "eur", "gbp", "jpy", "dollar", "taka", "rupee", "yen", "pound"]):
+        fc, tc, amt = "USD", "BDT", 100.0
+        # Check for currency symbols or names
+        currency_map = {
+            "usd": "USD", "dollar": "USD", "$": "USD",
+            "bdt": "BDT", "taka": "BDT", "৳": "BDT",
+            "eur": "EUR", "euro": "EUR", "€": "EUR",
+            "gbp": "GBP", "pound": "GBP", "£": "GBP",
+            "jpy": "JPY", "yen": "JPY", "¥": "JPY",
+            "inr": "INR", "rupee": "INR", "₹": "INR",
+            "cad": "CAD", "aud": "AUD", "sgd": "SGD", "aed": "AED",
+            "cny": "CNY", "krw": "KRW", "myr": "MYR", "thb": "THB", "try": "TRY"
+        }
+        to_splits = re.split(r"\bto\b", p, flags=re.IGNORECASE)
+        if len(to_splits) > 1:
+            # First half has source currency
+            for word, code in currency_map.items():
+                if re.search(r"\b" + re.escape(word) + r"\b", to_splits[0], flags=re.IGNORECASE):
+                    fc = code
+                    break
+            # Second half has target currency
+            for word, code in currency_map.items():
+                if re.search(r"\b" + re.escape(word) + r"\b", to_splits[1], flags=re.IGNORECASE):
+                    tc = code
+                    break
+        else:
+            found_codes = []
+            for word, code in currency_map.items():
+                if re.search(r"\b" + re.escape(word) + r"\b", p, flags=re.IGNORECASE):
+                    if code not in found_codes:
+                        found_codes.append(code)
+            if len(found_codes) >= 2:
+                fc, tc = found_codes[0], found_codes[1]
+            elif len(found_codes) == 1:
+                tc = found_codes[0]
+
+        nums = re.findall(r"[\d,]+\.?\d*", p)
+        if nums:
+            try:
+                amt = float(nums[0].replace(",", ""))
+            except:
+                amt = 100.0
+        return {"tool": "convert_currency", "args": {"from_currency": fc, "to_currency": tc, "amount": amt}}
+
+    # YouTube video suggestions & playback preview
+    if any(k in p for k in ["youtube", "video", "watch", "tutorial video", "yt"]):
+        return {"tool": "search_youtube_videos", "args": {"query": prompt}}
+
+    # Website link previews & metadata
+    if any(k in p for k in ["website", "recommend site", "suggest site", "best site", "url", "web link", "resource", "favicon", "links"]):
+        return {"tool": "fetch_website_info", "args": {"query": prompt}}
 
     return None
 

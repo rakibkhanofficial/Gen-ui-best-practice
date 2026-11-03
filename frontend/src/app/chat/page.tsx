@@ -36,6 +36,10 @@ import { RouteDistanceCard } from "@/components/gen-ui/RouteDistanceCard";
 import { HITLApprovalCard } from "@/components/gen-ui/HITLApprovalCard";
 import { CodeStudioCard } from "@/components/gen-ui/CodeStudioCard";
 import { JobBoardCard } from "@/components/gen-ui/JobBoardCard";
+import { FlightDetailsCard } from "@/components/gen-ui/FlightDetailsCard";
+import { CurrencyConverterCard } from "@/components/gen-ui/CurrencyConverterCard";
+import { YouTubeVideoCard } from "@/components/gen-ui/YouTubeVideoCard";
+import { WebsiteLinkCard } from "@/components/gen-ui/WebsiteLinkCard";
 
 export interface MessageItem {
   id: string;
@@ -476,6 +480,10 @@ export default function ChatPage() {
         {tool === "calculate_route_distance" && <RouteDistanceCard data={data} />}
         {tool === "generate_code_snippet" && <CodeStudioCard data={data} />}
         {tool === "search_jobs" && <JobBoardCard data={data} />}
+        {tool === "search_flights" && <FlightDetailsCard data={data} />}
+        {tool === "convert_currency" && <CurrencyConverterCard data={data} />}
+        {tool === "search_youtube_videos" && <YouTubeVideoCard data={data} />}
+        {tool === "fetch_website_info" && <WebsiteLinkCard data={data} />}
         {(tool === "request_sensitive_action" ||
           tool === "execute_approved_action") && (
           <HITLApprovalCard

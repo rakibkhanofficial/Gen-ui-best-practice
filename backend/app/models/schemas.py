@@ -230,3 +230,114 @@ class JobSearchData(BaseModel):
     total_jobs: int
     featured_platform: str
     jobs: List[JobListing]
+
+
+# --- 9. Flight Search & Details Schemas ---
+class FlightSegment(BaseModel):
+    airline: str
+    airline_logo: str
+    flight_number: str
+    departure_airport: str
+    departure_code: str
+    departure_time: str
+    arrival_airport: str
+    arrival_code: str
+    arrival_time: str
+    duration: str
+    aircraft: str
+    cabin_class: str
+    stops: int
+    stop_cities: List[str] = []
+
+
+class FlightOption(BaseModel):
+    id: str
+    price: float
+    currency: str
+    trip_type: str
+    outbound: FlightSegment
+    inbound: Optional[FlightSegment] = None
+    baggage: str
+    refundable: bool
+    score: int
+    badge: Optional[str] = None
+
+
+class FlightSearchData(BaseModel):
+    origin: str
+    origin_code: str
+    destination: str
+    destination_code: str
+    departure_date: str
+    return_date: Optional[str] = None
+    passengers: int
+    cabin_class: str
+    total_results: int
+    flights: List[FlightOption]
+
+
+# --- 10. Currency Converter Schemas ---
+class CurrencyRate(BaseModel):
+    code: str
+    name: str
+    flag_emoji: str
+    rate_to_usd: float
+    rate_from_usd: float
+    change_24h: float
+    trend: Literal["up", "down", "neutral"]
+
+
+class CurrencyConversion(BaseModel):
+    from_currency: str
+    from_amount: float
+    to_currency: str
+    to_amount: float
+    rate: float
+    inverse_rate: float
+    last_updated: str
+
+
+class CurrencyConverterData(BaseModel):
+    conversion: CurrencyConversion
+    popular_rates: List[CurrencyRate]
+    historical_note: str
+
+
+# --- 11. YouTube Video Suggestion Schemas ---
+class YouTubeVideo(BaseModel):
+    id: str
+    video_id: str
+    title: str
+    channel_name: str
+    channel_avatar: str
+    thumbnail_url: str
+    duration: str
+    views: str
+    published: str
+    description: str
+    tags: List[str] = []
+    like_count: Optional[str] = None
+
+
+class YouTubeSearchData(BaseModel):
+    query: str
+    total_results: int
+    videos: List[YouTubeVideo]
+
+
+# --- 12. Website Link Preview Schemas ---
+class WebsiteLink(BaseModel):
+    url: str
+    title: str
+    description: str
+    favicon_url: str
+    og_image: Optional[str] = None
+    domain: str
+    category: str
+    relevance_note: str
+
+
+class WebsiteLinkData(BaseModel):
+    query: str
+    total_results: int
+    websites: List[WebsiteLink]

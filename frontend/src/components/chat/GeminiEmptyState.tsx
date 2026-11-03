@@ -10,7 +10,11 @@ import {
   Code2,
   Briefcase,
   ShieldAlert,
-  ArrowUpRight
+  ArrowUpRight,
+  Plane,
+  Coins,
+  Tv,
+  Globe
 } from "lucide-react";
 
 interface GeminiEmptyStateProps {
@@ -64,6 +68,34 @@ export function GeminiEmptyState({
       icon: ShieldAlert,
       iconColor: "text-rose-500",
       prompt: "Request a refund authorization for customer order #99281",
+    },
+    {
+      title: "Flight Search & Schedules",
+      desc: "Compare airline prices, layovers, and booking details",
+      icon: Plane,
+      iconColor: "text-sky-500",
+      prompt: "Find flights from Dhaka to Tokyo with airlines and pricing",
+    },
+    {
+      title: "Live Currency Converter",
+      desc: "Real-time forex exchange rates with interactive swap",
+      icon: Coins,
+      iconColor: "text-teal-500",
+      prompt: "Convert 500 USD to BDT with exchange rate breakdown",
+    },
+    {
+      title: "YouTube Video Suggestion & Player",
+      desc: "Watch and preview streaming tutorials inline in chat",
+      icon: Tv,
+      iconColor: "text-red-500",
+      prompt: "Suggest YouTube tutorials for building with Next.js 16 and Gemini",
+    },
+    {
+      title: "Verified Web Resource Cards",
+      desc: "Curated websites with favicon metadata and preview cards",
+      icon: Globe,
+      iconColor: "text-purple-500",
+      prompt: "Suggest authoritative websites and documentation for modern AI development",
     },
   ];
 
