@@ -1,74 +1,60 @@
 import {
   CopilotRuntime,
-  BuiltInAgent,
-  createCopilotRuntimeHandler,
-  TranscriptionService,
-  TranscribeFileOptions,
+  createCopilotEndpoint,
+  InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
-import { NextRequest } from "next/server";
+import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { handle } from "hono/vercel";
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-
-class LocalAudioTranscriptionService extends TranscriptionService {
-  async transcribeFile(options: TranscribeFileOptions): Promise<string> {
-    try {
-      return `Voice transcript for ${options.audioFile.name || "voice input"} (${options.mimeType || "audio/webm"})`;
-    } catch {
-      return "Voice recording transcription completed.";
-    }
-  }
-}
+const defaultAgent = new LangGraphAgent({
+  deploymentUrl:
+    process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123",
+  graphId: "sample_agent",
+  langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+});
 
 const runtime = new CopilotRuntime({
-  agents: {
-    default: new BuiltInAgent({
-      model: "google/gemini-3.8-flash",
-      apiKey: apiKey,
-    }),
-  },
-  a2ui: {
-    enabled: true,
-  },
+  agents: { default: defaultAgent },
+  runner: new InMemoryAgentRunner(),
   openGenerativeUI: true,
-  generativeUI: true,
-
-  // 1. Rich Threads
-  threads: {
-    access: "open",
+  a2ui: {
+    injectA2UITool: false,
   },
-
-  // 2. Audio Voice Transcription Service
-  transcriptionService: new LocalAudioTranscriptionService(),
-
-  // Dynamic user identity resolution
-  identifyUser: async (req: any) => {
-    try {
-      const cookieHeader = req?.headers?.get?.("cookie") || "";
-      const userMatch = cookieHeader.match(/genui_user_id=([^;]+)/);
-      const guestMatch = cookieHeader.match(/genui_guest_id=([^;]+)/);
-      const userId = userMatch
-        ? decodeURIComponent(userMatch[1])
-        : guestMatch
-        ? decodeURIComponent(guestMatch[1])
-        : "guest_presenter";
-
-      return {
-        id: userId,
-        name: userId.startsWith("guest") ? "Guest Explorer" : "Google User",
-      };
-    } catch {
-      return { id: "guest_presenter", name: "Guest Presenter" };
-    }
+  mcpApps: {
+    servers: [
+      {
+        type: "http",
+        url: process.env.MCP_SERVER_URL || "https://mcp.excalidraw.com",
+        serverId: "example_mcp_app",
+      },
+    ],
   },
 });
 
-const handleRequest = createCopilotRuntimeHandler({
+const copilotApp = createCopilotEndpoint({
   runtime,
   basePath: "/api/copilotkit",
-  mode: "single-route",
-  cors: true,
 });
 
-export const GET = async (req: NextRequest) => handleRequest(req);
-export const POST = async (req: NextRequest) => handleRequest(req);
-export const OPTIONS = async (req: NextRequest) => handleRequest(req);
+// Wrap the CopilotKit endpoint in a parent Hono app that runs CORS middleware
+// FIRST. Order matters in Hono — middleware runs in registration order, so
+// CORS must be registered before the CopilotKit routes are mounted.
+// This lets the slides dev server (Vite :5173) call this Next.js runtime
+// (:3000) cross-origin without preflight failures on /agent/*/connect etc.
+const app = new Hono();
+app.use(
+  "*",
+  cors({
+    origin: (origin) => origin ?? "*",
+    credentials: true,
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["*"],
+  }),
+);
+app.route("/", copilotApp);
+
+export const GET = handle(app);
+export const POST = handle(app);
+export const OPTIONS = handle(app);

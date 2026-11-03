@@ -96,6 +96,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
   const [selectedColor, setSelectedColor] = useState<StickyNote["color"]>("yellow");
   const [targetCol, setTargetCol] = useState<string>("col-backlog");
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [canvasMode, setCanvasMode] = useState<"board" | "canvas">("board");
 
   React.useEffect(() => {
     if (data?.columns) {
@@ -235,29 +236,71 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{data.description}</p>
         </div>
 
-        {/* Canvas Zoom Toolbar */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/10 p-1 rounded-xl border border-slate-200 dark:border-white/10 text-xs">
-          <button
-            onClick={() => setZoomLevel((z) => Math.max(75, z - 10))}
-            className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <span className="px-2 font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-            {zoomLevel}%
-          </span>
-          <button
-            onClick={() => setZoomLevel((z) => Math.min(125, z + 10))}
-            className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
+        {/* Canvas Toolbar & Mode Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Mode Switcher: Sprint Board vs Excalidraw Live Canvas */}
+          <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-white/10 text-xs">
+            <button
+              onClick={() => setCanvasMode("board")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                canvasMode === "board"
+                  ? "bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Sprint Board
+            </button>
+            <button
+              onClick={() => setCanvasMode("canvas")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                canvasMode === "canvas"
+                  ? "bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Excalidraw MCP Canvas</span>
+            </button>
+          </div>
+
+          {/* Canvas Zoom Toolbar */}
+          {canvasMode === "board" && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/10 p-1 rounded-xl border border-slate-200 dark:border-white/10 text-xs">
+              <button
+                onClick={() => setZoomLevel((z) => Math.max(75, z - 10))}
+                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="px-2 font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                {zoomLevel}%
+              </span>
+              <button
+                onClick={() => setZoomLevel((z) => Math.min(125, z + 10))}
+                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Quick Add Sticky Note Bar */}
+      {canvasMode === "canvas" ? (
+        /* Live Excalidraw MCP Canvas Mode */
+        <div className="relative z-10 w-full h-[520px] rounded-2xl overflow-hidden border border-slate-200/90 dark:border-white/10 my-4 shadow-inner bg-slate-50 dark:bg-[#121212]">
+          <iframe
+            src="https://excalidraw.com"
+            className="w-full h-full border-0"
+            title="Excalidraw Live Collaborative Canvas MCP App"
+            allow="clipboard-read; clipboard-write"
+          />
+        </div>
+      ) : (
+        <>
+          {/* Quick Add Sticky Note Bar */}
       <div className="relative z-10 flex flex-wrap items-center gap-2 my-4 p-3 rounded-2xl bg-slate-50/90 dark:bg-white/5 border border-slate-200/80 dark:border-white/10">
         <input
           type="text"
@@ -427,6 +470,8 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
           </div>
         ))}
       </div>
+      </>
+      )}
     </motion.div>
   );
 }
