@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PanelLeftClose,
@@ -53,9 +53,14 @@ export function ChatSidebar({
   user,
   onLogout,
 }: ChatSidebarProps) {
-  const { theme, toggleTheme, mounted } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const startEditing = (thread: ConversationThread, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -264,10 +269,11 @@ export function ChatSidebar({
           {/* Theme Switcher Button */}
           <button
             onClick={toggleTheme}
+            suppressHydrationWarning
             className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-200/60 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-xs text-slate-700 dark:text-[#c4c7c5] transition-colors"
           >
-            <span className="flex items-center gap-2">
-              {!mounted ? (
+            <span suppressHydrationWarning className="flex items-center gap-2">
+              {!isMounted ? (
                 <>
                   <div className="w-3.5 h-3.5 rounded-full bg-slate-400/30" />
                   <span>Theme</span>
@@ -284,8 +290,8 @@ export function ChatSidebar({
                 </>
               )}
             </span>
-            <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 dark:text-[#9aa0a6]">
-              {mounted ? theme : ""}
+            <span suppressHydrationWarning className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 dark:text-[#9aa0a6]">
+              {isMounted ? theme : ""}
             </span>
           </button>
 

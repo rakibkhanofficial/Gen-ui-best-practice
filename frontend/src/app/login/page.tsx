@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -20,9 +20,14 @@ import { useTheme } from "@/components/theme-provider";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { theme, toggleTheme, mounted } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleGuestLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -38,10 +43,11 @@ export default function LoginPage() {
       {/* Top right theme toggle */}
       <button
         onClick={toggleTheme}
+        suppressHydrationWarning
         className="absolute top-4 right-4 p-2.5 rounded-full bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-[#c4c7c5] hover:shadow-md transition-all z-20"
         title="Toggle Light / Dark mode"
       >
-        {!mounted ? (
+        {!isMounted ? (
           <div className="w-4 h-4 rounded-full bg-slate-400/30" />
         ) : theme === "dark" ? (
           <Sun className="w-4 h-4 text-amber-400" />

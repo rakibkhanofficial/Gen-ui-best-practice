@@ -232,3 +232,4 @@ export function CurrencyConverterCard({ data }: CurrencyConverterCardProps) {
     </motion.div>
   );
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -33,9 +33,14 @@ export function ChatHeader({
   onOpenUpload,
 }: ChatHeaderProps) {
   const router = useRouter();
-  const { theme, toggleTheme, mounted } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
   const [showArchModal, setShowArchModal] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <>
@@ -115,10 +120,11 @@ export function ChatHeader({
           {/* Theme Switcher Button */}
           <button
             onClick={toggleTheme}
+            suppressHydrationWarning
             className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-[#c4c7c5] transition-colors"
             title="Toggle theme"
           >
-            {!mounted ? (
+            {!isMounted ? (
               <div className="w-4 h-4 rounded-full bg-slate-400/30" />
             ) : theme === "dark" ? (
               <Sun className="w-4 h-4 text-amber-400" />

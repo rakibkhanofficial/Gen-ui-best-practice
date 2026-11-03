@@ -226,3 +226,4 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
     </motion.div>
   );
 }
+

@@ -324,3 +324,4 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
     </motion.div>
   );
 }
+
