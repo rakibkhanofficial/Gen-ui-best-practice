@@ -60,6 +60,7 @@ import { YouTubeVideoCard } from "@/components/gen-ui/YouTubeVideoCard";
 import { WebsiteLinkCard } from "@/components/gen-ui/WebsiteLinkCard";
 import { ImageAnalysisCard } from "@/components/gen-ui/ImageAnalysisCard";
 import { DocumentAnalysisCard } from "@/components/gen-ui/DocumentAnalysisCard";
+import { MeetingTimePicker } from "@/components/gen-ui/MeetingTimePicker";
 
 export interface AttachmentInfo {
   filename: string;
@@ -258,6 +259,21 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       recordLearnedSkill(skillName);
       setSyncStatus(`Learned: "${skillName}" stored in Copilot memory`);
       return { success: true, skillName };
+    },
+  });
+
+  useCopilotAction({
+    name: "scheduleMeetingSlot",
+    description: "Book or reschedule a calendar meeting slot with CopilotKit real-time sync",
+    parameters: [
+      { name: "slotId", type: "string", description: "Selected slot ID", required: true },
+      { name: "date", type: "string", description: "Date of the meeting" },
+      { name: "time", type: "string", description: "Time of the meeting" },
+    ],
+    handler: async ({ slotId, date, time }) => {
+      setSyncStatus(`Meeting booked for ${date} at ${time} (Realtime Synced)`);
+      recordLearnedSkill(`Calendar Booking (${date} ${time})`);
+      return { success: true, slotId, date, time, status: "Confirmed" };
     },
   });
 
@@ -885,6 +901,9 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         return <ImageAnalysisCard data={genui.data} />;
       case "analyze_document":
         return <DocumentAnalysisCard data={genui.data} />;
+      case "schedule_meeting":
+      case "pick_meeting_time":
+        return <MeetingTimePicker data={genui.data} />;
       default:
         return (
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs">

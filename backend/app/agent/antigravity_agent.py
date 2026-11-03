@@ -18,6 +18,7 @@ from app.agent.tools.currency_tool import convert_currency
 from app.agent.tools.youtube_tool import search_youtube_videos
 from app.agent.tools.website_tool import fetch_website_info
 from app.agent.tools.document_tool import analyze_document, analyze_image
+from app.agent.tools.meeting_tool import schedule_meeting
 
 logger = logging.getLogger("genui.agent")
 
@@ -38,6 +39,7 @@ TOOL_REGISTRY = {
     "fetch_website_info": fetch_website_info,
     "analyze_document": analyze_document,
     "analyze_image": analyze_image,
+    "schedule_meeting": schedule_meeting,
 }
 
 
@@ -235,6 +237,21 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     "required": ["query"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "schedule_meeting",
+                "description": "Interactive Meeting Time Picker and calendar scheduling widget with Human-in-the-Loop booking.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "reason": {"type": "string", "description": "Reason or topic for the meeting"},
+                        "duration_minutes": {"type": "integer", "description": "Duration in minutes (e.g. 15, 30, 45, 60)"}
+                    },
+                    "required": ["reason"]
+                }
+            }
         }
     ]
 
@@ -242,6 +259,17 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
 def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     """Heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
     p = prompt.lower()
+
+    if any(k in p for k in ["meeting", "schedule", "calendar", "book time", "appointment", "sync up", "catch up", "time slot", "call", "meet"]):
+        duration = 30
+        if "15" in p or "quick" in p:
+            duration = 15
+        elif "45" in p:
+            duration = 45
+        elif "60" in p or "1 hour" in p or "one hour" in p:
+            duration = 60
+        return {"tool": "schedule_meeting", "args": {"reason": prompt, "duration_minutes": duration}}
+
     if any(k in p for k in ["code", "typescript", "python script", "how to write", "snippet", "implementation", "algorithm", "coder"]):
         lang = "TypeScript"
         if "python" in p:

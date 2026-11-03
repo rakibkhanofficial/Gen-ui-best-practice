@@ -21,6 +21,7 @@ import {
   Code2,
   Sun,
   FileSearch,
+  Calendar,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -90,6 +91,11 @@ export function GeminiEmptyState({
       icon: Code2,
       label: "FastAPI Code Studio",
       prompt: "Write a high-performance Python script for async SSE streaming with FastAPI",
+    },
+    {
+      icon: Calendar,
+      label: "Schedule Review",
+      prompt: "Schedule a 30-minute GenUI architecture review meeting with the team",
     },
     {
       icon: Sun,

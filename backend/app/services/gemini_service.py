@@ -81,6 +81,31 @@ def resolve_sources_for_query(
             })
         return sources
 
+    if tool_name == "schedule_meeting" or any(k in p for k in ["meeting", "schedule", "calendar", "time slot", "appointment"]):
+        return [
+            {
+                "name": "Google Calendar API v3",
+                "domain": "calendar.google.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=calendar.google.com&sz=128",
+                "url": "https://calendar.google.com",
+                "status": "Free/Busy Availability Matrix",
+            },
+            {
+                "name": "Cal.com Open Scheduling Engine",
+                "domain": "cal.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=cal.com&sz=128",
+                "url": "https://cal.com",
+                "status": "Real-time Slot Booking",
+            },
+            {
+                "name": "Google Meet WebRTC Gateway",
+                "domain": "meet.google.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=meet.google.com&sz=128",
+                "url": "https://meet.google.com",
+                "status": "Secure Video Conference Room",
+            },
+        ]
+
     if tool_name == "search_jobs" or any(k in p for k in ["job", "jobs", "bdjob", "linkedin", "career"]):
         return [
             {

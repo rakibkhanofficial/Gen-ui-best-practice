@@ -343,3 +343,35 @@ class WebsiteLinkData(BaseModel):
     query: str
     total_results: int
     websites: List[WebsiteLink]
+
+
+# --- 13. Meeting Time Picker & Scheduling Schemas ---
+class MeetingSlot(BaseModel):
+    id: str
+    date: str
+    start_time: str
+    end_time: str
+    duration_minutes: int
+    badge: Optional[str] = None
+    is_recommended: bool = False
+
+
+class MeetingParticipant(BaseModel):
+    name: str
+    email: str
+    avatar: str
+    role: str
+
+
+class MeetingScheduleData(BaseModel):
+    meeting_id: str
+    title: str
+    reason: str
+    duration_minutes: int
+    timezone: str
+    host: MeetingParticipant
+    participants: List[MeetingParticipant]
+    available_slots: List[MeetingSlot]
+    google_meet_url: str
+    status: str = "pending"  # pending | confirmed | declined
+
