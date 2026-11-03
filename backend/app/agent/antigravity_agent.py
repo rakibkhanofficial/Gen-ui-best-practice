@@ -257,10 +257,18 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
 
     if any(k in p for k in ["weather", "temperature", "forecast", "rain", "sunny", "climate"]):
         city = "San Francisco"
-        for c in ["tokyo", "london", "new york", "paris", "dhaka", "chicago", "seattle"]:
-            if c in p:
-                city = c
-                break
+        # Match "weather in <city>" or "weather for <city>" or "forecast in <city>"
+        city_match = re.search(r"\b(?:weather|forecast|temperature|climate)\s+(?:in|for|at|of)\s+([a-zA-Z\s]+)", p)
+        if city_match:
+            candidate = city_match.group(1).strip().rstrip("?.,!")
+            candidate = re.sub(r"\b(today|tomorrow|now|please|forecast|temperature)\b", "", candidate, flags=re.IGNORECASE).strip()
+            if candidate:
+                city = candidate.title()
+        else:
+            for c in ["tokyo", "delhi", "dhaka", "london", "new york", "paris", "dubai", "singapore", "chicago", "seattle", "sydney", "bangkok", "kolkata", "mumbai"]:
+                if c in p:
+                    city = c.title()
+                    break
         return {"tool": "get_weather_data", "args": {"city": city}}
 
     if any(k in p for k in ["sales", "revenue", "analytics", "arr", "deal", "kpi", "zen journey", "financial", "growth"]):

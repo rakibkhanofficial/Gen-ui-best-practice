@@ -10,9 +10,9 @@ import {
   Wind,
   Droplets,
   Eye,
-  ShieldAlert,
   Thermometer,
   Sparkles,
+  Compass
 } from "lucide-react";
 
 interface ForecastDay {
@@ -54,22 +54,22 @@ export function WeatherCard({ data, status = "complete" }: WeatherCardProps) {
 
   if (status === "inProgress" || !data?.city) {
     return (
-      <div className="w-full max-w-lg p-5 rounded-2xl glass-panel animate-pulse border border-slate-700/60 my-3">
+      <div className="w-full max-w-xl p-5 rounded-3xl bg-white dark:bg-[#1e1f20] animate-pulse border border-slate-200 dark:border-white/10 my-3">
         <div className="flex justify-between items-center mb-4">
-          <div className="h-6 w-36 bg-slate-700 rounded-md" />
-          <div className="h-6 w-16 bg-slate-700 rounded-full" />
+          <div className="h-6 w-36 bg-slate-200 dark:bg-slate-700 rounded-md" />
+          <div className="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
         </div>
         <div className="flex items-center space-x-4 mb-4">
-          <div className="h-16 w-16 rounded-full bg-slate-700" />
+          <div className="h-16 w-16 rounded-2xl bg-slate-200 dark:bg-slate-700" />
           <div className="space-y-2">
-            <div className="h-8 w-24 bg-slate-700 rounded-md" />
-            <div className="h-4 w-32 bg-slate-700 rounded-md" />
+            <div className="h-8 w-24 bg-slate-200 dark:bg-slate-700 rounded-md" />
+            <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded-md" />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="h-14 bg-slate-800 rounded-lg" />
-          <div className="h-14 bg-slate-800 rounded-lg" />
-          <div className="h-14 bg-slate-800 rounded-lg" />
+          <div className="h-14 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+          <div className="h-14 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+          <div className="h-14 bg-slate-100 dark:bg-slate-800 rounded-xl" />
         </div>
       </div>
     );
@@ -82,12 +82,22 @@ export function WeatherCard({ data, status = "complete" }: WeatherCardProps) {
   const getWeatherIcon = (cond?: string) => {
     const c = cond?.toLowerCase() || "";
     if (c.includes("rain"))
-      return <CloudRain className="w-10 h-10 text-cyan-400 animate-bounce" />;
-    if (c.includes("cloud") && c.includes("partly"))
-      return <CloudSun className="w-10 h-10 text-amber-300" />;
+      return <CloudRain className="w-10 h-10 text-sky-500 animate-bounce" />;
+    if (c.includes("cloud") && (c.includes("partly") || c.includes("sun")))
+      return <CloudSun className="w-10 h-10 text-amber-500" />;
     if (c.includes("cloud") || c.includes("overcast"))
-      return <Cloud className="w-10 h-10 text-slate-300" />;
-    return <Sun className="w-10 h-10 text-yellow-400 animate-spin-slow" />;
+      return <Cloud className="w-10 h-10 text-slate-400" />;
+    return <Sun className="w-10 h-10 text-amber-500 animate-spin-slow" />;
+  };
+
+  const getSmallIcon = (cond?: string) => {
+    const c = cond?.toLowerCase() || "";
+    if (c.includes("rain")) return <CloudRain className="w-4 h-4 text-sky-500" />;
+    if (c.includes("cloud") && (c.includes("partly") || c.includes("sun")))
+      return <CloudSun className="w-4 h-4 text-amber-500" />;
+    if (c.includes("cloud") || c.includes("overcast"))
+      return <Cloud className="w-4 h-4 text-slate-400" />;
+    return <Sun className="w-4 h-4 text-amber-500" />;
   };
 
   return (
@@ -95,47 +105,49 @@ export function WeatherCard({ data, status = "complete" }: WeatherCardProps) {
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="w-full max-w-xl my-4 rounded-2xl glass-panel-elevated p-6 border border-slate-700/60 shadow-2xl relative overflow-hidden text-slate-100"
+      className="w-full max-w-xl my-4 rounded-3xl bg-white dark:bg-[#1e1f20] p-6 border border-slate-200/90 dark:border-white/10 shadow-xl shadow-blue-500/5 relative overflow-hidden text-slate-800 dark:text-slate-100"
     >
       {/* Background ambient lighting */}
-      <div className="absolute -top-16 -right-16 w-44 h-44 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-16 -right-16 w-44 h-44 bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-amber-500/10 dark:bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-700/50">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold tracking-tight text-white">
+            <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               {data.city}
             </h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-              {data.country}
-            </span>
-            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800">
-              <Sparkles className="w-3 h-3" /> Live GenUI
+            {data.country && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 font-medium">
+                {data.country}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium">
+              <Sparkles className="w-3 h-3" /> Live Weather
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">{data.summary}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{data.summary}</p>
         </div>
 
         {/* Temperature unit toggle */}
-        <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-700">
+        <div className="flex items-center bg-slate-100 dark:bg-white/10 p-0.5 rounded-xl border border-slate-200 dark:border-white/10">
           <button
             onClick={() => setUnit("C")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               unit === "C"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             °C
           </button>
           <button
             onClick={() => setUnit("F")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               unit === "F"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             °F
@@ -146,81 +158,104 @@ export function WeatherCard({ data, status = "complete" }: WeatherCardProps) {
       {/* Main Temp & Condition */}
       <div className="flex items-center justify-between my-5">
         <div className="flex items-center space-x-4">
-          <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 shadow-inner">
+          <div className="p-3 bg-blue-50/70 dark:bg-white/5 rounded-2xl border border-blue-100 dark:border-white/10 shadow-xs">
             {getWeatherIcon(data.condition)}
           </div>
           <div>
-            <div className="text-4xl font-extrabold tracking-tight text-white">
+            <div className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               {temp}
             </div>
-            <div className="text-sm font-medium text-slate-300 flex items-center gap-1">
+            <div className="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-0.5">
               <span>{data.condition}</span>
-              <span className="text-slate-500">•</span>
-              <span className="text-xs text-slate-400">Feels like {feelsLike}</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Feels like {feelsLike}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Secondary metrics badge */}
         <div className="text-right">
-          <div className="text-xs font-semibold text-emerald-400 bg-emerald-950/40 px-2.5 py-1 rounded-md border border-emerald-800/60 inline-flex items-center gap-1">
+          <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60 inline-flex items-center gap-1">
             <Eye className="w-3.5 h-3.5" /> {data.air_quality_label}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            UV Index: <span className="text-amber-400 font-semibold">{data.uv_index}</span> (Moderate)
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+            UV Index: <span className="text-amber-600 dark:text-amber-400 font-semibold">{data.uv_index}</span> (Moderate)
           </div>
         </div>
       </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-3 gap-2.5 my-4">
-        <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center gap-2.5">
-          <Droplets className="w-4 h-4 text-cyan-400" />
+        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/5 flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400">
+            <Droplets className="w-4 h-4" />
+          </div>
           <div>
-            <div className="text-[11px] text-slate-400">Humidity</div>
-            <div className="text-sm font-bold text-white">{data.humidity}%</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Humidity</div>
+            <div className="text-sm font-bold text-slate-900 dark:text-white">
+              {data.humidity}%
+            </div>
           </div>
         </div>
-        <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center gap-2.5">
-          <Wind className="w-4 h-4 text-sky-400" />
+
+        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/5 flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+            <Wind className="w-4 h-4" />
+          </div>
           <div>
-            <div className="text-[11px] text-slate-400">Wind</div>
-            <div className="text-sm font-bold text-white">{data.wind_speed_kmh} km/h</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Wind Speed</div>
+            <div className="text-sm font-bold text-slate-900 dark:text-white">
+              {data.wind_speed_kmh} km/h
+            </div>
           </div>
         </div>
-        <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center gap-2.5">
-          <Thermometer className="w-4 h-4 text-amber-400" />
+
+        <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/5 flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+            <Compass className="w-4 h-4" />
+          </div>
           <div>
-            <div className="text-[11px] text-slate-400">Air Quality</div>
-            <div className="text-sm font-bold text-emerald-400">{data.air_quality_index} AQI</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Air Quality</div>
+            <div className="text-sm font-bold text-slate-900 dark:text-white">
+              {data.air_quality_index} AQI
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 5-Day Forecast Grid */}
+      {/* 5-Day Forecast Carousel / Grid */}
       {data.forecast && data.forecast.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-slate-800">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            5-Day Micro-Forecast
+        <div className="mt-5 pt-4 border-t border-slate-200/80 dark:border-white/10">
+          <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2.5">
+            5-Day Atmospheric Forecast
           </div>
           <div className="grid grid-cols-5 gap-2">
-            {data.forecast.map((f, idx) => {
-              const high = unit === "C" ? `${Math.round(f.high_temp_c)}°` : `${Math.round(f.high_temp_f)}°`;
-              const low = unit === "C" ? `${Math.round(f.low_temp_c)}°` : `${Math.round(f.low_temp_f)}°`;
+            {data.forecast.map((fc, idx) => {
+              const high = unit === "C" ? `${fc.high_temp_c}°` : `${fc.high_temp_f}°`;
+              const low = unit === "C" ? `${fc.low_temp_c}°` : `${fc.low_temp_f}°`;
+
               return (
                 <div
                   key={idx}
-                  className="p-2.5 bg-slate-900/40 hover:bg-slate-800/60 transition-colors rounded-xl border border-slate-800/80 text-center flex flex-col items-center justify-between"
+                  className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/70 dark:border-white/5 flex flex-col items-center justify-between text-center hover:bg-slate-100/80 dark:hover:bg-white/10 transition-colors"
                 >
-                  <span className="text-xs font-semibold text-slate-300">{f.day}</span>
-                  <div className="my-1.5">{getWeatherIcon(f.condition)}</div>
-                  <div className="text-xs font-bold text-white">{high}</div>
-                  <div className="text-[11px] text-slate-400">{low}</div>
-                  {f.precipitation_prob > 0 && (
-                    <span className="text-[10px] text-cyan-400 mt-1">
-                      {f.precipitation_prob}%
-                    </span>
-                  )}
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {fc.day}
+                  </span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">
+                    {fc.date}
+                  </span>
+
+                  <div className="my-1.5">{getSmallIcon(fc.condition)}</div>
+
+                  <div className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                    {high}
+                  </div>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {low}
+                  </div>
                 </div>
               );
             })}
@@ -230,4 +265,3 @@ export function WeatherCard({ data, status = "complete" }: WeatherCardProps) {
     </motion.div>
   );
 }
-

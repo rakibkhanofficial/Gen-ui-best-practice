@@ -588,7 +588,7 @@ export default function ChatPage() {
                             <StreamingMessage content={msg.content} />
                           </div>
                         ) : (
-                          isStreaming && (
+                          !msg.stage && isStreaming && (
                             <div className="flex items-center gap-1.5 text-xs text-slate-400 py-2">
                               <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
                               <span>Gemini 3.8 Flash is generating response...</span>

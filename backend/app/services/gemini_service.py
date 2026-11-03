@@ -368,18 +368,18 @@ async def stream_agent_reasoning(
 ) -> AsyncGenerator[str, None]:
     """Streams accurate, meaningful agent reasoning stages, SSE tokens, verified source chips, and GenUI events."""
     
-    # 1. Real Stage: Thinking
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Analyzing user prompt and evaluating context using Gemini 3.8 Flash...'})}\n\n"
-    await asyncio.sleep(0.3)
+    # 1. Real Stage: Thinking (Paced for smooth human perception)
+    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Illuminating intent & evaluating parameters with Gemini 3.8 Flash...'})}\n\n"
+    await asyncio.sleep(1.2)
 
     # Check for Excel Attachment analysis first
     if attachment_path and (attachment_path.endswith(".xlsx") or attachment_path.endswith(".xls") or attachment_path.endswith(".csv")):
         sources = resolve_sources_for_query(prompt, attachment_path=attachment_path)
         yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Inspecting uploaded spreadsheet: {os.path.basename(attachment_path)}...', 'sources': sources})}\n\n"
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(1.4)
 
         yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Executing pandas aggregate routines (summing revenues, calculating deal sizes, category shares)...', 'sources': sources})}\n\n"
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(1.2)
 
         try:
             excel_data = parse_sales_excel(attachment_path)
@@ -415,14 +415,15 @@ async def stream_agent_reasoning(
         tool_args = matched_intent["args"]
         sources = resolve_sources_for_query(prompt, tool_name=tool_name, tool_args=tool_args)
 
-        # 2. Real Stage: Searching with Live Sources and Logos
-        source_names = ", ".join([s["name"] for s in sources[:2]])
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Consulting verified web sources ({source_names}) for tool `{tool_name}`...', 'sources': sources})}\n\n"
-        await asyncio.sleep(0.45)
+        # 2. Real Stage: Searching with Live Sources and Clear Tool Call
+        source_names = ", ".join([s["name"] for s in sources[:3]])
+        params_summary = ", ".join(f"{k}='{v}'" for k, v in list(tool_args.items())[:2])
+        yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Calling agent tool `{tool_name}({params_summary})` across {len(sources)} verified sources ({source_names})...', 'sources': sources})}\n\n"
+        await asyncio.sleep(1.6)
 
-        # 3. Real Stage: Analysing
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': f'Executing mathematical models and structuring GenUI component data...', 'sources': sources})}\n\n"
-        await asyncio.sleep(0.35)
+        # 3. Real Stage: Analysing & Structuring GenUI
+        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': f'Executing mathematical models and structuring GenUI `{tool_name}` component data...', 'sources': sources})}\n\n"
+        await asyncio.sleep(1.3)
 
         tool_fn = TOOL_REGISTRY[tool_name]
         component_data = tool_fn(**tool_args)
@@ -458,10 +459,10 @@ async def stream_agent_reasoning(
     sources = resolve_sources_for_query(prompt)
     source_names = ", ".join([s["name"] for s in sources[:2]])
     yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Scanning active knowledge base ({source_names})...', 'sources': sources})}\n\n"
-    await asyncio.sleep(0.35)
+    await asyncio.sleep(1.4)
 
     yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Synthesizing response with Gemini 3.8 Flash...', 'sources': sources})}\n\n"
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(1.1)
 
     if client:
         try:
