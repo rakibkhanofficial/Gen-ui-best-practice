@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -27,9 +27,10 @@ import {
 export interface AttachmentInfo {
   filename: string;
   filePath: string;
-  fileType: "image" | "document" | "spreadsheet" | "file";
+  fileType: "image" | "document" | "spreadsheet" | "pdf" | "file";
   fileSize?: number;
   previewUrl?: string;
+  minioUrl?: string;
 }
 
 interface GeminiEmptyStateProps {
@@ -43,6 +44,7 @@ interface GeminiEmptyStateProps {
   isTranscribingAudio?: boolean;
   onAttachImage?: () => void;
   onAttachDoc?: () => void;
+  onFileSelected?: (file: File) => void;
   currentAttachment?: AttachmentInfo | null;
   onRemoveAttachment?: () => void;
   isUploading?: boolean;
@@ -60,12 +62,29 @@ export function GeminiEmptyState({
   isTranscribingAudio = false,
   onAttachImage,
   onAttachDoc,
+  onFileSelected,
   currentAttachment,
   onRemoveAttachment,
   isUploading = false,
   onBrowseGallery,
 }: GeminiEmptyStateProps) {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const localImageInputRef = useRef<HTMLInputElement>(null);
+  const localDocInputRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close attach menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    if (showAttachMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showAttachMenu]);
 
   // Real, dynamic GenUI capabilities of our project
   const suggestions = [
@@ -172,6 +191,13 @@ export function GeminiEmptyState({
                   alt={currentAttachment.filename}
                   className="w-7 h-7 rounded-lg object-cover border border-slate-200 dark:border-white/10 shrink-0"
                 />
+              ) : currentAttachment.fileType === "pdf" ? (
+                <div className="relative w-7 h-7 rounded-lg bg-gradient-to-br from-rose-500 to-red-600 text-white flex items-center justify-center shrink-0 shadow-xs ring-1 ring-black/5 dark:ring-white/10">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="absolute -bottom-1 -right-1 text-[7px] font-black uppercase tracking-tighter px-0.5 rounded-xs bg-rose-950 text-rose-200 border border-rose-400/40">
+                    PDF
+                  </span>
+                </div>
               ) : currentAttachment.fileType === "spreadsheet" ? (
                 <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                   <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -185,9 +211,15 @@ export function GeminiEmptyState({
               <div className="truncate max-w-xs">
                 <span className="font-semibold text-xs block truncate">{currentAttachment.filename}</span>
                 <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">
-                  {currentAttachment.fileSize
-                    ? `${Math.round(currentAttachment.fileSize / 1024)} KB`
-                    : currentAttachment.fileType.toUpperCase()}
+                  {currentAttachment.fileType === "pdf" ? (
+                    <span className="text-rose-600 dark:text-rose-400 font-medium">
+                      PDF Document &bull; {currentAttachment.fileSize ? `${Math.round(currentAttachment.fileSize / 1024)} KB` : "READY"}
+                    </span>
+                  ) : currentAttachment.fileSize ? (
+                    `${Math.round(currentAttachment.fileSize / 1024)} KB`
+                  ) : (
+                    currentAttachment.fileType.toUpperCase()
+                  )}
                 </span>
               </div>
 

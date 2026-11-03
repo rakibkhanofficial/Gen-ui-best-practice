@@ -23,6 +23,7 @@ from app.services.excel_service import (
 )
 from app.services.silo_service import upload_to_silo
 from app.services.gemini_service import stream_agent_reasoning
+from app.services.db_service import init_db, save_uploaded_file, get_uploaded_file
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +34,11 @@ app = FastAPI(
     description="Python FastAPI backend powered by Google Antigravity SDK, Gemini 3.8 Flash, and CopilotKit GenUI integration.",
     version="1.1.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Initializing database schemas...")
+    await init_db()
 
 # CORS middleware for Next.js frontend communication
 app.add_middleware(
@@ -62,6 +68,7 @@ class ChatRequest(BaseModel):
 class StreamChatRequest(BaseModel):
     message: str
     attachment_path: Optional[str] = None
+    attachment: Optional[Dict[str, Any]] = None
     session_id: Optional[str] = None
     conversation_id: Optional[str] = None
     user_id: Optional[str] = None
@@ -136,8 +143,8 @@ def execute_tool(payload: ToolExecutionRequest):
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Receives uploaded Excel files or images, saves to Silo S3 and local storage, and parses Excel."""
-    filename = file.filename or "upload.bin"
+    """Receives uploaded Excel files, PDFs, or images, saves to Silo S3, local storage, and database."""
+    filename = file.filename or f"upload_{int(time.time()*1000)}.bin"
     file_path = os.path.join(UPLOAD_DIR, filename)
 
     try:
@@ -156,6 +163,7 @@ async def upload_file(file: UploadFile = File(...)):
             file_bytes=content,
             content_type=file.content_type or "application/octet-stream"
         )
+        minio_url = silo_res.get("minio_url") or f"http://localhost:9000/genui-uploads/{filename}"
 
         # 3. Categorize file format & parse preview if applicable
         file_ext = os.path.splitext(filename.lower())[1]
@@ -164,25 +172,44 @@ async def upload_file(file: UploadFile = File(...)):
 
         if file_ext in [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"]:
             file_type = "image"
+        elif file_ext in [".pdf"]:
+            file_type = "pdf"
         elif file_ext in [".xlsx", ".xls", ".csv"]:
             file_type = "spreadsheet"
             try:
                 parsed_preview = parse_sales_excel(file_path)
             except Exception as pe:
                 logger.warning(f"Could not parse preview: {pe}")
-        elif file_ext in [".pdf", ".doc", ".docx", ".txt", ".md"]:
+        elif file_ext in [".doc", ".docx", ".txt", ".md"]:
             file_type = "document"
+
+        # 4. Save metadata to PostgreSQL & Redis database
+        file_id = f"file_{int(time.time()*1000)}"
+        db_record = await save_uploaded_file(
+            file_id=file_id,
+            filename=filename,
+            file_path=file_path,
+            file_size=file_size,
+            file_type=file_type,
+            minio_url=minio_url,
+            preview_url=minio_url,
+            silo_bucket="genui-uploads",
+            silo_etag=silo_res.get("etag")
+        )
 
         return {
             "success": True,
+            "id": file_id,
             "filename": filename,
             "file_path": file_path,
             "file_size": file_size,
             "file_type": file_type,
             "is_excel": file_type == "spreadsheet" and bool(parsed_preview),
-            "preview_url": f"/api/files/{filename}",
+            "preview_url": minio_url,
+            "minio_url": minio_url,
             "parsed_preview": parsed_preview,
-            "silo": silo_res
+            "silo": silo_res,
+            "db_record": db_record
         }
     except Exception as e:
         logger.error(f"Failed to process upload: {e}")
@@ -245,6 +272,7 @@ async def chat_stream_endpoint(payload: StreamChatRequest):
         "role": "user",
         "content": payload.message,
         "attachment_path": payload.attachment_path,
+        "attachment": payload.attachment,
         "timestamp": now_iso
     })
 

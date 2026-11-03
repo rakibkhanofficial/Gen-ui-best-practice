@@ -60,7 +60,9 @@ def upload_to_silo(filename: str, file_bytes: bytes, content_type: str = "applic
             "bucket": SILO_BUCKET,
             "object_name": filename,
             "etag": result.etag,
-            "version_id": result.version_id
+            "version_id": result.version_id,
+            "minio_url": f"http://localhost:9000/{SILO_BUCKET}/{filename}",
+            "public_url": f"http://localhost:9000/{SILO_BUCKET}/{filename}"
         }
     except Exception as e:
         logger.error(f"Failed to upload to Silo: {e}")
