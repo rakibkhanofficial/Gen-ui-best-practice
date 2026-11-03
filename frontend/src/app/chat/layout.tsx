@@ -2,6 +2,7 @@
 
 import React, { Suspense } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
+import { FullPageChatSkeleton } from "@/components/chat/ChatSessionSkeleton";
 
 export default function ChatLayout({
   children,
@@ -9,7 +10,7 @@ export default function ChatLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<FullPageChatSkeleton />}>
       <CopilotKit
         runtimeUrl="/api/copilotkit"
         transcribeAudioUrl="/api/copilotkit/transcribe"

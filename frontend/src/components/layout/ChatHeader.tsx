@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PanelLeft, Sun, Moon, Zap, Brain, Settings } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { UserSession } from "@/lib/auth";
@@ -74,20 +75,42 @@ export function ChatHeader({
         </div>
       </div>
 
-      {/* Right: Theme Switcher Only */}
+      {/* Right: Theme Switcher with Smooth Rotation/Scale Transition */}
       <div className="flex items-center gap-2">
         <button
           onClick={toggleTheme}
           suppressHydrationWarning
-          className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
+          className="relative w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer overflow-hidden"
           title={isMounted && theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {!isMounted ? (
             <div className="w-4 h-4 rounded-full bg-slate-300 dark:bg-zinc-700" />
-          ) : theme === "dark" ? (
-            <Sun className="w-4 h-4 text-amber-400" />
           ) : (
-            <Moon className="w-4 h-4 text-indigo-500" />
+            <AnimatePresence mode="wait" initial={false}>
+              {theme === "dark" ? (
+                <motion.div
+                  key="dark-sun"
+                  initial={{ rotate: -90, scale: 0.5, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: 90, scale: 0.5, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Sun className="w-4 h-4 text-amber-400" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="light-moon"
+                  initial={{ rotate: 90, scale: 0.5, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: -90, scale: 0.5, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Moon className="w-4 h-4 text-indigo-500" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
         </button>
       </div>

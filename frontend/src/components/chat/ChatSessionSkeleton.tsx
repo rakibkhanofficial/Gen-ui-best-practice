@@ -174,7 +174,7 @@ export function FullPageChatSkeleton() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#131314] text-slate-800 dark:text-[#e3e3e3] font-sans antialiased">
       {/* 1. Left Sidebar Skeleton (Desktop) */}
-      <aside className="hidden md:flex w-64 h-full border-r border-slate-200/80 dark:border-white/5 bg-[#f8fafc]/90 dark:bg-[#1e1f20]/90 flex-col shrink-0 p-3 justify-between animate-pulse">
+      <aside className="hidden md:flex w-64 h-full border-r border-slate-200/80 dark:border-white/5 bg-[#f8f9fa] dark:bg-[#131314] flex-col shrink-0 p-3 justify-between animate-pulse">
         <div className="space-y-4">
           {/* Logo / New Chat Button */}
           <div className="h-10 w-full rounded-xl bg-slate-200 dark:bg-white/10" />

@@ -17,7 +17,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+              try {
+                var saved = localStorage.getItem('genui_theme');
+                var isDark = saved ? saved === 'dark' : true;
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                  document.documentElement.style.colorScheme = 'dark';
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                  document.documentElement.style.colorScheme = 'light';
+                }
+              } catch (e) {
+                document.documentElement.classList.add('dark');
+              }
+            })()`,
+          }}
+        />
+      </head>
       <body
         className="bg-white dark:bg-[#131314] text-slate-900 dark:text-[#e3e3e3] antialiased min-h-screen selection:bg-blue-500/20"
         suppressHydrationWarning

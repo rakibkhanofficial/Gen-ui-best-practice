@@ -39,8 +39,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  const applyTheme = (t: Theme) => {
+  const applyTheme = (t: Theme, withTransition: boolean = false) => {
     const root = document.documentElement;
+    if (withTransition) {
+      root.classList.add("theme-transitioning");
+    }
     if (t === "dark") {
       root.classList.add("dark");
       root.classList.remove("light");
@@ -50,11 +53,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add("light");
       root.style.colorScheme = "light";
     }
+    if (withTransition) {
+      setTimeout(() => {
+        root.classList.remove("theme-transitioning");
+      }, 350);
+    }
   };
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    applyTheme(t);
+    applyTheme(t, true);
     try {
       localStorage.setItem("genui_theme", t);
     } catch {}

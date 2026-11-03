@@ -78,3 +78,4 @@ export async function DELETE(
     return NextResponse.json({ status: "deleted", session_id: sessionId });
   }
 }
+
