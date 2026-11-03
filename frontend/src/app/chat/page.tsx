@@ -509,7 +509,6 @@ export default function ChatPage() {
           user={user}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onOpenUpload={() => setShowUploadModal(true)}
         />
 
         {/* Message Viewport */}

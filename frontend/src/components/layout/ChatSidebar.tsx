@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState } from "react";
 import {
   Plus,
   MessageSquare,
@@ -10,15 +9,10 @@ import {
   Edit2,
   Check,
   X,
-  Sun,
-  Moon,
   Sparkles,
   LogOut,
   PanelLeftClose,
-  Clock,
-  ChevronRight
 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
 import { UserSession } from "@/lib/auth";
 
 export interface ChatSession {
@@ -54,15 +48,9 @@ export function ChatSidebar({
   user,
   onLogout,
 }: ChatSidebarProps) {
-  const { theme, toggleTheme } = useTheme();
-  const [isMounted, setIsMounted] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const startEditing = (session: ChatSession, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -186,7 +174,7 @@ export function ChatSidebar({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="p-0.5 text-slate-400 hover:text-slate-600"
+                  className="p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -314,32 +302,10 @@ export function ChatSidebar({
           )}
         </div>
 
-        {/* 4. Footer: Theme Toggle & User Account */}
-        <div className="p-3 border-t border-slate-200/70 dark:border-white/5 space-y-2 shrink-0 bg-[#f8f9fa] dark:bg-[#131314]">
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            suppressHydrationWarning
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#1a1b1c] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200/70 dark:border-white/5 text-xs text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2">
-              {!isMounted ? (
-                <div className="w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-zinc-700" />
-              ) : theme === "dark" ? (
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-              ) : (
-                <Moon className="w-3.5 h-3.5 text-indigo-500" />
-              )}
-              <span>{isMounted && theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-            </span>
-            <span className="text-[10px] uppercase font-mono text-slate-400">
-              {isMounted ? theme : ""}
-            </span>
-          </button>
-
-          {/* User Profile Pill */}
-          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white dark:bg-[#1a1b1c] border border-slate-200/70 dark:border-white/5">
-            <div className="flex items-center gap-2 overflow-hidden">
+        {/* 4. Footer: User Account */}
+        <div className="p-3 border-t border-slate-200/70 dark:border-white/5 shrink-0 bg-[#f8f9fa] dark:bg-[#131314]">
+          <div className="flex items-center justify-between px-2.5 py-2 rounded-xl bg-white dark:bg-[#1a1b1c] border border-slate-200/70 dark:border-white/5">
+            <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
                 {userInitial}
               </div>
