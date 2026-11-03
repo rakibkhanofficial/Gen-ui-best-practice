@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ChatContainer } from "@/app/chat/ChatContainer";
+import { FullPageChatSkeleton } from "@/components/chat/ChatSessionSkeleton";
 
 interface DynamicChatPageProps {
   params: Promise<{ chatId: string }>;
@@ -12,7 +13,7 @@ async function ChatPageContent({ params }: DynamicChatPageProps) {
 
 export default function DynamicChatPage({ params }: DynamicChatPageProps) {
   return (
-    <Suspense fallback={<div className="h-screen w-screen bg-white dark:bg-[#131314]" />}>
+    <Suspense fallback={<FullPageChatSkeleton />}>
       <ChatPageContent params={params} />
     </Suspense>
   );

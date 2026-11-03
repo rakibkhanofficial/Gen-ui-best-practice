@@ -46,6 +46,7 @@ import { ChatHeader } from "@/components/layout/ChatHeader";
 import { GeminiEmptyState } from "@/components/chat/GeminiEmptyState";
 import { StreamingMessage } from "@/components/chat/StreamingMessage";
 import { AgentReasoningStage, AgentStage, SearchSource } from "@/components/chat/AgentReasoningStage";
+import { ChatMessagesSkeleton } from "@/components/chat/ChatSessionSkeleton";
 
 // Generative UI Showcase Components
 import { WeatherCard } from "@/components/gen-ui/WeatherCard";
@@ -100,6 +101,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(initialChatId || null);
+  const [isLoadingSession, setIsLoadingSession] = useState(!!initialChatId);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -584,8 +586,10 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       } catch {
         setMessages([]);
       }
+      setIsLoadingSession(false);
     } else if (!activeSessionId) {
       setMessages([]);
+      setIsLoadingSession(false);
     }
   }, [initialChatId, user]);
 
@@ -628,22 +632,29 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   };
 
   const selectSession = (sessionId: string) => {
+    if (sessionId === activeSessionId) return;
+
+    setIsLoadingSession(true);
     setActiveSessionId(sessionId);
     setActiveChatCookie(sessionId);
     router.push(`/chat/${sessionId}`);
 
-    if (user) {
-      try {
-        const stored = localStorage.getItem(getUserMessagesKey(user.id, sessionId));
-        if (stored) {
-          setMessages(JSON.parse(stored));
-        } else {
+    // Smooth skeleton shimmer transition before rendering the session messages
+    setTimeout(() => {
+      if (user) {
+        try {
+          const stored = localStorage.getItem(getUserMessagesKey(user.id, sessionId));
+          if (stored) {
+            setMessages(JSON.parse(stored));
+          } else {
+            setMessages([]);
+          }
+        } catch {
           setMessages([]);
         }
-      } catch {
-        setMessages([]);
       }
-    }
+      setIsLoadingSession(false);
+    }, 180);
   };
 
   const handleNewChat = () => {
@@ -651,6 +662,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     setMessages([]);
     setInput("");
     setCurrentAttachment(null);
+    setIsLoadingSession(false);
     router.push("/chat");
   };
 
@@ -1037,27 +1049,55 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
 
         {/* Message Stream Scroll Area */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4 space-y-6">
-          {messages.length === 0 ? (
-            <GeminiEmptyState
-              userName={user?.name || "Explorer"}
-              input={input}
-              setInput={setInput}
-              onSendMessage={(prompt?: string) => handleSendMessage(prompt)}
-              onOpenUpload={() => setShowAttachMenu(true)}
-              onToggleVoice={toggleVoiceInput}
-              isListening={isListening}
-              isTranscribingAudio={isTranscribingAudio}
-              onAttachImage={() => imageInputRef.current?.click()}
-              onAttachDoc={() => docInputRef.current?.click()}
-              currentAttachment={currentAttachment}
-              onRemoveAttachment={() => setCurrentAttachment(null)}
-              isUploading={isUploading}
-              onBrowseGallery={() =>
-                handleSendMessage("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")
-              }
-            />
-          ) : (
-            <div className="max-w-3xl mx-auto space-y-6 pb-28">
+          <AnimatePresence mode="wait">
+            {isLoadingSession ? (
+              <motion.div
+                key="skeleton"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="max-w-3xl mx-auto space-y-6 pb-28 w-full"
+              >
+                <ChatMessagesSkeleton />
+              </motion.div>
+            ) : messages.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+              >
+                <GeminiEmptyState
+                  userName={user?.name || "Explorer"}
+                  input={input}
+                  setInput={setInput}
+                  onSendMessage={(prompt?: string) => handleSendMessage(prompt)}
+                  onOpenUpload={() => setShowAttachMenu(true)}
+                  onToggleVoice={toggleVoiceInput}
+                  isListening={isListening}
+                  isTranscribingAudio={isTranscribingAudio}
+                  onAttachImage={() => imageInputRef.current?.click()}
+                  onAttachDoc={() => docInputRef.current?.click()}
+                  currentAttachment={currentAttachment}
+                  onRemoveAttachment={() => setCurrentAttachment(null)}
+                  isUploading={isUploading}
+                  onBrowseGallery={() =>
+                    handleSendMessage("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")
+                  }
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key={`session-${activeSessionId}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="max-w-3xl mx-auto space-y-6 pb-28"
+              >
+                <div className="space-y-6">
               {messages.map((msg) => (
                 <div key={msg.id} className="space-y-3">
                   {msg.role === "user" ? (
@@ -1222,9 +1262,11 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                   )}
                 </div>
               ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
+                <div ref={messagesEndRef} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* 3. Bottom Prompt Input Bar with Plus Attachment Button - Rendered only when messages exist */}
