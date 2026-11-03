@@ -282,6 +282,50 @@ def get_user_sessions(user_id: str = "guest_default"):
     }
 
 
+class CreateSessionRequest(BaseModel):
+    id: str
+    title: str
+    user_id: str = "guest_default"
+    user_type: Optional[str] = "guest"
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class UpdateSessionRequest(BaseModel):
+    title: Optional[str] = None
+
+
+@app.post("/api/chat/sessions")
+def create_or_sync_session(payload: CreateSessionRequest):
+    """Creates or syncs a chat session for this user."""
+    user_id = payload.user_id
+    if user_id not in USER_SESSIONS:
+        USER_SESSIONS[user_id] = {}
+    now_iso = datetime.now().isoformat()
+    if payload.id not in USER_SESSIONS[user_id]:
+        USER_SESSIONS[user_id][payload.id] = {
+            "id": payload.id,
+            "title": payload.title,
+            "user_id": user_id,
+            "user_type": payload.user_type or "guest",
+            "created_at": payload.created_at or now_iso,
+            "updated_at": payload.updated_at or now_iso,
+            "turns": []
+        }
+    return {"status": "ok", "session": USER_SESSIONS[user_id][payload.id]}
+
+
+@app.patch("/api/chat/sessions/{session_id}")
+def update_user_session(session_id: str, payload: UpdateSessionRequest, user_id: str = "guest_default"):
+    """Updates session metadata (e.g. title) for this user."""
+    if user_id in USER_SESSIONS and session_id in USER_SESSIONS[user_id]:
+        if payload.title:
+            USER_SESSIONS[user_id][session_id]["title"] = payload.title
+            USER_SESSIONS[user_id][session_id]["updated_at"] = datetime.now().isoformat()
+        return {"status": "updated", "session": USER_SESSIONS[user_id][session_id]}
+    return {"status": "not_found", "session_id": session_id}
+
+
 @app.get("/api/chat/sessions/{session_id}")
 def get_session_history(session_id: str, user_id: str = "guest_default"):
     """Returns conversation history for a specific session of this user."""

@@ -101,6 +101,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const [user, setUser] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(initialChatId || null);
   const [isLoadingSession, setIsLoadingSession] = useState(!!initialChatId);
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -178,17 +179,55 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, [authStatus, authSession]);
 
-  const loadUserSessions = (userId: string) => {
+  const loadUserSessions = async (userId: string) => {
+    setIsLoadingSessions(true);
+    let localSessions: ChatSession[] = [];
     try {
       const key = getUserSessionsKey(userId);
       const stored = localStorage.getItem(key);
       if (stored) {
-        setSessions(JSON.parse(stored));
-      } else {
-        setSessions([]);
+        localSessions = JSON.parse(stored);
+        setSessions(localSessions);
       }
-    } catch {
-      setSessions([]);
+    } catch {}
+
+    try {
+      const res = await fetch(`/api/chat/sessions?user_id=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.sessions)) {
+          const apiSessions: ChatSession[] = data.sessions.map((s: any) => ({
+            id: s.id,
+            title: s.title || "Conversation",
+            createdAt: s.created_at ? new Date(s.created_at).getTime() : Date.now(),
+            updatedAt: s.updated_at ? new Date(s.updated_at).getTime() : Date.now(),
+            turnsCount: Array.isArray(s.turns) ? s.turns.length : 1,
+            userId: s.user_id || userId,
+            userType: s.user_type || "guest",
+          }));
+
+          const sessionMap = new Map<string, ChatSession>();
+          localSessions.forEach((s) => sessionMap.set(s.id, s));
+          apiSessions.forEach((s) => {
+            const existing = sessionMap.get(s.id);
+            if (!existing || s.updatedAt >= existing.updatedAt) {
+              sessionMap.set(s.id, s);
+            }
+          });
+
+          const mergedSessions = Array.from(sessionMap.values()).sort(
+            (a, b) => b.updatedAt - a.updatedAt
+          );
+          setSessions(mergedSessions);
+          saveSessionsList(userId, mergedSessions);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch remote chat history from API:", err);
+    } finally {
+      setTimeout(() => {
+        setIsLoadingSessions(false);
+      }, localSessions.length === 0 ? 320 : 100);
     }
   };
 
@@ -690,7 +729,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
 
     try {
       localStorage.removeItem(getUserMessagesKey(user.id, sessionId));
-      fetch(`http://localhost:8000/api/chat/sessions/${sessionId}?user_id=${user.id}`, {
+      fetch(`/api/chat/sessions/${sessionId}?user_id=${encodeURIComponent(user.id)}`, {
         method: "DELETE",
       }).catch(() => {});
     } catch {}
@@ -707,6 +746,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     );
     setSessions(updated);
     saveSessionsList(user.id, updated);
+
+    fetch(`/api/chat/sessions/${sessionId}?user_id=${encodeURIComponent(user.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTitle }),
+    }).catch(() => {});
   };
 
   const handleLogout = () => {
@@ -771,6 +816,17 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       const updatedSessions = [newSession, ...sessions.filter((s) => s.id !== currentSessionId)];
       setSessions(updatedSessions);
       saveSessionsList(user.id, updatedSessions);
+
+      fetch("/api/chat/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: newSession.id,
+          title: newSession.title,
+          user_id: user.id,
+          user_type: user.role,
+        }),
+      }).catch(() => {});
     } else {
       const updatedSessions = sessions.map((s) =>
         s.id === currentSessionId
@@ -1050,6 +1106,8 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         onRenameSession={renameSession}
         user={user}
         onLogout={handleLogout}
+        isLoadingSessions={isLoadingSessions}
+        onRefreshSessions={() => user && loadUserSessions(user.id)}
       />
 
       {/* 2. Main Chat Area */}

@@ -101,6 +101,70 @@ export function ChatMessagesSkeleton() {
 }
 
 /**
+ * SidebarSessionsSkeleton
+ *
+ * Polished shimmer skeleton for the sidebar conversation history list.
+ * Displayed when session history is being fetched from the API or during page reloads.
+ */
+export function SidebarSessionsSkeleton() {
+  return (
+    <div className="space-y-4 py-1 select-none animate-pulse font-sans">
+      {/* Group 1: Today Shimmer */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between px-2.5 py-1">
+          <div className="h-2.5 w-12 rounded bg-slate-200/90 dark:bg-white/10" />
+          <div className="h-2 w-4 rounded bg-slate-200/50 dark:bg-white/5" />
+        </div>
+        <div className="space-y-1">
+          {[
+            { titleW: "w-4/5", subW: "w-20" },
+            { titleW: "w-3/4", subW: "w-16" },
+            { titleW: "w-5/6", subW: "w-24" },
+          ].map((item, idx) => (
+            <div
+              key={`skeleton-today-${idx}`}
+              className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-200/40 dark:bg-white/5 border border-transparent"
+            >
+              <div className="w-3.5 h-3.5 rounded-sm bg-slate-300/80 dark:bg-white/10 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className={`h-3 ${item.titleW} rounded bg-slate-300/80 dark:bg-white/15`} />
+                <div className={`h-2 ${item.subW} rounded bg-slate-200/60 dark:bg-white/5`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Group 2: Previous 7 Days Shimmer */}
+      <div className="space-y-1 pt-1">
+        <div className="flex items-center justify-between px-2.5 py-1">
+          <div className="h-2.5 w-20 rounded bg-slate-200/90 dark:bg-white/10" />
+          <div className="h-2 w-4 rounded bg-slate-200/50 dark:bg-white/5" />
+        </div>
+        <div className="space-y-1">
+          {[
+            { titleW: "w-3/4", subW: "w-16" },
+            { titleW: "w-2/3", subW: "w-14" },
+            { titleW: "w-4/5", subW: "w-12" },
+          ].map((item, idx) => (
+            <div
+              key={`skeleton-prev-${idx}`}
+              className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-200/40 dark:bg-white/5 border border-transparent"
+            >
+              <div className="w-3.5 h-3.5 rounded-sm bg-slate-300/80 dark:bg-white/10 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className={`h-3 ${item.titleW} rounded bg-slate-300/80 dark:bg-white/15`} />
+                <div className={`h-2 ${item.subW} rounded bg-slate-200/60 dark:bg-white/5`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * FullPageChatSkeleton
  *
  * Full-page Suspense fallback matching the exact App Router layout
@@ -117,13 +181,8 @@ export function FullPageChatSkeleton() {
           {/* Filter Input */}
           <div className="h-8 w-full rounded-lg bg-slate-200/60 dark:bg-white/5" />
           {/* Session List Skeleton */}
-          <div className="space-y-2 pt-2">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="h-9 w-full rounded-xl bg-slate-200/50 dark:bg-white/5"
-              />
-            ))}
+          <div className="pt-2">
+            <SidebarSessionsSkeleton />
           </div>
         </div>
 

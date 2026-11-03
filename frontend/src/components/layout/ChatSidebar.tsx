@@ -13,8 +13,10 @@ import {
   LogOut,
   PanelLeftClose,
   Layers,
+  RotateCw,
 } from "lucide-react";
 import { UserSession } from "@/lib/auth";
+import { SidebarSessionsSkeleton } from "@/components/chat/ChatSessionSkeleton";
 
 export interface ChatSession {
   id: string; // The session_id
@@ -37,6 +39,8 @@ interface ChatSidebarProps {
   onRenameSession: (id: string, newTitle: string) => void;
   user: UserSession | null;
   onLogout: () => void;
+  isLoadingSessions?: boolean;
+  onRefreshSessions?: () => void;
 }
 
 export function ChatSidebar({
@@ -50,6 +54,8 @@ export function ChatSidebar({
   onRenameSession,
   user,
   onLogout,
+  isLoadingSessions = false,
+  onRefreshSessions,
 }: ChatSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -146,13 +152,29 @@ export function ChatSidebar({
               </div>
             </div>
 
-            <button
-              onClick={onToggle}
-              className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer shrink-0 ml-1"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1 shrink-0 ml-1">
+              {onRefreshSessions && (
+                <button
+                  onClick={onRefreshSessions}
+                  disabled={isLoadingSessions}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
+                  title="Refresh chat history"
+                >
+                  <RotateCw
+                    className={`w-3.5 h-3.5 ${
+                      isLoadingSessions ? "animate-spin text-blue-500" : ""
+                    }`}
+                  />
+                </button>
+              )}
+              <button
+                onClick={onToggle}
+                className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* 2. Primary Action: + New Chat */}
@@ -189,9 +211,11 @@ export function ChatSidebar({
             )}
           </div>
 
-          {/* 3. Sessions List (Chronological Groups) */}
+          {/* 3. Sessions List (Chronological Groups or Shimmer Skeleton) */}
           <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3 text-xs font-sans">
-            {filteredSessions.length === 0 ? (
+            {isLoadingSessions ? (
+              <SidebarSessionsSkeleton />
+            ) : filteredSessions.length === 0 ? (
               <div className="text-center py-8 text-slate-400 dark:text-zinc-500">
                 <MessageSquare className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
                 <p className="text-xs">No chat sessions yet</p>
@@ -310,29 +334,39 @@ export function ChatSidebar({
 
           {/* 4. Footer: User Account */}
           <div className="p-3 border-t border-slate-200/70 dark:border-white/5 shrink-0 bg-[#f8f9fa] dark:bg-[#131314]">
-            <div className="flex items-center justify-between px-2.5 py-2 rounded-xl bg-white dark:bg-[#1a1b1c] border border-slate-200/70 dark:border-white/5 shadow-2xs">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-medium flex items-center justify-center text-[11px] shrink-0">
-                  {userInitial}
+            {!user ? (
+              <div className="flex items-center justify-between px-2.5 py-2 rounded-xl bg-slate-200/40 dark:bg-white/5 border border-transparent animate-pulse">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-slate-300/80 dark:bg-white/10" />
+                  <div className="h-3 w-20 rounded bg-slate-300/80 dark:bg-white/10" />
                 </div>
-                <div className="truncate text-xs font-normal text-slate-800 dark:text-zinc-200">
-                  {displayName}
-                </div>
+                <div className="h-4 w-12 rounded bg-slate-300/60 dark:bg-white/10" />
               </div>
+            ) : (
+              <div className="flex items-center justify-between px-2.5 py-2 rounded-xl bg-white dark:bg-[#1a1b1c] border border-slate-200/70 dark:border-white/5 shadow-2xs">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-medium flex items-center justify-center text-[11px] shrink-0">
+                    {userInitial}
+                  </div>
+                  <div className="truncate text-xs font-normal text-slate-800 dark:text-zinc-200">
+                    {displayName}
+                  </div>
+                </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-zinc-400 font-mono">
-                  {user?.role === "google" ? "PRO" : "GUEST"}
-                </span>
-                <button
-                  onClick={onLogout}
-                  className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                  title="Sign out"
-                >
-                  <LogOut className="w-3 h-3" />
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-zinc-400 font-mono">
+                    {user?.role === "google" ? "PRO" : "GUEST"}
+                  </span>
+                  <button
+                    onClick={onLogout}
+                    className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </aside>
