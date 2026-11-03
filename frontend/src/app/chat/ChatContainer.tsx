@@ -973,14 +973,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   };
 
   // 12. Component Registry (All GenUI components including image and document analysis)
-  const renderGenUIComponent = (genui: { tool: string; data: any }) => {
+  const renderGenUIComponent = (genui: { tool: string; data: any }, isLastMessageStreaming?: boolean) => {
     switch (genui.tool) {
       case "get_weather_data":
         return <WeatherCard data={genui.data} />;
       case "get_sales_analytics":
         return <SalesDashboard data={genui.data} />;
       case "generate_planning_board":
-        return <PlanningBoard data={genui.data} />;
+        return <PlanningBoard data={genui.data} isLiveStreaming={isLastMessageStreaming || genui.data?.is_live_generating} />;
       case "search_product_catalog":
         return <ProductCatalogCard data={genui.data} />;
       case "calculate_route_distance":
@@ -1098,7 +1098,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                 className="max-w-3xl mx-auto space-y-6 pb-28"
               >
                 <div className="space-y-6">
-              {messages.map((msg) => (
+              {messages.map((msg, msgIdx) => (
                 <div key={msg.id} className="space-y-3">
                   {msg.role === "user" ? (
                     /* User Turn */
@@ -1163,7 +1163,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                             transition={{ duration: 0.25 }}
                             className="my-2"
                           >
-                            {renderGenUIComponent(msg.genui)}
+                            {renderGenUIComponent(msg.genui, isStreaming && msgIdx === messages.length - 1)}
                           </motion.div>
                         )}
 

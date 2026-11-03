@@ -18,7 +18,8 @@ import {
   Pencil,
   Eye,
   CheckCircle2,
-  FileCode2
+  Play,
+  RotateCw
 } from "lucide-react";
 import confetti from "canvas-confetti";
 
@@ -50,11 +51,13 @@ export interface PlanningBoardData {
   mcp_app_url?: string;
   mcp_server_id?: string;
   excalidraw_elements?: any[];
+  is_live_generating?: boolean;
 }
 
 export interface PlanningBoardProps {
   data?: PlanningBoardData;
   status?: "inProgress" | "executing" | "complete";
+  isLiveStreaming?: boolean;
 }
 
 const STAGE_THEMES = [
@@ -96,18 +99,74 @@ const STAGE_THEMES = [
   },
 ];
 
-export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps) {
+export function PlanningBoard({
+  data,
+  status = "complete",
+  isLiveStreaming = false,
+}: PlanningBoardProps) {
   const [columns, setColumns] = useState<BoardColumn[]>(data?.columns || []);
   const [activeView, setActiveView] = useState<"diagram" | "editor">("diagram");
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [copiedMcp, setCopiedMcp] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Live Canvas Drawing State Machine (as in Claude Artifacts & Excalidraw Studio)
+  const shouldAnimate = isLiveStreaming || Boolean(data?.is_live_generating);
+  const [isDrawing, setIsDrawing] = useState<boolean>(shouldAnimate);
+  const [drawnStages, setDrawnStages] = useState<number>(shouldAnimate ? 1 : 4);
+  const [pencilCoord, setPencilCoord] = useState<{ x: number; y: number }>({ x: 200, y: 140 });
+
   useEffect(() => {
     if (data?.columns && data.columns.length > 0) {
       setColumns(data.columns);
     }
   }, [data]);
+
+  // Progressive Live Canvas Drawing Routine
+  const startLiveDrawing = () => {
+    setIsDrawing(true);
+    setDrawnStages(1);
+    setPencilCoord({ x: 200, y: 140 });
+
+    const timer1 = setTimeout(() => {
+      setDrawnStages(2);
+      setPencilCoord({ x: 490, y: 140 });
+    }, 500);
+
+    const timer2 = setTimeout(() => {
+      setDrawnStages(3);
+      setPencilCoord({ x: 780, y: 140 });
+    }, 1000);
+
+    const timer3 = setTimeout(() => {
+      setDrawnStages(4);
+      setPencilCoord({ x: 1070, y: 140 });
+    }, 1500);
+
+    const timer4 = setTimeout(() => {
+      setIsDrawing(false);
+      confetti({
+        particleCount: 35,
+        spread: 60,
+        origin: { y: 0.7 },
+        colors: ["#f59e0b", "#38bdf8", "#c084fc", "#34d399"],
+      });
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+    };
+  };
+
+  useEffect(() => {
+    if (shouldAnimate) {
+      const cancel = startLiveDrawing();
+      return cancel;
+    }
+  }, [shouldAnimate]);
 
   const mcpServerUrl = data?.mcp_app_url || "https://mcp.excalidraw.com";
   const mcpServerId = data?.mcp_server_id || "example_mcp_app";
@@ -230,7 +289,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
   };
 
   return (
-    <div className="w-full my-3 rounded-2xl bg-white dark:bg-[#18191a] border border-slate-200/90 dark:border-white/10 shadow-xs relative overflow-hidden flex flex-col h-[480px] sm:h-[500px] font-sans text-slate-800 dark:text-slate-100">
+    <div className="w-full my-3 rounded-2xl bg-white dark:bg-[#18191a] border border-slate-200/90 dark:border-white/10 shadow-xs relative overflow-hidden flex flex-col h-[500px] font-sans text-slate-800 dark:text-slate-100">
       {/* Excalidraw Sketchy Dot Grid Background Canvas */}
       <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#475569_1px,transparent_1px)] [background-size:20px_20px] opacity-40 pointer-events-none" />
 
@@ -252,8 +311,34 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
           </div>
         </div>
 
-        {/* Right: View Switcher & MCP Tools */}
+        {/* Right: View Switcher, Live Replay & MCP Tools */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Replay Live Drawing Button */}
+          {activeView === "diagram" && (
+            <button
+              onClick={startLiveDrawing}
+              disabled={isDrawing}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                isDrawing
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse"
+                  : "bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-zinc-200"
+              }`}
+              title="Replay Claude-style progressive canvas drawing"
+            >
+              {isDrawing ? (
+                <>
+                  <Pencil className="w-3 h-3 text-amber-500 animate-bounce" />
+                  <span>Drawing...</span>
+                </>
+              ) : (
+                <>
+                  <RotateCw className="w-3 h-3 text-slate-500" />
+                  <span>Replay Draw</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* View Toggle: Diagram vs Live Web Editor */}
           <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-white/10 text-[11px]">
             <button
@@ -336,7 +421,43 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
         </div>
       </div>
 
-      {/* 2. Main Canvas Body */}
+      {/* 2. Live Drawing HUD Banner */}
+      <AnimatePresence>
+        {isDrawing && activeView === "diagram" && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="relative z-20 bg-amber-500/10 dark:bg-amber-950/40 border-b border-amber-500/20 px-4 py-1.5 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shrink-0"
+          >
+            <div className="flex items-center gap-2">
+              <Pencil className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+              <span className="font-semibold text-[11px]">
+                Streaming Canvas Drawing:
+              </span>
+              <span className="text-[11px] opacity-80">
+                Drawing Phase {drawnStages} of 4 ({columns[drawnStages - 1]?.title || "Planning..."})
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] tabular-nums font-bold">
+                {drawnStages * 25}%
+              </span>
+              <div className="w-24 h-1.5 rounded-full bg-amber-200 dark:bg-white/10 overflow-hidden">
+                <motion.div
+                  className="h-full bg-amber-500 rounded-full"
+                  initial={{ width: "25%" }}
+                  animate={{ width: `${drawnStages * 25}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 3. Main Canvas Body */}
       {activeView === "editor" ? (
         /* Full Embedded Excalidraw Web Canvas */
         <div className="relative z-10 flex-1 w-full h-full bg-slate-50 dark:bg-[#121212] overflow-hidden">
@@ -362,15 +483,53 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
             }}
             className="relative transition-transform duration-150"
           >
-            {/* Excalidraw Architectural Flow Stages */}
+            {/* Live Drawing Pencil Head Tracking Cursor (Claude Canvas Drawing Effect) */}
+            <AnimatePresence>
+              {isDrawing && (
+                <motion.div
+                  animate={{
+                    left: pencilCoord.x,
+                    top: pencilCoord.y,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 180,
+                    damping: 20,
+                  }}
+                  className="absolute z-30 pointer-events-none -ml-4 -mt-4 flex items-center gap-1.5"
+                >
+                  <div className="w-8 h-8 rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/40 flex items-center justify-center animate-bounce">
+                    <Pencil className="w-4 h-4 fill-white" />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white shadow-md">
+                    Drawing Phase 0{drawnStages}...
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Excalidraw Architectural Flow Stages with Progressive Reveal */}
             <div className="grid grid-cols-4 gap-6">
               {columns.map((col, idx) => {
                 const theme = STAGE_THEMES[idx % STAGE_THEMES.length];
+                const isVisible = idx < drawnStages;
 
                 return (
-                  <div
+                  <motion.div
                     key={col.id}
-                    className={`rounded-2xl border-2 ${theme.border} ${theme.bg} p-4 shadow-sm backdrop-blur-xs min-h-[360px] flex flex-col justify-between`}
+                    initial={{ opacity: 0, scale: 0.9, y: 12 }}
+                    animate={{
+                      opacity: isVisible ? 1 : 0.15,
+                      scale: isVisible ? 1 : 0.96,
+                      y: isVisible ? 0 : 8,
+                    }}
+                    transition={{
+                      duration: 0.35,
+                      ease: "easeOut",
+                    }}
+                    className={`rounded-2xl border-2 ${theme.border} ${theme.bg} p-4 shadow-sm backdrop-blur-xs min-h-[360px] flex flex-col justify-between transition-all ${
+                      !isVisible ? "filter blur-[0.5px] pointer-events-none" : ""
+                    }`}
                     style={{
                       borderRadius: "16px",
                       boxShadow: "3px 3px 0px rgba(0,0,0,0.06)",
@@ -397,8 +556,11 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
                       {/* Excalidraw Hand-drawn Task Blocks */}
                       <div className="space-y-3">
                         {col.notes.map((note) => (
-                          <div
+                          <motion.div
                             key={note.id}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 4 }}
+                            transition={{ duration: 0.25 }}
                             className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-slate-200/90 dark:border-white/10 shadow-xs hover:border-slate-400 dark:hover:border-white/20 transition-all"
                             style={{
                               boxShadow: "2px 2px 0px rgba(0,0,0,0.04)",
@@ -436,7 +598,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
                                 </button>
                               </div>
                             </div>
-                          </div>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
@@ -446,12 +608,12 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
                       <span>Phase {theme.step} verified</span>
                       <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
 
-            {/* Hand-drawn Style SVG Flow Connectors between Phases */}
+            {/* Hand-drawn Style SVG Flow Connectors with Dynamic Stroke Dash Drawing */}
             <svg
               className="absolute inset-0 pointer-events-none w-full h-full"
               style={{ overflow: "visible" }}
@@ -471,32 +633,50 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
               </defs>
 
               {/* Connecting Stage 1 to Stage 2 */}
-              <path
+              <motion.path
                 d="M 285 180 C 310 180, 310 180, 325 180"
                 fill="none"
                 stroke="#64748b"
                 strokeWidth="2"
-                strokeDasharray="5 4"
+                strokeDasharray="100"
+                initial={{ strokeDashoffset: 100, opacity: 0 }}
+                animate={{
+                  strokeDashoffset: drawnStages >= 2 ? 0 : 100,
+                  opacity: drawnStages >= 2 ? 1 : 0,
+                }}
+                transition={{ duration: 0.45 }}
                 markerEnd="url(#excalidraw-arrow)"
               />
 
               {/* Connecting Stage 2 to Stage 3 */}
-              <path
+              <motion.path
                 d="M 580 180 C 605 180, 605 180, 620 180"
                 fill="none"
                 stroke="#64748b"
                 strokeWidth="2"
-                strokeDasharray="5 4"
+                strokeDasharray="100"
+                initial={{ strokeDashoffset: 100, opacity: 0 }}
+                animate={{
+                  strokeDashoffset: drawnStages >= 3 ? 0 : 100,
+                  opacity: drawnStages >= 3 ? 1 : 0,
+                }}
+                transition={{ duration: 0.45 }}
                 markerEnd="url(#excalidraw-arrow)"
               />
 
               {/* Connecting Stage 3 to Stage 4 */}
-              <path
+              <motion.path
                 d="M 875 180 C 900 180, 900 180, 915 180"
                 fill="none"
                 stroke="#64748b"
                 strokeWidth="2"
-                strokeDasharray="5 4"
+                strokeDasharray="100"
+                initial={{ strokeDashoffset: 100, opacity: 0 }}
+                animate={{
+                  strokeDashoffset: drawnStages >= 4 ? 0 : 100,
+                  opacity: drawnStages >= 4 ? 1 : 0,
+                }}
+                transition={{ duration: 0.45 }}
                 markerEnd="url(#excalidraw-arrow)"
               />
             </svg>
@@ -504,7 +684,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
         </div>
       )}
 
-      {/* 3. Clean MCP Micro-Footer */}
+      {/* 4. Clean MCP Micro-Footer */}
       <div className="relative z-10 px-4 py-1.5 border-t border-slate-200/70 dark:border-white/5 bg-slate-50/90 dark:bg-[#18191a] shrink-0 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
         <div className="flex items-center gap-1.5 truncate">
           <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
@@ -513,15 +693,20 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
           </span>
         </div>
 
-        <a
-          href="https://excalidraw.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 hover:underline font-medium shrink-0"
-        >
-          <span>Open Web Canvas</span>
-          <ExternalLink className="w-2.5 h-2.5" />
-        </a>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-slate-400 dark:text-zinc-500 hidden sm:inline">
+            Live Progressive SVG Canvas
+          </span>
+          <a
+            href="https://excalidraw.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 hover:underline font-medium shrink-0"
+          >
+            <span>Open Web Canvas</span>
+            <ExternalLink className="w-2.5 h-2.5" />
+          </a>
+        </div>
       </div>
     </div>
   );

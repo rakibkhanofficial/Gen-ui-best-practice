@@ -554,11 +554,18 @@ async def stream_agent_reasoning(
         await asyncio.sleep(1.0)
 
         # 3. Real Stage: Structuring GenUI
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Structuring interactive component...', 'sources': sources})}\n\n"
+        analyzing_detail = (
+            "Streaming live Excalidraw canvas drawing..."
+            if tool_name == "generate_planning_board"
+            else "Structuring interactive component..."
+        )
+        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': analyzing_detail, 'sources': sources})}\n\n"
         await asyncio.sleep(0.8)
 
         tool_fn = TOOL_REGISTRY[tool_name]
         component_data = tool_fn(**tool_args)
+        if tool_name == "generate_planning_board":
+            component_data["is_live_generating"] = True
 
         # 4. Emit GenUI Component Payload
         yield f"data: {json.dumps({'event': 'genui', 'tool': tool_name, 'data': component_data, 'sources': sources})}\n\n"
