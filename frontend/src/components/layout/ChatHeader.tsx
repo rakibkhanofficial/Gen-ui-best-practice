@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PanelLeft, Sun, Moon, Zap, Brain, Settings } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { UserSession } from "@/lib/auth";
 
@@ -10,16 +10,14 @@ interface ChatHeaderProps {
   user: UserSession | null;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  syncStatus?: string | null;
-  learnedCount?: number;
+  isChatDetails?: boolean;
 }
 
 export function ChatHeader({
   user,
   sidebarOpen,
   onToggleSidebar,
-  syncStatus,
-  learnedCount = 3,
+  isChatDetails = false,
 }: ChatHeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -29,50 +27,40 @@ export function ChatHeader({
   }, []);
 
   return (
-    <header className="h-14 px-4 border-b border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#131314]/90 backdrop-blur-md flex items-center justify-between sticky top-0 z-20 transition-colors select-none font-sans">
-      {/* Left: Sidebar Toggle + Clean Project Title */}
-      <div className="flex items-center gap-2">
-        {!sidebarOpen && (
-          <button
-            onClick={onToggleSidebar}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
-            title="Open sidebar"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </button>
-        )}
-
-        <div className="flex items-center gap-2 px-1 py-1 text-xs">
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-          <span className="font-semibold text-slate-800 dark:text-white">
-            Gen UI Best Practice
-          </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-600 dark:bg-white/10 dark:text-blue-300 font-mono">
-            Copilot &amp; Antigravity
-          </span>
-        </div>
-      </div>
-
-      {/* Center: CopilotKit Capabilities Badges (Realtime Sync & Continual Learning) */}
-      <div className="hidden md:flex items-center gap-2 text-[11px]">
-        {/* Realtime Sync Badge */}
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium"
-          title={syncStatus || "Real-time bidirectional state sync with CopilotKit Runtime"}
+    <header className="h-14 px-3 sm:px-4 border-b border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#131314]/90 backdrop-blur-md flex items-center justify-between sticky top-0 z-20 transition-colors select-none font-sans">
+      {/* Left: Burger Menu (for both collapse & expand) + Project Badge (Chat Details Only) */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        {/* Burger Menu Button: 3 horizontal line icon for both collapse and expand with smooth click feel */}
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="p-2 rounded-xl text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-          <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-          <span>Realtime Sync</span>
-        </div>
+          <Menu className="w-5 h-5 transition-transform duration-200 ease-out" />
+        </button>
 
-        {/* Learning Memory Badge */}
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-medium"
-          title={`CopilotKit Learning Container active with ${learnedCount} learned behavioral skills`}
-        >
-          <Brain className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-          <span>Learning ({learnedCount} skills)</span>
-        </div>
+        {/* Project Branding: ONLY rendered when on chat details page, omitted on /chat or empty state */}
+        <AnimatePresence>
+          {isChatDetails && (
+            <motion.div
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.18 }}
+              className="flex items-center gap-2 px-1 py-1 text-xs truncate"
+            >
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+              <span className="font-semibold text-slate-800 dark:text-white truncate">
+                Gen UI Best Practice
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-600 dark:bg-white/10 dark:text-blue-300 font-mono shrink-0">
+                Copilot &amp; Antigravity
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Right: Theme Switcher with Smooth Rotation/Scale Transition */}
@@ -80,7 +68,7 @@ export function ChatHeader({
         <button
           onClick={toggleTheme}
           suppressHydrationWarning
-          className="relative w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer overflow-hidden"
+          className="relative w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer overflow-hidden active:scale-95"
           title={isMounted && theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {!isMounted ? (

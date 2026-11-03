@@ -1153,8 +1153,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           user={user}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           sidebarOpen={sidebarOpen}
-          syncStatus={syncStatus}
-          learnedCount={learnedMemory.skillsLearned.length}
+          isChatDetails={Boolean(activeSessionId && (pathname !== "/chat" || messages.length > 0))}
         />
 
         {/* Message Stream Scroll Area */}

@@ -11,7 +11,6 @@ import {
   Check,
   X,
   LogOut,
-  PanelLeftClose,
   Layers,
   RotateCw,
 } from "lucide-react";
@@ -167,13 +166,6 @@ export function ChatSidebar({
                   />
                 </button>
               )}
-              <button
-                onClick={onToggle}
-                className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
-                title="Collapse sidebar"
-              >
-                <PanelLeftClose className="w-4 h-4" />
-              </button>
             </div>
           </div>
 

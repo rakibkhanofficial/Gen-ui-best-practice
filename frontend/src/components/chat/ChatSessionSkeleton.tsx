@@ -238,10 +238,42 @@ export function GeminiEmptyStateSkeleton() {
 }
 
 /**
+ * ChatHeaderSkeleton
+ *
+ * Shimmer header matching ChatHeader:
+ * - On /chat (empty state): ONLY burger menu button skeleton + theme switcher skeleton (no project badge).
+ * - On /chat/[chatId] (chat details): Burger menu + "Gen UI Best Practice Copilot & Antigravity" badge + theme switcher.
+ */
+export function ChatHeaderSkeleton({ isChatDetails = false }: { isChatDetails?: boolean }) {
+  return (
+    <header className="h-14 px-3 sm:px-4 border-b border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#131314]/90 backdrop-blur-md flex items-center justify-between shrink-0 select-none font-sans">
+      <div className="flex items-center gap-2.5 min-w-0">
+        {/* Burger Menu Button Skeleton */}
+        <div className="w-8 h-8 rounded-xl bg-slate-200/80 dark:bg-white/10 animate-pulse shrink-0" />
+
+        {/* Project Branding Skeleton: ONLY shown when isChatDetails is true */}
+        {isChatDetails && (
+          <div className="flex items-center gap-2 px-1">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+            <div className="h-3.5 w-32 rounded bg-slate-200 dark:bg-white/10 animate-pulse" />
+            <div className="h-4 w-24 rounded bg-slate-100 dark:bg-white/5 animate-pulse" />
+          </div>
+        )}
+      </div>
+
+      {/* Right: Theme Switcher Button Skeleton */}
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-slate-200/80 dark:bg-white/10 animate-pulse" />
+      </div>
+    </header>
+  );
+}
+
+/**
  * FullPageEmptyChatSkeleton
  *
  * Full-page Suspense fallback specifically for the empty state / new chat page (/chat).
- * Renders the sidebar + header + centered GeminiEmptyStateSkeleton (no bottom bar).
+ * Renders the sidebar + header (without project badge) + centered GeminiEmptyStateSkeleton (no bottom bar).
  */
 export function FullPageEmptyChatSkeleton() {
   return (
@@ -249,7 +281,16 @@ export function FullPageEmptyChatSkeleton() {
       {/* 1. Left Sidebar Skeleton (Desktop) */}
       <aside className="hidden md:flex w-64 h-full border-r border-slate-200/80 dark:border-white/5 bg-[#f8f9fa] dark:bg-[#131314] flex-col shrink-0 p-3 justify-between animate-pulse">
         <div className="space-y-4">
-          {/* Logo / New Chat Button */}
+          {/* Sidebar Brand Header Skeleton */}
+          <div className="h-10 flex items-center gap-2 px-1 pb-2 border-b border-slate-200/60 dark:border-white/5">
+            <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-white/10 shrink-0" />
+            <div className="space-y-1 flex-1">
+              <div className="h-3 w-28 rounded bg-slate-200 dark:bg-white/10" />
+              <div className="h-2 w-20 rounded bg-slate-200/60 dark:bg-white/5" />
+            </div>
+          </div>
+
+          {/* New Chat Button Skeleton */}
           <div className="h-10 w-full rounded-xl bg-slate-200 dark:bg-white/10" />
           {/* Filter Input */}
           <div className="h-8 w-full rounded-lg bg-slate-200/60 dark:bg-white/5" />
@@ -265,17 +306,8 @@ export function FullPageEmptyChatSkeleton() {
 
       {/* 2. Main Chat Area Skeleton */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Top Header Skeleton */}
-        <header className="h-14 px-4 border-b border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#131314]/90 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <div className="h-4 w-36 rounded bg-slate-200 dark:bg-white/10 animate-pulse" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-24 rounded-full bg-slate-200/80 dark:bg-white/10 animate-pulse" />
-            <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse" />
-          </div>
-        </header>
+        {/* Top Header Skeleton: isChatDetails=false ensures no project badge is shown */}
+        <ChatHeaderSkeleton isChatDetails={false} />
 
         {/* Empty State Centered Area */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4 flex items-center justify-center">
@@ -290,7 +322,7 @@ export function FullPageEmptyChatSkeleton() {
  * FullPageChatSkeleton
  *
  * Full-page Suspense fallback matching the exact App Router layout for conversation sessions (/chat/[chatId])
- * (sidebar + top header + message stream skeleton + bottom bar).
+ * (sidebar + top header with project badge + message stream skeleton + bottom bar).
  */
 export function FullPageChatSkeleton() {
   return (
@@ -298,7 +330,16 @@ export function FullPageChatSkeleton() {
       {/* 1. Left Sidebar Skeleton (Desktop) */}
       <aside className="hidden md:flex w-64 h-full border-r border-slate-200/80 dark:border-white/5 bg-[#f8f9fa] dark:bg-[#131314] flex-col shrink-0 p-3 justify-between animate-pulse">
         <div className="space-y-4">
-          {/* Logo / New Chat Button */}
+          {/* Sidebar Brand Header Skeleton */}
+          <div className="h-10 flex items-center gap-2 px-1 pb-2 border-b border-slate-200/60 dark:border-white/5">
+            <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-white/10 shrink-0" />
+            <div className="space-y-1 flex-1">
+              <div className="h-3 w-28 rounded bg-slate-200 dark:bg-white/10" />
+              <div className="h-2 w-20 rounded bg-slate-200/60 dark:bg-white/5" />
+            </div>
+          </div>
+
+          {/* New Chat Button Skeleton */}
           <div className="h-10 w-full rounded-xl bg-slate-200 dark:bg-white/10" />
           {/* Filter Input */}
           <div className="h-8 w-full rounded-lg bg-slate-200/60 dark:bg-white/5" />
@@ -314,17 +355,8 @@ export function FullPageChatSkeleton() {
 
       {/* 2. Main Chat Area Skeleton */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Top Header Skeleton */}
-        <header className="h-14 px-4 border-b border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#131314]/90 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <div className="h-4 w-36 rounded bg-slate-200 dark:bg-white/10 animate-pulse" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-24 rounded-full bg-slate-200/80 dark:bg-white/10 animate-pulse" />
-            <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-white/10 animate-pulse" />
-          </div>
-        </header>
+        {/* Top Header Skeleton: isChatDetails=true shows project badge skeleton */}
+        <ChatHeaderSkeleton isChatDetails={true} />
 
         {/* Message Area Skeleton */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4">
