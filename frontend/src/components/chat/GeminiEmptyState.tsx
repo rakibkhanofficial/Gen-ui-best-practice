@@ -6,34 +6,56 @@ import {
   Sparkles,
   Plus,
   Mic,
+  MicOff,
   ChevronDown,
   ArrowRight,
   Image as ImageIcon,
   FolderOpen,
+  FileSpreadsheet,
+  FileText,
+  X,
+  Loader2,
 } from "lucide-react";
+
+export interface AttachmentInfo {
+  filename: string;
+  filePath: string;
+  fileType: "image" | "document" | "spreadsheet" | "file";
+  fileSize?: number;
+  previewUrl?: string;
+}
 
 interface GeminiEmptyStateProps {
   userName?: string;
-  onSelectPrompt: (prompt: string) => void;
+  input: string;
+  setInput: (value: string) => void;
+  onSendMessage: (overridePrompt?: string) => void;
   onOpenUpload?: () => void;
   onToggleVoice?: () => void;
   isListening?: boolean;
   onAttachImage?: () => void;
   onAttachDoc?: () => void;
+  currentAttachment?: AttachmentInfo | null;
+  onRemoveAttachment?: () => void;
+  isUploading?: boolean;
   onBrowseGallery?: () => void;
 }
 
 export function GeminiEmptyState({
   userName = "Developer",
-  onSelectPrompt,
+  input,
+  setInput,
+  onSendMessage,
   onOpenUpload,
   onToggleVoice,
   isListening = false,
   onAttachImage,
   onAttachDoc,
+  currentAttachment,
+  onRemoveAttachment,
+  isUploading = false,
   onBrowseGallery,
 }: GeminiEmptyStateProps) {
-  const [promptInput, setPromptInput] = useState("");
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [selectedMode, setSelectedMode] = useState("Default mode");
@@ -68,12 +90,12 @@ export function GeminiEmptyState({
   ];
 
   const handleSend = () => {
-    if (promptInput.trim()) {
-      onSelectPrompt(promptInput.trim());
+    if (input.trim() || currentAttachment) {
+      onSendMessage();
     } else {
       // If prompt is empty and user clicks "I'm feeling lucky", pick a dynamic creative prompt!
       const randomPrompt = suggestions[Math.floor(Math.random() * suggestions.length)].prompt;
-      onSelectPrompt(randomPrompt);
+      onSendMessage(randomPrompt);
     }
   };
 
@@ -85,7 +107,7 @@ export function GeminiEmptyState({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
         className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs text-slate-700 dark:text-zinc-300 font-medium mb-6 shadow-2xs hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
-        onClick={() => onSelectPrompt("What is new in Gemini 4 Argon and Gen UI Architecture?")}
+        onClick={() => onSendMessage("What is new in Gemini 4 Argon and Gen UI Architecture?")}
       >
         <span className="w-5 h-5 rounded-full bg-[#1a73e8] text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-xs">
           4
@@ -111,12 +133,60 @@ export function GeminiEmptyState({
         className="w-full max-w-2xl relative group"
       >
         {/* Soft Multi-color Ambient Border Glow (Coral/Peach top-left to Sky Blue bottom-right) */}
-        <div className="absolute -inset-[1.5px] rounded-3xl bg-gradient-to-br from-amber-400/40 via-rose-400/35 to-blue-500/45 blur-[1.5px] opacity-80 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div
+          className={`absolute -inset-[1.5px] rounded-3xl bg-gradient-to-br from-amber-400/40 via-rose-400/35 to-blue-500/45 blur-[1.5px] transition-opacity duration-300 pointer-events-none ${
+            isListening
+              ? "opacity-100 ring-2 ring-rose-500/40"
+              : "opacity-80 group-hover:opacity-100 group-focus-within:opacity-100"
+          }`}
+        />
 
         <div className="relative w-full bg-white dark:bg-[#1e1f20] rounded-[23px] border border-slate-200/70 dark:border-white/10 p-4 shadow-lg shadow-blue-500/5 transition-all">
+          {/* Active Attached File Pill inside Prompt Box */}
+          {currentAttachment && (
+            <div className="flex items-center gap-2 mb-3 p-1.5 pr-2.5 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 w-fit text-xs text-slate-800 dark:text-zinc-200 shadow-2xs animate-in fade-in slide-in-from-bottom-1">
+              {currentAttachment.fileType === "image" && currentAttachment.previewUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={currentAttachment.previewUrl}
+                  alt={currentAttachment.filename}
+                  className="w-7 h-7 rounded-lg object-cover border border-slate-200 dark:border-white/10 shrink-0"
+                />
+              ) : currentAttachment.fileType === "spreadsheet" ? (
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5" />
+                </div>
+              )}
+
+              <div className="truncate max-w-xs">
+                <span className="font-semibold text-xs block truncate">{currentAttachment.filename}</span>
+                <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">
+                  {currentAttachment.fileSize
+                    ? `${Math.round(currentAttachment.fileSize / 1024)} KB`
+                    : currentAttachment.fileType.toUpperCase()}
+                </span>
+              </div>
+
+              {onRemoveAttachment && (
+                <button
+                  type="button"
+                  onClick={onRemoveAttachment}
+                  className="p-1 hover:bg-slate-200/70 dark:hover:bg-white/10 rounded-full cursor-pointer ml-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  title="Remove attachment"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
           <textarea
-            value={promptInput}
-            onChange={(e) => setPromptInput(e.target.value)}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -124,7 +194,11 @@ export function GeminiEmptyState({
               }
             }}
             rows={3}
-            placeholder="Describe an app and let Gemini do the rest"
+            placeholder={
+              isListening
+                ? "Listening... speak now into your microphone"
+                : "Describe an app and let Gemini do the rest"
+            }
             className="w-full bg-transparent border-0 outline-none resize-none text-[15px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-sans"
           />
 
@@ -135,14 +209,19 @@ export function GeminiEmptyState({
               <button
                 type="button"
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
+                disabled={isUploading}
                 className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 title="Add files (Image Gallery or System File Manager)"
               >
-                <Plus
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    showAttachMenu ? "rotate-45" : ""
-                  }`}
-                />
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                ) : (
+                  <Plus
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      showAttachMenu ? "rotate-45" : ""
+                    }`}
+                  />
+                )}
               </button>
 
               {/* Native Selector Dropdown */}
@@ -246,15 +325,19 @@ export function GeminiEmptyState({
                 onClick={onToggleVoice}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                   isListening
-                    ? "bg-rose-500 text-white animate-pulse"
+                    ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30"
                     : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                 }`}
-                title="Voice Input (Speech-to-Text)"
+                title={isListening ? "Stop voice listening" : "Start voice input (Speech-to-Text)"}
               >
-                <Mic className="w-4 h-4" />
+                {isListening ? (
+                  <MicOff className="w-4 h-4 text-white" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
               </button>
 
-              {/* I'm feeling lucky Button */}
+              {/* I'm feeling lucky / Submit Button */}
               <button
                 type="button"
                 onClick={handleSend}
@@ -278,7 +361,7 @@ export function GeminiEmptyState({
         {suggestions.map((item, idx) => (
           <button
             key={idx}
-            onClick={() => onSelectPrompt(item.prompt)}
+            onClick={() => onSendMessage(item.prompt)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100/80 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-normal text-slate-700 dark:text-zinc-300 transition-all shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
           >
             <span className="text-sm shrink-0">{item.icon}</span>
@@ -298,7 +381,7 @@ export function GeminiEmptyState({
           Explore apps built with Gemini 4 Argon
         </span>
         <button
-          onClick={onBrowseGallery ? onBrowseGallery : () => onSelectPrompt("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")}
+          onClick={onBrowseGallery ? onBrowseGallery : () => onSendMessage("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")}
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
         >
           <span>Browse the app gallery</span>

@@ -117,3 +117,4 @@ def analyze_image(
         "ocr_extracted_text": prompt or "Gen UI Best Practice • CopilotKit & Antigravity SDK",
         "processed_at": "Just now",
     }
+

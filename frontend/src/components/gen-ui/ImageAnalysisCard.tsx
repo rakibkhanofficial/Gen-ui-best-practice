@@ -187,3 +187,4 @@ export function ImageAnalysisCard({ data }: ImageAnalysisCardProps) {
     </motion.div>
   );
 }
+

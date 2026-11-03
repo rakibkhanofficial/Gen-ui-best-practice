@@ -165,3 +165,4 @@ export function DocumentAnalysisCard({ data }: DocumentAnalysisCardProps) {
     </motion.div>
   );
 }
+

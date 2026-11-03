@@ -931,12 +931,17 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           {messages.length === 0 ? (
             <GeminiEmptyState
               userName={user?.name || "Explorer"}
-              onSelectPrompt={(prompt: string) => handleSendMessage(prompt)}
+              input={input}
+              setInput={setInput}
+              onSendMessage={(prompt?: string) => handleSendMessage(prompt)}
               onOpenUpload={() => setShowAttachMenu(true)}
               onToggleVoice={toggleVoiceInput}
               isListening={isListening}
               onAttachImage={() => imageInputRef.current?.click()}
               onAttachDoc={() => docInputRef.current?.click()}
+              currentAttachment={currentAttachment}
+              onRemoveAttachment={() => setCurrentAttachment(null)}
+              isUploading={isUploading}
               onBrowseGallery={() =>
                 handleSendMessage("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")
               }
@@ -1074,9 +1079,10 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           )}
         </div>
 
-        {/* 3. Bottom Prompt Input Bar with Plus Attachment Button */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 dark:from-[#131314] dark:via-[#131314]/90 to-transparent pointer-events-none">
-          <div className="max-w-3xl mx-auto pointer-events-auto">
+        {/* 3. Bottom Prompt Input Bar with Plus Attachment Button - Rendered only when messages exist */}
+        {messages.length > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 dark:from-[#131314] dark:via-[#131314]/90 to-transparent pointer-events-none">
+            <div className="max-w-3xl mx-auto pointer-events-auto">
             {/* Active Attachment Pill above Input */}
             {currentAttachment && (
               <div className="flex items-center gap-2 mb-2 p-1.5 pr-2.5 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 w-fit text-xs text-slate-800 dark:text-zinc-200 shadow-sm animate-in fade-in slide-in-from-bottom-1">
@@ -1293,6 +1299,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
             </p>
           </div>
         </div>
+        )}
       </div>
 
       {/* 4. Full Page Drag and Drop Overlay */}
