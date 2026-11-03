@@ -23,7 +23,9 @@ import {
   Cpu,
   Layers,
   User,
-  Bot
+  Bot,
+  Code2,
+  Briefcase
 } from "lucide-react";
 
 import { getGuestUser, UserSession } from "@/lib/auth";
@@ -34,6 +36,8 @@ import { PlanningBoard } from "@/components/gen-ui/PlanningBoard";
 import { ProductCatalogCard } from "@/components/gen-ui/ProductCatalogCard";
 import { RouteDistanceCard } from "@/components/gen-ui/RouteDistanceCard";
 import { HITLApprovalCard } from "@/components/gen-ui/HITLApprovalCard";
+import { CodeStudioCard } from "@/components/gen-ui/CodeStudioCard";
+import { JobBoardCard } from "@/components/gen-ui/JobBoardCard";
 import { StreamingMessage } from "@/components/chat/StreamingMessage";
 import { AgentReasoningStage, AgentStage } from "@/components/chat/AgentReasoningStage";
 import { FileUploadZone } from "@/components/chat/FileUploadZone";
@@ -259,6 +263,10 @@ export default function ChatPage() {
         return <ProductCatalogCard data={data} status="complete" />;
       case "calculate_route_distance":
         return <RouteDistanceCard data={data} status="complete" />;
+      case "generate_code_snippet":
+        return <CodeStudioCard data={data} status="complete" />;
+      case "search_jobs":
+        return <JobBoardCard data={data} status="complete" />;
       case "request_sensitive_action":
         return (
           <HITLApprovalCard
@@ -344,6 +352,22 @@ export default function ChatPage() {
         >
           <Navigation className="w-3.5 h-3.5 text-teal-400" />
           <span>🗺️ SF to Tahoe Route</span>
+        </button>
+
+        <button
+          onClick={() => triggerPreset("Show production TypeScript and Python code for FastAPI SSE Streaming")}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-950/70 hover:bg-blue-900/80 border border-blue-800 text-xs text-blue-300 transition-colors"
+        >
+          <Code2 className="w-3.5 h-3.5 text-blue-400" />
+          <span>💻 Code Studio (SSE Stream)</span>
+        </button>
+
+        <button
+          onClick={() => triggerPreset("Search Frontend Next.js and AI Engineer jobs in Dhaka on BDJobs and LinkedIn")}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-800 text-xs text-cyan-300 transition-colors"
+        >
+          <Briefcase className="w-3.5 h-3.5 text-cyan-400" />
+          <span>💼 BDJobs &amp; LinkedIn Search</span>
         </button>
 
         <button

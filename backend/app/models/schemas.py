@@ -185,3 +185,48 @@ class HITLActionData(BaseModel):
     requested_by: str
     requires_confirmation_token: bool = True
 
+
+
+# --- 7. Interactive Code Studio Schemas ---
+class CodeFile(BaseModel):
+    filename: str
+    language: str
+    code: str
+    explanation: str
+    output_simulation: Optional[str] = None
+    complexity: Optional[str] = "O(n)"
+
+
+class CodeSnippetData(BaseModel):
+    title: str
+    description: str
+    active_language: str
+    execution_command: str
+    files: List[CodeFile]
+
+
+# --- 8. Job Board & Search Schemas (BDJobs & LinkedIn) ---
+class JobListing(BaseModel):
+    id: str
+    title: str
+    company: str
+    company_logo: Optional[str] = None
+    location: str
+    platform: Literal["BDJobs", "LinkedIn", "RemoteGlobal"]
+    salary_range: str
+    work_type: Literal["Remote", "Hybrid", "On-site"]
+    experience_level: Literal["Junior", "Mid-Level", "Senior", "Lead"]
+    tags: List[str]
+    posted_time: str
+    description: str
+    apply_url: str
+    match_score: int
+    interview_tips: Optional[List[str]] = None
+
+
+class JobSearchData(BaseModel):
+    query: str
+    location: str
+    total_jobs: int
+    featured_platform: str
+    jobs: List[JobListing]

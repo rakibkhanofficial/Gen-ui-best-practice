@@ -65,3 +65,4 @@ def upload_to_silo(filename: str, file_bytes: bytes, content_type: str = "applic
     except Exception as e:
         logger.error(f"Failed to upload to Silo: {e}")
         return {"uploaded_to_silo": False, "error": str(e)}
+

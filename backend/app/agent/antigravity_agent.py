@@ -10,6 +10,8 @@ from app.agent.tools.planning_tool import generate_planning_board
 from app.agent.tools.product_tool import search_product_catalog
 from app.agent.tools.route_tool import calculate_route_distance
 from app.agent.tools.operations_tool import request_sensitive_action, execute_approved_action
+from app.agent.tools.code_tool import generate_code_snippet
+from app.agent.tools.job_tool import search_jobs
 
 logger = logging.getLogger("genui.agent")
 
@@ -22,6 +24,8 @@ TOOL_REGISTRY = {
     "calculate_route_distance": calculate_route_distance,
     "request_sensitive_action": request_sensitive_action,
     "execute_approved_action": execute_approved_action,
+    "generate_code_snippet": generate_code_snippet,
+    "search_jobs": search_jobs,
 }
 
 
@@ -130,6 +134,36 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     "required": ["action_id", "decision"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_code_snippet",
+                "description": "Generate multi-file type-safe code solutions with simulated execution output and syntax complexity.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {"type": "string", "description": "The coding problem or framework implementation"},
+                        "language": {"type": "string", "description": "Programming language (TypeScript, Python, Go, Rust)"}
+                    },
+                    "required": ["topic"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_jobs",
+                "description": "Search tech job listings aggregated from BDJobs, LinkedIn, and remote platforms.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Job title or skill (e.g. 'Frontend', 'Next.js', 'AI')"},
+                        "location": {"type": "string", "description": "Location (e.g. 'Dhaka', 'Bangladesh', 'Remote')"},
+                        "platform": {"type": "string", "enum": ["All", "BDJobs", "LinkedIn"]}
+                    }
+                }
+            }
         }
     ]
 
@@ -137,6 +171,22 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
 def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     """Heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
     p = prompt.lower()
+    if any(k in p for k in ["code", "typescript", "python script", "how to write", "snippet", "implementation", "algorithm", "coder"]):
+        lang = "TypeScript"
+        if "python" in p:
+            lang = "Python"
+        elif "go" in p or "golang" in p:
+            lang = "Go"
+        return {"tool": "generate_code_snippet", "args": {"topic": prompt, "language": lang}}
+
+    if any(k in p for k in ["job", "jobs", "bdjob", "bdjobs", "linkedin", "hiring", "career", "vacancy", "internship", "developer job"]):
+        platform = "All"
+        if "bdjob" in p:
+            platform = "BDJobs"
+        elif "linkedin" in p:
+            platform = "LinkedIn"
+        return {"tool": "search_jobs", "args": {"query": prompt, "location": "Dhaka, Bangladesh", "platform": platform}}
+
     if any(k in p for k in ["weather", "temperature", "forecast", "rain", "sunny", "climate"]):
         city = "San Francisco"
         for c in ["tokyo", "london", "new york", "paris", "dhaka", "chicago", "seattle"]:
