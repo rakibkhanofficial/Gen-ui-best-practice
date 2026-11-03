@@ -1,145 +1,138 @@
 # Generative UI (GenUI) Department Presentation Guide
 
-A structured guide for presenting this application to your team, engineering leadership, and product department.
+A comprehensive, scenario-by-scenario presentation guide for showcasing **Generative UI Studio** to your team, engineering leadership, and product department.
 
 ---
 
-## 1. Presentation Structure (15–20 Minutes)
+## 1. Presentation Structure (20–25 Minutes)
 
 | Section | Duration | Key Talking Point |
 | :--- | :--- | :--- |
-| **I. The Problem with 1st-Gen Chatbots** | 3 mins | Text streaming is inadequate for real work (finance, roadmaps, e-commerce, sensitive actions). |
-| **II. What is Generative UI?** | 3 mins | Moving from text responses to dynamic, interactive React components composed on the fly. |
-| **III. Live Demo Walkthrough (6 Scenarios)** | 8 mins | Triggering each GenUI component using the preset buttons & demonstrating interactivity. |
-| **IV. Technical Architecture & Protocols** | 4 mins | Google Antigravity SDK, AG-UI Protocol, CopilotKit Runtime, Next.js 16, and UV terminal runner. |
-| **V. Q&A and Engineering Roadmap** | 2 mins | Google OAuth upgrade, custom database models, enterprise agent deployment. |
+| **I. The Problem with 1st-Gen Chatbots** | 3 mins | Text streaming is inadequate for real-world tasks (engineering planning, finance, routing, medical decisions). |
+| **II. What is Generative UI?** | 3 mins | Moving from plain markdown to stateful, interactive React components composed dynamically on the fly. |
+| **III. Live Demo Walkthrough (12+ Scenarios)** | 12 mins | Triggering each GenUI component using natural prompts & demonstrating rich interactivity. |
+| **IV. Technical Architecture & Protocols** | 4 mins | SSE streaming, CopilotKit runtime, Google GenAI SDK (Gemini 3.8), and Docker multi-mode deployment. |
+| **V. Q&A and Enterprise Roadmap** | 3 mins | Multi-agent coordination, database integrations, and on-premise container deployment. |
 
 ---
 
-## 2. Live Demo Script (Step-by-Step)
+## 2. Live Demo Script (Step-by-Step Walkthrough)
 
-Open your browser to `http://localhost:3000`.
+Open your browser to `http://localhost:3000` (or `http://localhost:80` if running via Nginx).
 
 ### Scene 1: Guest Authentication & Studio Entry
-1. Explain: *"We built a seamless authentication gate with guest login so developers and stakeholders can test immediately without configuring OAuth upfront. NextAuth Google login is plugged in for Phase 2."*
-2. Click **"Continue as Guest"**.
-3. You are redirected to `http://localhost:3000/chat`.
-
-### Scene 2: Atmospheric Weather Card (Framer Motion & Micro-Forecasts)
-1. Click the preset: **"🌤️ Tokyo Weather"** (or type *"What is the weather in Tokyo?"*).
-2. Point out:
-   - Notice the **inProgress skeleton** as the agent determines the tool.
-   - Once loaded, the component renders with ambient glassmorphism and animated atmospheric conditions.
-   - Click the **°C / °F toggle** in the card to prove it is a real interactive React component with local state, not a static image or markdown table.
-   - Point out the 5-day micro-forecast and Air Quality Index (AQI) gauges.
-
-### Scene 3: Enterprise Sales Analytics & Zen Table
-1. Click the preset: **"📊 Q3 Zen Sales & Table"** (or type *"Show sales analytics for Q3"*).
-2. Point out:
-   - Modern BI dashboard inspired by Zen Journey.
-   - Interactive Recharts bar/trend visualization comparing Achieved Revenue vs Target vs OpEx.
-   - Hover over the chart bars to reveal the interactive tooltips.
-   - Click the **"Ledger"** tab in the card. Show the sortable/filterable transaction table.
-   - Filter transactions by **Enterprise**, **Growth**, or **Starter** tiers.
-   - Explain: *"The agent selected the chart types, assembled the financial KPIs, and returned structured data that hydrated our design-system components."*
-
-### Scene 4: Miro-Style Visual Sticky Note Planning Board
-1. Click the preset: **"📝 Miro Sticky Board"** (or type *"Plan architecture roadmap for our GenUI deployment"*).
-2. Point out:
-   - Visual Kanban lanes: *Ideation & Backlog*, *In Progress*, *Review & Validation*, and *Shipped & Verified*.
-   - Interactive sticky notes with custom colors, tags, and assignees.
-   - Click the **Thumbs Up (vote)** button on any note to watch the vote counter increment live.
-   - Click the **→ arrow** on a note to move it to the next column. When a card enters the *Shipped* column, notice the **confetti celebration** trigger!
-   - Type a new idea in the quick input (e.g., *"Add voice recognition"*) and click **"+ Stick"** to add a live note to the board.
-
-### Scene 5: Tech Spec Comparison Matrix (E-Commerce)
-1. Click the preset: **"💻 Tech Specs Matrix"** (or type *"Compare MacBook Pro M4 Max vs ThinkPad P1 AI Studio"*).
-2. Point out:
-   - Side-by-side spec comparison table for complex purchase decisions.
-   - Highlighted technical metrics (Memory Bandwidth, Neural Engine TOPS, GPU cores).
-   - Click **"Select Model"** on either card to see real-time selection toggle.
-
-### Scene 6: Route & Distance Explorer (Geo Navigation)
-1. Click the preset: **"🗺️ SF to Tahoe Route"** (or type *"What is the driving distance from San Francisco to Lake Tahoe?"*).
-2. Point out:
-   - Multi-modal comparison (Driving: 3 hr 42 min vs Transit vs Flying).
-   - Waypoints along the mountain pass (Bay Bridge, Sacramento Junction, Donner Summit).
-   - Click **"Turn-by-turn Navigation Steps"** to expand the step-by-step route directions.
-
-### Scene 7: Human-in-the-Loop (HITL) Action Approval Card ⭐ *Crucial Section*
-1. Click the preset: **"🛡️ HITL Refund Approval"** (or type *"Request refund of $1,250 for order ORD-8921"*).
-2. Point out to your department:
-   - *"In enterprise agents, autonomous actions can be dangerous (financial refunds, deleting database tables, production deployments). Traditional bots either execute blindly or fail."*
-   - *"Here, our Google Antigravity SDK safety policy (`policy.ask_user`) halts the agent execution before the action is executed and surfaces a Human-in-the-Loop approval card."*
-   - Show the **60-second countdown timer** ticking down.
-   - Review the **Mutation Diff** showing the before and after state across systems (Stripe Payment Ledger & Salesforce CRM).
-   - Click **"Approve & Execute Action"** (or **"Reject & Abort"**).
-   - Notice the instant feedback: state updates to *"Action Authorized & Executed by Human Operator"*, confetti triggers, and the agent audit log on the right sidebar records the decision!
-
-### Scene 8: Uploading Real Excel Sales Data & Streamdown Markdown Streaming ⭐
-1. Click the preset: **"📁 Upload Excel Sales Data"** or click the **📎 Paperclip** icon next to the chat input.
-2. In the modal, explain:
-   - *"We use pgsty/silo (S3-compatible storage) along with a direct parsing engine powered by pandas and openpyxl."*
-   - If you don't have an Excel spreadsheet handy during the presentation, click **"Download Sample Sales Excel"** inside the modal, then drag & drop the downloaded `sample_enterprise_sales.xlsx` file right into the upload box!
-3. Watch the real agent reasoning stages:
-   - **Thinking**: *"Analyzing user prompt with Gemini 3.8 Flash..."*
-   - **Searching**: *"Inspecting uploaded spreadsheet: sample_enterprise_sales.xlsx..."*
-   - **Analysing**: *"Executing pandas aggregate routines (summing revenues, calculating deal sizes, category shares)..."*
-4. Notice how the text response streams in fluidly without flickering or broken markdown, powered by **`streamdown` (Vercel)**!
-5. Below the streamed explanation, notice the **Zen Sales Dashboard & Transaction Ledger** dynamically mounted with the real data computed from the uploaded spreadsheet!
-
-### Scene 9: Interactive Code Studio & Execution Simulator
-1. Click the preset: **"💻 Code Studio (SSE Stream)"** (or type *"Show me TypeScript code for SSE streaming"*).
-2. Point out:
-   - Multi-file tab selector (`streamClient.ts`, `stream_server.py`, `handler.go`).
-   - Line numbers, syntax highlighting, and architecture insight banner.
-   - Click **"Console"** or click **"Simulate Run"** to execute the simulated worker process and inspect stdout/stderr terminal output.
-   - Click the **Copy Code** button or the **Download File** button.
-
-### Scene 10: BDJobs & LinkedIn Career Hub
-1. Click the preset: **"💼 BDJobs & LinkedIn Search"** (or type *"Search frontend developer jobs on BDJobs and LinkedIn"*).
-2. Point out:
-   - Real-world tech market aggregation for Bangladesh (Brain Station 23, Therap BD, Pathao, Vercel Remote).
-   - Platform badges (Orange BDJobs vs. Blue LinkedIn).
-   - Monthly salary ranges in BDT (৳) and USD ($), with work mode (Hybrid, On-site, Remote).
-   - Profile match score (e.g. 98% Match).
-   - Click **"AI Interview Preparation Tips"** to reveal tailored interview strategy questions generated by **Gemini 3.8 Flash**!
-   - Click **"Apply on BDJobs / LinkedIn"** to view external application routing.
+1. Explain: *"We built a frictionless authentication gate with guest login so developers and stakeholders can test immediately without configuring OAuth upfront. NextAuth session handling is ready for production."*
+2. Click **"Continue as Guest"** to enter `http://localhost:3000/chat`.
 
 ---
 
-## 3. Explaining the Technical Architecture
+### Scene 2: Interactive Visual Planning Board (Excalidraw MCP) ⭐ *High Impact*
+1. **Prompt**: *"Generate an Excalidraw architecture diagram and sprint plan for our GenUI release"*
+2. **Key Talking Points**:
+   - Point out the **progressive SVG rendering** creating hand-drawn visual diagrams in real time.
+   - Show the **automatic fit-to-screen scale calculation**: All phases (Discovery, Active Development, Review) fit perfectly without manual zoom adjustments.
+   - Click the **[Fit]** button in the zoom pill to demonstrate auto-centering.
+   - Click **Export .excalidraw** to download the schema for import into excalidraw.com.
 
-```
-User Prompt
-    │
-    ▼
-Next.js 16 (App Router + CopilotKit Core)
-    │
-    ├── (SSE / AG-UI Protocol) ───────────┐
-    │                                     ▼
-Next.js API Gateway (/api/copilotkit) ──> Python Agent Backend (FastAPI + UV)
-                                              │
-                                              ├── Google Antigravity SDK
-                                              │   ├── LocalAgentConfig
-                                              │   ├── Custom Tools Registry
-                                              │   └── Safety Policy (ask_user)
-                                              │
-                                              ▼
-                                         Docker Auxiliary Services
-                                         ├── PostgreSQL (Chat History)
-                                         └── Redis (State & Event Bus)
-```
+---
 
-### Highlights for Engineering Leadership:
-1. **Developer Experience (DX)**:
-   - Frontend runs via `npm run dev` with Next.js 16 Turbopack.
-   - Backend runs via `uv run` with instant Python hot-reloading (`--reload`).
-   - Docker is used **only** for backing databases (Postgres & Redis) — **no Docker build time** on Python or React code changes!
-2. **Deterministic UI Rendering**:
-   - The LLM does NOT generate raw unpredictable HTML.
-   - It outputs typed, validated JSON schemas conforming to Pydantic models.
-   - React components are statically typed, accessible, and theme-consistent.
-3. **Safety & Compliance**:
-   - Sensitive mutations require explicit Human-in-the-Loop approval before dispatch.
+### Scene 3: Monaco Code Studio & Sandboxed Artifact Runner ⭐
+1. **Prompt**: *"Write a high-performance Python script for async SSE streaming with FastAPI, and include an interactive HTML tester"*
+2. **Key Talking Points**:
+   - Multi-file tab architecture with language indicators.
+   - Monaco code viewing with syntax highlighting, token count, and 1-click clipboard copy.
+   - For single-file HTML/CSS/JS artifacts, click the **"Live Preview" / "Run Artifact"** tab to execute the application inside a secure, sandboxed `iframe`.
 
+---
+
+### Scene 4: OpenStreetMap OSRM Direction & Route Explorer ⭐
+1. **Prompt**: *"Show the direction or route from Mohakhali to Dhaka Airport Road"*
+2. **Key Talking Points**:
+   - Clean, organized routing header displaying source, destination, and OSRM status badge.
+   - Interactive Leaflet/OpenStreetMap visual geometry showing the exact highway path.
+   - Multi-modal comparisons (Driving 18-25 min, Transit 35-45 min, Walking 1 hr 55 min).
+   - Elevated Expressway toll estimations in BDT (৳150 - ৳220).
+   - One-click Google Maps fallback button.
+
+---
+
+### Scene 5: Authentic Job Board with Bangladesh Conglomerate Branding ⭐
+1. **Prompt**: *"Find Senior Software Engineer jobs at Beximco Group or Square Group in Dhaka"*
+2. **Key Talking Points**:
+   - Real, authentic job cards across leading Bangladesh conglomerates (Beximco, Square, ACI, Bashundhara, Walton, PRAN-RFL, Grameenphone, BRAC).
+   - Crisp, high-definition company PNG logos loaded locally (zero missing images or generic stock photos).
+   - Transparent salary ranges in BDT (e.g. ৳180,000 - ৳260,000 / month).
+   - Expandable **Interview Prep & Role Guidance** tips tailored to each position.
+
+---
+
+### Scene 6: Multi-Currency Flight Search & Booking Matrix ⭐
+1. **Prompt**: *"Search flights from Delhi to Dhaka"* or *"Find flights from Dhaka to Cox's Bazar"*
+2. **Key Talking Points**:
+   - Real airline fleet routing across India-Bangladesh and domestic Bangladesh corridors.
+   - Verified official logos for **Air India**, **SpiceJet**, **Biman Bangladesh**, **US-Bangla**, **NOVOAIR**, and **Air Astra**.
+   - Dual currency support: automatic price display in **BDT (৳)** and **INR (₹)** with exchange rate breakdown.
+   - Baggage allowance and non-stop / 1-stop indicators.
+
+---
+
+### Scene 7: Doctor Finder & Medical Specialist Card
+1. **Prompt**: *"Find the top best cardiologist doctors in Dhaka Bangladesh"*
+2. **Key Talking Points**:
+   - Specialist medical profiles with degrees, hospital affiliations, consultation fees in BDT, and chamber addresses.
+   - Interactive **"Book Appointment"** modal with day and time slot pickers.
+   - Verified avatar badges with reliable fallback monograms.
+
+---
+
+### Scene 8: Medicine Information & Generic Alternatives
+1. **Prompt**: *"Tell me about Napa and suggest alternatives"*
+2. **Key Talking Points**:
+   - Identifies generic name (Paracetamol), therapeutic class, dosage forms, and indications.
+   - Lists alternatives from leading Bangladesh pharmaceutical manufacturers: **Xcel by ACI**, **Ace by Square**, **Fast by Beximco**.
+   - Includes precautions, pregnancy safety, and side effects.
+
+---
+
+### Scene 9: ACI AgTech & Agriculture E-Commerce
+1. **Prompt**: *"Show ACI agriculture products"*
+2. **Key Talking Points**:
+   - Authentic products sourced from ACI Agribusiness (hybrid seeds, bio-fertilizers, smart sprayers).
+   - Clean, modern e-commerce product cards showing prices in BDT, user ratings, in-stock badges, and delivery guarantees.
+
+---
+
+### Scene 10: Location-Aware Hotel Finder
+1. **Prompt**: *"Find luxury hotels in Dhaka near Gulshan or airport road"*
+2. **Key Talking Points**:
+   - Curated accommodations with star ratings, per-night prices in BDT, amenity chips, and booking links.
+
+---
+
+### Scene 11: Mathematical Derivations & LaTeX Formulas
+1. **Prompt**: *"Derive the Euler-Lagrange equation and solve the brachistochrone problem"*
+2. **Key Talking Points**:
+   - Streamdown KaTeX rendering multi-line mathematical proofs and differential equations with crystal-clear typography.
+
+---
+
+### Scene 12: Human-in-the-Loop (HITL) Safety Gatekeeper
+1. **Prompt**: *"Request refund of $1,250 for order ORD-8921"*
+2. **Key Talking Points**:
+   - Safety policy halts execution before executing destructive or high-value mutations.
+   - 60-second ticking countdown timer.
+   - Side-by-side JSON mutation diff.
+   - Live **Approve** and **Reject** buttons that resume agent state and trigger celebration confetti upon completion.
+
+---
+
+## 3. Architecture Deep-Dive for Technical Leaders
+
+1. **Protocol Decoupling**:
+   - SSE streaming for token-by-token low-latency rendering.
+   - CopilotKit V2 runtime for declarative agent UI coordination.
+2. **Zero Docker Rebuild Friction in Development**:
+   - Run backing services in Docker (`docker compose -f docker-compose.deps.yml up -d`).
+   - Run `uv run uvicorn` and `npm run dev` in your terminal for sub-second hot reload.
+3. **Enterprise Production Ready**:
+   - Full monorepo production stack via `docker-compose.prod.yml` with multi-stage standalone Next.js and Uvicorn workers behind an unbuffered Nginx reverse proxy.

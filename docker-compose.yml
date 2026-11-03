@@ -1,7 +1,10 @@
 # Docker Compose for GenUI Practice & Presentation Platform
 # Backing services: PostgreSQL, Redis, and Silo S3-Compatible Object Storage (pgsty/silo)
-# Application code runs directly on the host (Backend: `uv run`, Frontend: `npm run dev`)
-# No Docker image rebuilding required when changing application code!
+# 
+# For other Docker configurations:
+#   - Full Local Monorepo with Nginx: docker compose -f docker-compose.local.yml up --build
+#   - Production Multi-Stage Stack:   docker compose -f docker-compose.prod.yml up -d --build
+#   - Backing Services Only (Terminal Run): docker compose up -d
 
 services:
   postgres:

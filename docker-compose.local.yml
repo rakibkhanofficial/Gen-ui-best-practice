@@ -1,0 +1,114 @@
+# Setup 1: Local Full-Stack Monorepo with Nginx Reverse Proxy
+# Runs entire stack in Docker with hot-reload enabled via volume mounts.
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: genui-local-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: genui-local-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_uv_cache:/root/.cache/uv
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/genui_db
+      - REDIS_URL=redis://redis:6379/0
+      - S3_ENDPOINT_URL=http://silo:9000
+      - S3_ACCESS_KEY_ID=siloadmin
+      - S3_SECRET_ACCESS_KEY=silopassword
+      - S3_BUCKET_NAME=genui-artifacts
+      - CORS_ORIGINS=["http://localhost", "http://localhost:3000", "http://localhost:80", "http://127.0.0.1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      silo:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: genui-local-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost/api
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
+      - NEXTAUTH_URL=http://localhost
+      - NEXTAUTH_SECRET=genui-super-secret-development-key-32chars
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: genui-local-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: genui_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d genui_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: genui-local-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_local_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  silo:
+    image: pgsty/silo:latest
+    container_name: genui-local-silo
+    restart: unless-stopped
+    command: silo server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: siloadmin
+      MINIO_ROOT_PASSWORD: silopassword
+    volumes:
+      - silo_local_data:/data
+
+volumes:
+  backend_uv_cache:
+  postgres_local_data:
+  redis_local_data:
+  silo_local_data:
