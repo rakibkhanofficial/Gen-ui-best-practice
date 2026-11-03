@@ -287,3 +287,4 @@ When presenting this application to your team:
 2. **Demonstrate Interactivity**: Click the **°C/°F toggle**, move sticky notes in the **Miro Board** to trigger confetti, and filter the **Sales Ledger**. Emphasize that these are native, responsive React components with local state.
 3. **Show the Safety Barrier**: Trigger the **HITL Refund Gate** to demonstrate the 60-second countdown and explain how enterprise agents enforce safety boundaries before touching production databases.
 4. **Highlight the Architecture**: Explain how the **Google Antigravity SDK**, **Gemini 3.8 Flash**, and **CopilotKit V2** work in harmony across a single monorepo.
+

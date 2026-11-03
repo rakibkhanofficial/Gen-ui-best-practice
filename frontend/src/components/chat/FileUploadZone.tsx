@@ -22,8 +22,6 @@ interface FileUploadZoneProps {
   onClose?: () => void;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
 export function FileUploadZone({ onFileUploaded, onClose }: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -60,7 +58,7 @@ export function FileUploadZone({ onFileUploaded, onClose }: FileUploadZoneProps)
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/upload`, {
+      const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
@@ -85,7 +83,7 @@ export function FileUploadZone({ onFileUploaded, onClose }: FileUploadZoneProps)
   };
 
   const handleDownloadSample = () => {
-    window.open(`${BACKEND_URL}/api/download-sample-excel`, "_blank");
+    window.open("/api/download-sample-excel", "_blank");
   };
 
   return (

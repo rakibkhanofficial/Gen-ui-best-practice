@@ -87,8 +87,8 @@ export function HITLApprovalCard({
       if (onDecision && data?.action_id) {
         await onDecision(data.action_id, decision);
       } else {
-        // Fallback direct backend call
-        await fetch("http://localhost:8000/api/actions/approve", {
+        // Fallback backend call via same-origin route proxy
+        await fetch("/api/actions/approve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action_id: data?.action_id, decision }),

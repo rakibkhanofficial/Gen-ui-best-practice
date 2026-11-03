@@ -37,8 +37,6 @@ import { HITLApprovalCard } from "@/components/gen-ui/HITLApprovalCard";
 import { CodeStudioCard } from "@/components/gen-ui/CodeStudioCard";
 import { JobBoardCard } from "@/components/gen-ui/JobBoardCard";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
 export interface MessageItem {
   id: string;
   role: "user" | "assistant";
@@ -290,7 +288,8 @@ export default function ChatPage() {
     abortControllerRef.current = controller;
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/chat/stream`, {
+      // Connect to Next.js API route proxy (same origin, no direct port 8000 calls)
+      const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -311,17 +310,72 @@ export default function ChatPage() {
       let accumulatedContent = "";
       let latestGenUI: any = null;
       let activeStage: AgentStage = "Thinking";
-      let activeStageDetail = "";
+      let activeStageDetail = "Gemini 3.8 Flash evaluating query & tools...";
+
+      const processParsedEvent = (parsed: any, eventType: string) => {
+        const evt = (parsed.event || eventType || "").toLowerCase();
+
+        // 1. Stage / Status updates
+        if (evt === "status" || evt === "stage" || parsed.stage) {
+          if (parsed.stage) activeStage = parsed.stage as AgentStage;
+          if (parsed.detail) activeStageDetail = parsed.detail;
+        }
+
+        // 2. Delta / Text updates
+        if (evt === "delta" || evt === "text_delta" || parsed.text || parsed.delta) {
+          const deltaText = parsed.text ?? parsed.delta ?? "";
+          accumulatedContent += deltaText;
+        }
+
+        // 3. GenUI / Tool Call component instantiation
+        if (evt === "genui" || evt === "tool_call" || (parsed.tool && parsed.data)) {
+          latestGenUI = {
+            tool: parsed.tool,
+            data: parsed.data,
+          };
+          if (parsed.stage) {
+            activeStage = parsed.stage as AgentStage;
+          }
+        }
+
+        // 4. Stream completion
+        if (
+          evt === "done" ||
+          evt === "complete" ||
+          parsed.stage === "Completed" ||
+          parsed.status === "completed"
+        ) {
+          activeStage = "Completed";
+        }
+
+        // Update assistant message state
+        setMessages((prev) => {
+          const updated = prev.map((msg) => {
+            if (msg.id === assistantMsgId) {
+              return {
+                ...msg,
+                content: accumulatedContent,
+                stage: activeStage,
+                stageDetail: activeStageDetail,
+                genui: latestGenUI || msg.genui,
+              };
+            }
+            return msg;
+          });
+          saveThreadMessages(currentThreadId, updated);
+          return updated;
+        });
+      };
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
 
-        for (const block of lines) {
+        for (const block of blocks) {
           if (!block.trim()) continue;
 
           let eventType = "message";
@@ -339,44 +393,47 @@ export default function ChatPage() {
 
           try {
             const parsed = JSON.parse(dataStr);
-
-            if (eventType === "stage") {
-              activeStage = parsed.stage as AgentStage;
-              activeStageDetail = parsed.detail || "";
-            } else if (eventType === "text_delta") {
-              accumulatedContent += parsed.delta || "";
-            } else if (eventType === "tool_call") {
-              latestGenUI = {
-                tool: parsed.tool,
-                data: parsed.data,
-              };
-              activeStage = "Completed";
-            } else if (eventType === "complete") {
-              activeStage = "Completed";
-            }
-
-            // Update assistant message in real-time
-            setMessages((prev) => {
-              const updated = prev.map((msg) => {
-                if (msg.id === assistantMsgId) {
-                  return {
-                    ...msg,
-                    content: accumulatedContent,
-                    stage: activeStage,
-                    stageDetail: activeStageDetail,
-                    genui: latestGenUI || msg.genui,
-                  };
-                }
-                return msg;
-              });
-              saveThreadMessages(currentThreadId, updated);
-              return updated;
-            });
+            processParsedEvent(parsed, eventType);
           } catch {
             // Ignore non-JSON chunks
           }
         }
       }
+
+      // Process any trailing bytes remaining in buffer
+      if (buffer.trim()) {
+        let eventType = "message";
+        let dataStr = "";
+        for (const line of buffer.split("\n")) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            dataStr = line.slice(6).trim();
+          }
+        }
+        if (dataStr) {
+          try {
+            const parsed = JSON.parse(dataStr);
+            processParsedEvent(parsed, eventType);
+          } catch {}
+        }
+      }
+
+      // Mark stage as completed upon stream termination
+      setMessages((prev) => {
+        const updated = prev.map((msg) => {
+          if (msg.id === assistantMsgId) {
+            return {
+              ...msg,
+              stage: "Completed" as AgentStage,
+              genui: latestGenUI || msg.genui,
+            };
+          }
+          return msg;
+        });
+        saveThreadMessages(currentThreadId, updated);
+        return updated;
+      });
     } catch (err: any) {
       if (err.name === "AbortError") {
         // User deliberately aborted stream
@@ -386,7 +443,7 @@ export default function ChatPage() {
             msg.id === assistantMsgId
               ? {
                   ...msg,
-                  content: `⚠️ Connection to Gemini 3.8 Flash backend failed: ${err.message}. Please verify the FastAPI service is running on port 8000.`,
+                  content: `⚠️ Connection error: ${err.message}. Please verify the agent service is active.`,
                   stage: "Completed",
                 }
               : msg
