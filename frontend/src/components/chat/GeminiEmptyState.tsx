@@ -22,6 +22,11 @@ import {
   Sun,
   FileSearch,
   Calendar,
+  Pill,
+  Stethoscope,
+  Sprout,
+  MapPin,
+  Calculator,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -88,6 +93,31 @@ export function GeminiEmptyState({
 
   // Real, dynamic GenUI capabilities of our project
   const suggestions = [
+    {
+      icon: Pill,
+      label: "Napa & ACI Xcel",
+      prompt: "Find Napa or ACI Xcel alternatives with dosage and pricing",
+    },
+    {
+      icon: Stethoscope,
+      label: "Top Cardiologists",
+      prompt: "Find the top 5 best cardiologist doctor in Bangladesh or Dhaka",
+    },
+    {
+      icon: Sprout,
+      label: "ACI Agri Products",
+      prompt: "Show ACI agriculture products, hybrid seeds, and fertilizers",
+    },
+    {
+      icon: MapPin,
+      label: "Hospital Map",
+      prompt: "Where is National Heart Foundation Hospital on Google Maps",
+    },
+    {
+      icon: Calculator,
+      label: "Math Quadratic Solver",
+      prompt: "Solve quadratic equation x^2 - x - 6 = 0 step by step",
+    },
     {
       icon: Plane,
       label: "Flights to Tokyo",

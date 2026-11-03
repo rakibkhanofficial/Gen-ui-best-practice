@@ -21,6 +21,11 @@ from app.agent.tools.youtube_tool import search_youtube_videos
 from app.agent.tools.website_tool import fetch_website_info
 from app.agent.tools.document_tool import analyze_document, analyze_image
 from app.agent.tools.meeting_tool import schedule_meeting
+from app.agent.tools.medicine_tool import search_medicines
+from app.agent.tools.doctor_tool import search_doctors
+from app.agent.tools.agri_tool import search_agri_products
+from app.agent.tools.map_tool import search_places_map
+from app.agent.tools.math_tool import solve_math_problem
 
 logger = logging.getLogger("genui.agent")
 
@@ -42,6 +47,11 @@ TOOL_REGISTRY = {
     "analyze_document": analyze_document,
     "analyze_image": analyze_image,
     "schedule_meeting": schedule_meeting,
+    "search_medicines": search_medicines,
+    "search_doctors": search_doctors,
+    "search_agri_products": search_agri_products,
+    "search_places_map": search_places_map,
+    "solve_math_problem": solve_math_problem,
 }
 
 
@@ -273,6 +283,11 @@ class ToolCallDecision(BaseModel):
         "search_youtube_videos",
         "fetch_website_info",
         "schedule_meeting",
+        "search_medicines",
+        "search_doctors",
+        "search_agri_products",
+        "search_places_map",
+        "solve_math_problem",
         "none"
     ]
     query: Optional[str] = None
@@ -287,6 +302,11 @@ class ToolCallDecision(BaseModel):
     quarter: Optional[str] = None
     language: Optional[str] = None
     duration_minutes: Optional[int] = None
+    specialty: Optional[str] = None
+    location: Optional[str] = None
+    category: Optional[str] = None
+    expression: Optional[str] = None
+    problem_type: Optional[str] = None
 
 
 def route_intent_with_llm(prompt: str, client: Any) -> Optional[Dict[str, Any]]:
@@ -297,8 +317,13 @@ def route_intent_with_llm(prompt: str, client: Any) -> Optional[Dict[str, Any]]:
     try:
         decision_prompt = f"""You are the Generative UI Tool Decision Engine.
 Available interactive tools:
+- search_medicines(query): For medicine/drug information, generic alternatives (e.g. Napa vs ACI's Xcel, Ace, Paracetamol), dosages, indications, pharmacy pricing.
+- search_doctors(query, specialty, location): For finding doctors, top specialists, cardiologists in Dhaka/Bangladesh, chamber addresses, consultation fees, and appointment bookings.
+- search_agri_products(query, category): For agricultural products, ACI Agribusiness (seeds, bio-fertilizers, pesticides, tractors), crop care, farming equipment, e-commerce suggestions.
+- search_places_map(query, location): For Google Maps embeds, directions, finding hospitals/clinics/places on map, coordinates, opening hours.
+- solve_math_problem(expression, problem_type): For math equations, quadratic formulas, calculus derivatives/integrals, algebra, step-by-step LaTeX derivations and graphs.
 - search_youtube_videos(query): For finding or showing YouTube videos, tutorials, video lectures, clips, channels, watch recommendations.
-- generate_code_snippet(topic, language): For writing, generating, implementing raw code files, scripts, algorithms, code studio.
+- generate_code_snippet(topic, language): For writing, generating, implementing raw code files, scripts, algorithms, HTML/CSS/JS web artifacts, interactive widgets, code studio.
 - generate_planning_board(topic): For visual architecture diagrams, sprint planning, Kanban, Miro/Excalidraw canvas roadmaps.
 - search_flights(origin, destination): For flight search, fares, airlines, travel tickets between cities.
 - get_weather_data(city): For current weather forecasts, temperatures, meteorological reports.
@@ -342,13 +367,36 @@ Decide the most appropriate tool to display interactive GenUI component for the 
             return None
 
         args: Dict[str, Any] = {}
-        if tool == "search_youtube_videos":
+        if tool == "search_medicines":
+            args["query"] = data.get("query") or prompt
+        elif tool == "search_doctors":
+            args["query"] = data.get("query") or prompt
+            args["specialty"] = data.get("specialty") or ("Cardiology" if "cardio" in prompt.lower() or "heart" in prompt.lower() else "General Specialist")
+            args["location"] = data.get("location") or "Dhaka, Bangladesh"
+        elif tool == "search_agri_products":
+            args["query"] = data.get("query") or prompt
+            args["category"] = data.get("category") or "All"
+        elif tool == "search_places_map":
+            args["query"] = data.get("query") or prompt
+            args["location"] = data.get("location") or "Dhaka, Bangladesh"
+        elif tool == "solve_math_problem":
+            args["expression"] = data.get("expression") or prompt
+            args["problem_type"] = data.get("problem_type") or ("Calculus" if "deriv" in prompt.lower() or "calculus" in prompt.lower() else "Algebra")
+        elif tool == "search_youtube_videos":
             args["query"] = data.get("query") or data.get("topic") or prompt
         elif tool == "generate_planning_board":
             args["topic"] = data.get("topic") or data.get("query") or prompt
         elif tool == "generate_code_snippet":
             args["topic"] = data.get("topic") or data.get("query") or prompt
-            args["language"] = data.get("language") or ("Python" if "python" in prompt.lower() else "TypeScript")
+            detected_lang = data.get("language")
+            if not detected_lang:
+                if "python" in prompt.lower() or "fastapi" in prompt.lower():
+                    detected_lang = "Python"
+                elif any(k in prompt.lower() for k in ["html", "css", "calculator", "game", "artifact"]):
+                    detected_lang = "HTML"
+                else:
+                    detected_lang = "TypeScript"
+            args["language"] = detected_lang
         elif tool == "get_weather_data":
             args["city"] = data.get("city") or "Tokyo"
         elif tool == "search_flights":
@@ -604,6 +652,54 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     # 12. Human-in-the-Loop Sensitive Action Gatekeeper
     if re.search(r"\b(refund\s*order|refund\s*customer|deploy\s*(to\s*)?prod(uction)?|database\s*migration\s*approval|sensitive\s*action|human\s*in\s*the\s*loop|hitl\b)\b", p):
         return {"tool": "request_sensitive_action", "args": {"action_type": "customer_refund", "target_id": "ORD-8921", "amount": 1250.00, "reason": "Customer billing adjustment"}}
+
+    # 13. Medicine & Generic Alternatives (Napa, Xcel, Ace, Paracetamol, etc.)
+    if (
+        re.search(r"\b(napa|xcel|ace|paracetamol|medicines?|drugs?|tablets?|capsules?|syrup|dosage|generic|pharmacy|pharma|alternative\s+to\s+\w+|seclo|losectil|fever\s+medicine|painkiller)\b", p) or
+        (re.search(r"\b(find|search|show|get|buy)\b", p) and re.search(r"\b(napa|xcel|paracetamol|medicine|alternative)\b", p))
+    ):
+        return {"tool": "search_medicines", "args": {"query": prompt}}
+
+    # 14. Doctor Directory & Chamber Booking (Top cardiologists in Dhaka/Bangladesh, etc.)
+    if (
+        re.search(r"\b(doctors?|physicians?|specialists?|cardiologists?|cardiologist|heart\s+doctor|heart\s+specialist|neurologists?|surgeons?|chamber|visiting\s+hours?|consultant\s+doctor|mbbs|best\s+cardiologist)\b", p) or
+        (re.search(r"\b(best|top|find|search)\b", p) and re.search(r"\b(doctor|cardiologist|physician|surgeon|consultant)\b", p))
+    ):
+        specialty = "Cardiology" if any(k in p for k in ["cardio", "heart", "chest"]) else "General Medicine"
+        location = "Dhaka, Bangladesh"
+        return {"tool": "search_doctors", "args": {"query": prompt, "specialty": specialty, "location": location}}
+
+    # 15. Agriculture, ACI Agribusiness, Seeds, Fertilizer, Machinery
+    if (
+        re.search(r"\b(agriculture|agri|agribusiness|crops?|paddy|rice\s+seeds?|hybrid\s+seeds?|fertilizers?|pesticides?|insecticides?|fungicides?|tractor|sonalika|aci\s+crop|aci\s+seed|aci\s+fertilizer|aci\s+agriculture|aci\s+motors|bio\s*fertilizer)\b", p) or
+        (re.search(r"\b(aci|crop|farming|farmer|seed|fertilizer)\b", p) and re.search(r"\b(products?|items?|price|catalog|buy)\b", p))
+    ):
+        category = "All"
+        if "seed" in p:
+            category = "Hybrid Seeds"
+        elif "fertilizer" in p:
+            category = "Bio-Fertilizer"
+        elif "tractor" in p or "machin" in p:
+            category = "Farm Machinery"
+        elif "pesticide" in p or "spray" in p:
+            category = "Crop Care"
+        return {"tool": "search_agri_products", "args": {"query": prompt, "category": category}}
+
+    # 16. Google Maps & Interactive Location Explorer
+    if (
+        re.search(r"\b(google\s*maps?|maps?|locations?|directions?|where\s+is|find\s+on\s+map|show\s+on\s+map|hospital\s+location|coordinates?|near\s+me\s+map)\b", p) or
+        (re.search(r"\b(map|location)\b", p) and re.search(r"\b(dhaka|hospital|clinic|university|center|station|airport|mirpur|gulshan)\b", p))
+    ):
+        cleaned_loc = re.sub(r"^(show|find|open|search|where is|get|give me)\s+(the\s+)?(google\s+)?(map\s+(for|of|to)?|location\s+(of|for)?|directions\s+(to)?)\s*", "", p, flags=re.IGNORECASE).strip()
+        return {"tool": "search_places_map", "args": {"query": cleaned_loc or prompt, "location": "Dhaka, Bangladesh"}}
+
+    # 17. Math Problem Solver & Grapher
+    if (
+        re.search(r"\b(math|equation|solve|calculate|roots?|quadratic|derivative|differentiat(e|ion)|integrat(e|ion)|calculus|algebra|trigonometry|discriminant|polynomial|formula)\b", p) and
+        re.search(r"[0-9xX\+\-\*\/\^=\(\)]", p) and not re.search(r"\b(flights?|usd|bdt|currency)\b", p)
+    ):
+        p_type = "Calculus" if any(k in p for k in ["deriv", "calculus", "integral", "diff"]) else "Algebra"
+        return {"tool": "solve_math_problem", "args": {"expression": prompt, "problem_type": p_type}}
 
     return None
 

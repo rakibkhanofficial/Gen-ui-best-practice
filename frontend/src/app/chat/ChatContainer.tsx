@@ -64,6 +64,11 @@ import { WebsiteLinkCard } from "@/components/gen-ui/WebsiteLinkCard";
 import { ImageAnalysisCard } from "@/components/gen-ui/ImageAnalysisCard";
 import { DocumentAnalysisCard } from "@/components/gen-ui/DocumentAnalysisCard";
 import { MeetingTimePicker } from "@/components/gen-ui/MeetingTimePicker";
+import { MedicineCard } from "@/components/gen-ui/MedicineCard";
+import { DoctorDirectoryCard } from "@/components/gen-ui/DoctorDirectoryCard";
+import { AgriProductCard } from "@/components/gen-ui/AgriProductCard";
+import { GoogleMapCard } from "@/components/gen-ui/GoogleMapCard";
+import { MathSolverCard } from "@/components/gen-ui/MathSolverCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -1090,6 +1095,16 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       case "schedule_meeting":
       case "pick_meeting_time":
         return <MeetingTimePicker data={genui.data} />;
+      case "search_medicines":
+        return <MedicineCard data={genui.data} />;
+      case "search_doctors":
+        return <DoctorDirectoryCard data={genui.data} />;
+      case "search_agri_products":
+        return <AgriProductCard data={genui.data} />;
+      case "search_places_map":
+        return <GoogleMapCard data={genui.data} />;
+      case "solve_math_problem":
+        return <MathSolverCard data={genui.data} />;
       default:
         return (
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs">

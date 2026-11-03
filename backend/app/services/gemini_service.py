@@ -299,6 +299,96 @@ def resolve_sources_for_query(
             },
         ]
 
+    if tool_name == "search_medicines" or any(k in p for k in ["napa", "xcel", "paracetamol", "medicine"]):
+        return [
+            {
+                "name": "DGDA Drug Administration",
+                "domain": "dgda.gov.bd",
+                "favicon": "https://www.google.com/s2/favicons?domain=dgda.gov.bd&sz=128",
+                "url": "https://www.dgda.gov.bd",
+                "status": "National Formulary & Pricing Registry",
+            },
+            {
+                "name": "MIMS Bangladesh",
+                "domain": "mims.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=mims.com&sz=128",
+                "url": "https://www.mims.com",
+                "status": "Verified Pharmaceutical Index",
+            },
+        ]
+
+    if tool_name == "search_doctors" or any(k in p for k in ["doctor", "cardiologist", "physician", "chamber"]):
+        return [
+            {
+                "name": "Bangladesh Medical & Dental Council (BMDC)",
+                "domain": "bmdc.org.bd",
+                "favicon": "https://www.google.com/s2/favicons?domain=bmdc.org.bd&sz=128",
+                "url": "https://www.bmdc.org.bd",
+                "status": "Physician License & Registry",
+            },
+            {
+                "name": "National Heart Foundation",
+                "domain": "nhf.org.bd",
+                "favicon": "https://www.google.com/s2/favicons?domain=nhf.org.bd&sz=128",
+                "url": "https://www.nhf.org.bd",
+                "status": "Cardiac Super-Specialty Directory",
+            },
+        ]
+
+    if tool_name == "search_agri_products" or any(k in p for k in ["agriculture", "aci", "fertilizer", "crop", "seed"]):
+        return [
+            {
+                "name": "ACI Agribusiness Portal",
+                "domain": "aci-bd.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=aci-bd.com&sz=128",
+                "url": "https://www.aci-bd.com/businesses/agribusinesses",
+                "status": "Official Agribusiness Catalog",
+            },
+            {
+                "name": "Department of Agricultural Extension (DAE)",
+                "domain": "dae.gov.bd",
+                "favicon": "https://www.google.com/s2/favicons?domain=dae.gov.bd&sz=128",
+                "url": "https://www.dae.gov.bd",
+                "status": "Crop Variety & Input Certification",
+            },
+        ]
+
+    if tool_name == "search_places_map" or any(k in p for k in ["google map", "map", "location"]):
+        return [
+            {
+                "name": "Google Maps Platform",
+                "domain": "maps.google.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=maps.google.com&sz=128",
+                "url": "https://maps.google.com",
+                "status": "Geographic Topology & Routing",
+            },
+            {
+                "name": "OpenStreetMap Bangladesh",
+                "domain": "openstreetmap.org",
+                "favicon": "https://www.google.com/s2/favicons?domain=openstreetmap.org&sz=128",
+                "url": "https://www.openstreetmap.org",
+                "status": "Open Geospatial Coordinates",
+            },
+        ]
+
+    if tool_name == "solve_math_problem" or any(k in p for k in ["math", "equation", "quadratic", "calculus"]):
+        return [
+            {
+                "name": "Wolfram MathWorld",
+                "domain": "mathworld.wolfram.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=wolfram.com&sz=128",
+                "url": "https://mathworld.wolfram.com",
+                "status": "Symbolic Algebra & Proof Engine",
+            },
+            {
+                "name": "KaTeX LaTeX Rendering Engine",
+                "domain": "katex.org",
+                "favicon": "https://www.google.com/s2/favicons?domain=katex.org&sz=128",
+                "url": "https://katex.org",
+                "status": "Mathematical Notation Standards",
+            },
+        ]
+
     if tool_name == "calculate_route_distance":
         return [
             {
@@ -558,6 +648,11 @@ async def stream_agent_reasoning(
             "convert_currency": "Converting currency exchange rates",
             "search_youtube_videos": "Fetching video resources",
             "fetch_website_info": "Inspecting website metadata",
+            "search_medicines": "Checking pharmaceutical formulary & generic alternatives",
+            "search_doctors": "Searching verified specialist directory & chamber schedules",
+            "search_agri_products": "Querying ACI Agribusiness & crop care catalog",
+            "search_places_map": "Locating places & embedding interactive Google Maps",
+            "solve_math_problem": "Deriving mathematical solution & LaTeX graph coordinates",
         }
         friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 

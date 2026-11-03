@@ -377,3 +377,150 @@ class MeetingScheduleData(BaseModel):
     google_meet_url: str
     status: str = "pending"  # pending | confirmed | declined
 
+
+
+# --- 14. Medicine & Generic Alternatives Schemas ---
+class MedicineAlternative(BaseModel):
+    brand_name: str
+    generic_name: str
+    manufacturer: str  # e.g. "ACI Limited", "Square Pharmaceuticals", "Beximco"
+    strength: str      # e.g. "500 mg", "665 mg XR"
+    form: str          # "Tablet", "Syrup", "Suspension", "Suppository"
+    price_bdt: float   # e.g. 1.20
+    is_requested: bool = False
+    highlights: Optional[str] = None  # e.g. "Direct Generic Match", "XR Extended Release", "Cost-effective"
+
+
+class MedicineItem(BaseModel):
+    id: str
+    brand_name: str
+    generic_name: str
+    manufacturer: str
+    dosage_form: str
+    strength: str
+    pack_size: str
+    unit_price_bdt: float
+    strip_price_bdt: float
+    indications: List[str]
+    dosage_guide: str
+    safety_advice: str
+    pregnancy_category: str
+    alternatives: List[MedicineAlternative]
+    ecommerce_available: bool = True
+    in_stock: bool = True
+
+
+class MedicineSearchData(BaseModel):
+    query: str
+    primary_medicine: MedicineItem
+    alternatives_count: int
+    generic_group: str
+    disclaimer: str = "Always consult a licensed physician before starting or switching medications."
+
+
+# --- 15. Doctor Directory & Chamber Booking Schemas ---
+class DoctorChamber(BaseModel):
+    hospital_name: str
+    location: str
+    visiting_days: str
+    visiting_hours: str
+    room_no: str
+    hotline: str
+
+
+class DoctorItem(BaseModel):
+    id: str
+    name: str
+    avatar_url: str
+    degrees: str
+    designation: str
+    specialty: str
+    experience_years: int
+    rating: float
+    review_count: int
+    consultation_fee_bdt: float
+    chambers: List[DoctorChamber]
+    key_expertise: List[str]
+    available_today: bool = True
+    appointment_slot: str
+
+
+class DoctorSearchData(BaseModel):
+    query: str
+    specialty: str
+    location: str
+    total_results: int
+    doctors: List[DoctorItem]
+
+
+# --- 16. Agriculture & Crop Care Products Schemas ---
+class AgriProductItem(BaseModel):
+    id: str
+    name: str
+    category: str  # "Hybrid Seeds", "Crop Care", "Bio-Fertilizer", "Farm Machinery"
+    manufacturer: str  # "ACI Agribusiness", "ACI Motors", "ACI Crop Care"
+    image_url: str
+    pack_size: str
+    price_bdt: float
+    target_crops: List[str]
+    active_ingredient: Optional[str] = None
+    key_benefits: List[str]
+    application_rate: str
+    in_stock: bool = True
+    ecom_link: str = "https://www.aci-bd.com/businesses/agribusinesses"
+    dealer_contact: str = "ACI Agro Hotline: 16500"
+
+
+class AgriProductSearchData(BaseModel):
+    query: str
+    category: str
+    total_results: int
+    products: List[AgriProductItem]
+    seasonal_advice: str
+
+
+# --- 17. Google Maps & Location Explorer Schemas ---
+class MapPlaceItem(BaseModel):
+    id: str
+    name: str
+    category: str
+    address: str
+    latitude: float
+    longitude: float
+    rating: float
+    review_count: int
+    open_now: bool = True
+    opening_hours: str
+    phone: str
+    google_maps_url: str
+    embed_map_url: str
+    distance_km: Optional[float] = None
+    travel_time_min: Optional[int] = None
+
+
+class MapSearchData(BaseModel):
+    query: str
+    location: str
+    places: List[MapPlaceItem]
+    active_place_index: int = 0
+
+
+# --- 18. Math Problem Solver & Grapher Schemas ---
+class MathStep(BaseModel):
+    step_number: int
+    title: str
+    explanation: str
+    latex_expression: str
+
+
+class MathSolverData(BaseModel):
+    problem_title: str
+    problem_type: str  # "Algebra", "Calculus", "Trigonometry", "Financial Math", "Geometry"
+    input_expression: str
+    latex_input: str
+    solution_latex: str
+    solution_summary: str
+    steps: List[MathStep]
+    graph_coordinates: Optional[List[Dict[str, float]]] = None
+    formula_identity: Optional[str] = None
+    practical_application: str
