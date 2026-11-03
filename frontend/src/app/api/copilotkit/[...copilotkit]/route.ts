@@ -39,3 +39,4 @@ export const POST = async (req: NextRequest) => handleRequest(req);
 export const OPTIONS = async (req: NextRequest) => handleRequest(req);
 export const PATCH = async (req: NextRequest) => handleRequest(req);
 export const DELETE = async (req: NextRequest) => handleRequest(req);
+
