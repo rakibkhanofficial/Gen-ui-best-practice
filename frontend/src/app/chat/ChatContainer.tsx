@@ -68,9 +68,10 @@ import { MeetingTimePicker } from "@/components/gen-ui/MeetingTimePicker";
 export interface AttachmentInfo {
   filename: string;
   filePath: string;
-  fileType: "image" | "document" | "spreadsheet" | "file";
+  fileType: "image" | "document" | "spreadsheet" | "pdf" | "file";
   fileSize?: number;
   previewUrl?: string;
+  minioUrl?: string;
 }
 
 export interface MessageItem {
@@ -373,25 +374,35 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       const data = await res.json();
 
       const isImg = file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const isSpreadsheet = /\.(xlsx|xls|csv)$/i.test(file.name);
+
       let localPreviewUrl: string | undefined = undefined;
       if (isImg && typeof window !== "undefined") {
         localPreviewUrl = URL.createObjectURL(file);
       }
 
-      const fileType = isImg
+      const fileType: AttachmentInfo["fileType"] = isImg
         ? "image"
-        : /\.(xlsx|xls|csv)$/i.test(file.name)
+        : isPdf
+        ? "pdf"
+        : isSpreadsheet
         ? "spreadsheet"
-        : /\.(pdf|docx?|txt|md)$/i.test(file.name)
+        : /\.(docx?|txt|md)$/i.test(file.name)
         ? "document"
         : "file";
+
+      // Permanent MinIO or API proxy URL for durable chat persistence
+      const minioUrl = data.minio_url || (data.silo && data.silo.minio_url);
+      const permanentUrl = minioUrl || data.preview_url || `/api/files/${encodeURIComponent(file.name)}`;
 
       const attachmentInfo: AttachmentInfo = {
         filename: data.filename || file.name,
         filePath: data.file_path || file.name,
         fileType: fileType,
         fileSize: data.file_size || file.size,
-        previewUrl: localPreviewUrl || data.preview_url,
+        previewUrl: permanentUrl || localPreviewUrl,
+        minioUrl: minioUrl,
       };
 
       setCurrentAttachment(attachmentInfo);
@@ -889,6 +900,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         body: JSON.stringify({
           message: messageContent,
           attachment_path: attachmentToSubmit?.filePath,
+          attachment: attachmentToSubmit ? { ...attachmentToSubmit } : undefined,
           session_id: currentSessionId,
           conversation_id: userTurnId,
           user_id: user.id,
@@ -1112,6 +1124,30 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
 
       {/* 2. Main Chat Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Unconditionally mounted hidden file inputs for both empty state and chat bar */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={docInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json,application/pdf"
+          className="hidden"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+            e.target.value = "";
+          }}
+        />
+
         {/* Top Header */}
         <ChatHeader
           user={user}
@@ -1154,6 +1190,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                   isTranscribingAudio={isTranscribingAudio}
                   onAttachImage={() => imageInputRef.current?.click()}
                   onAttachDoc={() => docInputRef.current?.click()}
+                  onFileSelected={handleFileUpload}
                   currentAttachment={currentAttachment}
                   onRemoveAttachment={() => setCurrentAttachment(null)}
                   isUploading={isUploading}
@@ -1178,36 +1215,141 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                     /* User Turn */
                     <div className="flex justify-end">
                       <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-3 bg-[#f0f4f9] dark:bg-[#282a2c] text-slate-900 dark:text-white text-sm">
-                        {/* Render Attached File if present */}
+                        {/* Render Attached File if present with rich preview */}
                         {msg.attachment && (
-                          <div className="mb-2 p-2 rounded-xl bg-white/80 dark:bg-black/30 border border-slate-200/80 dark:border-white/10 flex items-center gap-2.5">
-                            {msg.attachment.fileType === "image" && msg.attachment.previewUrl ? (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img
-                                src={msg.attachment.previewUrl}
-                                alt={msg.attachment.filename}
-                                className="w-12 h-12 object-cover rounded-lg border border-slate-200 dark:border-white/10 shrink-0"
-                              />
+                          <div className="mb-3">
+                            {msg.attachment.fileType === "image" && (msg.attachment.previewUrl || msg.attachment.minioUrl) ? (
+                              <div className="rounded-xl overflow-hidden border border-slate-200/90 dark:border-white/10 bg-black/5 dark:bg-white/5 max-w-sm">
+                                <a
+                                  href={msg.attachment.minioUrl || msg.attachment.previewUrl || `/api/files/${encodeURIComponent(msg.attachment.filename)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block relative group cursor-pointer"
+                                  title="Click to view full image in new tab"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={msg.attachment.previewUrl || msg.attachment.minioUrl || `/api/files/${encodeURIComponent(msg.attachment.filename)}`}
+                                    alt={msg.attachment.filename}
+                                    className="max-h-72 w-auto max-w-full rounded-t-xl object-contain bg-slate-900/5 dark:bg-black/40 transition-transform duration-200 group-hover:scale-[1.01]"
+                                    onError={(e) => {
+                                      const target = e.currentTarget;
+                                      if (msg.attachment?.filename && !target.src.includes("/api/files/")) {
+                                        target.src = `/api/files/${encodeURIComponent(msg.attachment.filename)}`;
+                                      }
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <span className="px-2.5 py-1 rounded-lg bg-black/75 text-white text-xs font-medium flex items-center gap-1.5 backdrop-blur-xs shadow-md">
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      View Full Image
+                                    </span>
+                                  </div>
+                                </a>
+                                <div className="px-3 py-1.5 bg-slate-50 dark:bg-zinc-800/60 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300">
+                                  <span className="truncate font-medium max-w-[200px]">{msg.attachment.filename}</span>
+                                  <span className="text-[10px] font-mono text-slate-400 dark:text-zinc-400">
+                                    {msg.attachment.fileSize ? `${Math.round(msg.attachment.fileSize / 1024)} KB` : "IMAGE"}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : msg.attachment.fileType === "pdf" ? (
+                              <div className="p-3 rounded-xl bg-white/95 dark:bg-[#1e1f20] border border-rose-200 dark:border-rose-900/40 shadow-xs flex items-center justify-between gap-3 group max-w-sm">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white flex items-center justify-center shrink-0 shadow-xs ring-1 ring-black/5 dark:ring-white/10">
+                                    <FileText className="w-4 h-4" />
+                                    <span className="absolute -bottom-1 -right-1 text-[7px] font-black uppercase tracking-tighter px-0.5 rounded-xs bg-rose-950 text-rose-200 border border-rose-400/40 shadow-2xs">
+                                      PDF
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-semibold text-xs text-slate-900 dark:text-white block truncate max-w-[170px]">
+                                      {msg.attachment.filename}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-rose-600 dark:text-rose-400 font-medium">
+                                      <span>PDF Document</span>
+                                      <span>&bull;</span>
+                                      <span className="font-mono text-slate-400 dark:text-zinc-500">
+                                        {msg.attachment.fileSize
+                                          ? `${(msg.attachment.fileSize / (1024 * 1024)).toFixed(1) === "0.0"
+                                              ? `${Math.round(msg.attachment.fileSize / 1024)} KB`
+                                              : `${(msg.attachment.fileSize / (1024 * 1024)).toFixed(1)} MB`}`
+                                          : "PDF"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <a
+                                  href={msg.attachment.minioUrl || msg.attachment.previewUrl || `/api/files/${encodeURIComponent(msg.attachment.filename)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="shrink-0 px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Open PDF in new tab"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>Open</span>
+                                </a>
+                              </div>
                             ) : msg.attachment.fileType === "spreadsheet" ? (
-                              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                                <FileSpreadsheet className="w-5 h-5" />
+                              <div className="p-3 rounded-xl bg-white/95 dark:bg-[#1e1f20] border border-emerald-200 dark:border-emerald-900/40 shadow-xs flex items-center justify-between gap-3 group max-w-sm">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center shrink-0 shadow-xs ring-1 ring-black/5 dark:ring-white/10">
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                    <span className="absolute -bottom-1 -right-1 text-[7px] font-black uppercase tracking-tighter px-0.5 rounded-xs bg-emerald-950 text-emerald-200 border border-emerald-400/40 shadow-2xs">
+                                      XLS
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-semibold text-xs text-slate-900 dark:text-white block truncate max-w-[170px]">
+                                      {msg.attachment.filename}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                      <span>Spreadsheet</span>
+                                      <span>&bull;</span>
+                                      <span className="font-mono text-slate-400 dark:text-zinc-500">
+                                        {msg.attachment.fileSize ? `${Math.round(msg.attachment.fileSize / 1024)} KB` : "EXCEL"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <a
+                                  href={msg.attachment.minioUrl || msg.attachment.previewUrl || `/api/files/${encodeURIComponent(msg.attachment.filename)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="shrink-0 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Download / View spreadsheet"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>View</span>
+                                </a>
                               </div>
                             ) : (
-                              <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                                <FileText className="w-5 h-5" />
+                              <div className="p-3 rounded-xl bg-white/95 dark:bg-[#1e1f20] border border-blue-200 dark:border-blue-900/40 shadow-xs flex items-center justify-between gap-3 group max-w-sm">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs ring-1 ring-black/5 dark:ring-white/10">
+                                    <FileText className="w-4 h-4" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-semibold text-xs text-slate-900 dark:text-white block truncate max-w-[170px]">
+                                      {msg.attachment.filename}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono block">
+                                      {msg.attachment.fileSize ? `${Math.round(msg.attachment.fileSize / 1024)} KB` : "FILE"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <a
+                                  href={msg.attachment.minioUrl || msg.attachment.previewUrl || `/api/files/${encodeURIComponent(msg.attachment.filename)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="shrink-0 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Open file"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>Open</span>
+                                </a>
                               </div>
                             )}
-
-                            <div className="truncate flex-1">
-                              <span className="font-semibold text-xs text-slate-900 dark:text-white block truncate">
-                                {msg.attachment.filename}
-                              </span>
-                              <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono block">
-                                {msg.attachment.fileSize
-                                  ? `${Math.round(msg.attachment.fileSize / 1024)} KB`
-                                  : msg.attachment.fileType.toUpperCase()}
-                              </span>
-                            </div>
                           </div>
                         )}
                         {msg.content && <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>}
@@ -1357,6 +1499,13 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                     alt={currentAttachment.filename}
                     className="w-8 h-8 rounded-xl object-cover border border-slate-200 dark:border-white/10 shrink-0"
                   />
+                ) : currentAttachment.fileType === "pdf" ? (
+                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white flex items-center justify-center shrink-0 shadow-xs ring-1 ring-black/5 dark:ring-white/10">
+                    <FileText className="w-4 h-4" />
+                    <span className="absolute -bottom-1 -right-1 text-[7px] font-black uppercase tracking-tighter px-0.5 rounded-xs bg-rose-950 text-rose-200 border border-rose-400/40 shadow-2xs">
+                      PDF
+                    </span>
+                  </div>
                 ) : currentAttachment.fileType === "spreadsheet" ? (
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <FileSpreadsheet className="w-4 h-4" />
@@ -1370,9 +1519,15 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                 <div className="truncate max-w-xs">
                   <span className="font-semibold text-xs block truncate">{currentAttachment.filename}</span>
                   <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">
-                    {currentAttachment.fileSize
-                      ? `${Math.round(currentAttachment.fileSize / 1024)} KB`
-                      : currentAttachment.fileType.toUpperCase()}
+                    {currentAttachment.fileType === "pdf" ? (
+                      <span className="text-rose-600 dark:text-rose-400 font-medium">
+                        PDF Document &bull; {currentAttachment.fileSize ? `${Math.round(currentAttachment.fileSize / 1024)} KB` : "READY"}
+                      </span>
+                    ) : currentAttachment.fileSize ? (
+                      `${Math.round(currentAttachment.fileSize / 1024)} KB`
+                    ) : (
+                      currentAttachment.fileType.toUpperCase()
+                    )}
                   </span>
                 </div>
 
@@ -1454,28 +1609,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                       </motion.div>
                     )}
                   </AnimatePresence>
-
-                  {/* Hidden Native File Inputs */}
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
-                      e.target.value = "";
-                    }}
-                  />
-                  <input
-                    ref={docInputRef}
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
-                      e.target.value = "";
-                    }}
-                  />
                 </div>
 
                 {/* Center: Clean vertically-aligned auto-resizing input without internal scrollbar */}

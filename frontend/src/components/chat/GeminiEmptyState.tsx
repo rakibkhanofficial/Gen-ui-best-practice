@@ -257,7 +257,7 @@ export function GeminiEmptyState({
           {/* Bottom Bar inside prompt box */}
           <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5 mt-2">
             {/* Left: Plus (+) Button for Native File Attachment */}
-            <div className="relative">
+            <div ref={attachMenuRef} className="relative">
               <button
                 type="button"
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
@@ -290,7 +290,13 @@ export function GeminiEmptyState({
                       type="button"
                       onClick={() => {
                         setShowAttachMenu(false);
-                        onAttachImage ? onAttachImage() : onOpenUpload?.();
+                        if (localImageInputRef.current) {
+                          localImageInputRef.current.click();
+                        } else if (onAttachImage) {
+                          onAttachImage();
+                        } else {
+                          onOpenUpload?.();
+                        }
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
                     >
@@ -309,7 +315,13 @@ export function GeminiEmptyState({
                       type="button"
                       onClick={() => {
                         setShowAttachMenu(false);
-                        onAttachDoc ? onAttachDoc() : onOpenUpload?.();
+                        if (localDocInputRef.current) {
+                          localDocInputRef.current.click();
+                        } else if (onAttachDoc) {
+                          onAttachDoc();
+                        } else {
+                          onOpenUpload?.();
+                        }
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
                     >
@@ -326,6 +338,38 @@ export function GeminiEmptyState({
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Native hidden inputs in EmptyState for instant selection */}
+              <input
+                ref={localImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    if (onFileSelected) {
+                      onFileSelected(e.target.files[0]);
+                    }
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <input
+                ref={localDocInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json,application/pdf"
+                className="hidden"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    if (onFileSelected) {
+                      onFileSelected(e.target.files[0]);
+                    }
+                  }
+                  e.target.value = "";
+                }}
+              />
             </div>
 
             {/* Right: Voice Input + Send Button */}

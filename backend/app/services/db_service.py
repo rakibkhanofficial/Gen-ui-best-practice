@@ -197,3 +197,4 @@ async def get_uploaded_file(identifier: str) -> Optional[Dict[str, Any]]:
             logger.error(f"Error retrieving file record from PostgreSQL: {e}")
 
     return None
+
