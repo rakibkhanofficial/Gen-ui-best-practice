@@ -11,6 +11,9 @@ import {
   ArrowUp,
   Square,
   FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  UploadCloud,
   X,
   Copy,
   Check,
@@ -20,8 +23,9 @@ import {
   MicOff,
   Volume2,
   VolumeX,
-  Zap,
-  Brain
+  Plus,
+  Loader2,
+  FolderOpen
 } from "lucide-react";
 
 import {
@@ -40,7 +44,6 @@ import { ChatHeader } from "@/components/layout/ChatHeader";
 import { GeminiEmptyState } from "@/components/chat/GeminiEmptyState";
 import { StreamingMessage } from "@/components/chat/StreamingMessage";
 import { AgentReasoningStage, AgentStage, SearchSource } from "@/components/chat/AgentReasoningStage";
-import { FileUploadZone } from "@/components/chat/FileUploadZone";
 
 // Generative UI Showcase Components
 import { WeatherCard } from "@/components/gen-ui/WeatherCard";
@@ -55,6 +58,16 @@ import { FlightDetailsCard } from "@/components/gen-ui/FlightDetailsCard";
 import { CurrencyConverterCard } from "@/components/gen-ui/CurrencyConverterCard";
 import { YouTubeVideoCard } from "@/components/gen-ui/YouTubeVideoCard";
 import { WebsiteLinkCard } from "@/components/gen-ui/WebsiteLinkCard";
+import { ImageAnalysisCard } from "@/components/gen-ui/ImageAnalysisCard";
+import { DocumentAnalysisCard } from "@/components/gen-ui/DocumentAnalysisCard";
+
+export interface AttachmentInfo {
+  filename: string;
+  filePath: string;
+  fileType: "image" | "document" | "spreadsheet" | "file";
+  fileSize?: number;
+  previewUrl?: string;
+}
 
 export interface MessageItem {
   id: string; // The conversation turn id (e.g. conv_user_..., conv_asst_...)
@@ -68,10 +81,7 @@ export interface MessageItem {
     tool: string;
     data: any;
   };
-  attachment?: {
-    filename: string;
-    filePath: string;
-  };
+  attachment?: AttachmentInfo;
   timestamp: string;
 }
 
@@ -90,13 +100,15 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [currentAttachment, setCurrentAttachment] = useState<{
-    filename: string;
-    filePath: string;
-    preview?: any;
-  } | null>(null);
+  const [currentAttachment, setCurrentAttachment] = useState<AttachmentInfo | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Drag and Drop & Native File Picker State
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   // CopilotKit Capabilities State
   const [syncStatus, setSyncStatus] = useState<string | null>("Realtime sync connected to Copilot Runtime");
@@ -118,6 +130,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       "Generative UI Dynamic Mounting",
       "Human-in-the-Loop Safe Authorization",
       "Multi-turn Session URL Routing",
+      "Multimodal File & Image Vision Parsing",
     ],
     interactionCount: 1,
   });
@@ -125,8 +138,9 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
 
-  // 1. Resolve User Identity (NextAuth Google Provider OR IP+Time Guest Identity)
+  // 1. Resolve User Identity
   useEffect(() => {
     if (authStatus === "loading") return;
 
@@ -155,7 +169,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, [authStatus, authSession]);
 
-  // Load user-wise sessions
   const loadUserSessions = (userId: string) => {
     try {
       const key = getUserSessionsKey(userId);
@@ -170,7 +183,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   };
 
-  // Load user learned memory from localStorage
   const loadUserLearnedMemory = (userId: string) => {
     try {
       const stored = localStorage.getItem(`genui_learning_${userId}`);
@@ -194,8 +206,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     });
   }, [user]);
 
-  // 2. CopilotKit Learning Hook: useCopilotReadable
-  // Feeds live application state and continual learning insights into the Copilot context
+  // 2. CopilotKit Learning Hook
   useCopilotReadable({
     description: "Active User Profile, Continual Learning Skills, and Workspace Context",
     value: {
@@ -208,8 +219,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     },
   });
 
-  // 3. CopilotKit Realtime Sync Actions: useCopilotAction
-  // Enables real-time bidirectional state updates between agent and interactive components
+  // 3. CopilotKit Realtime Sync Actions
   useCopilotAction({
     name: "syncFlightBooking",
     description: "Synchronize flight booking status in real-time with the flight card component",
@@ -251,7 +261,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     },
   });
 
-  // 4. CopilotKit Rich Threads: Sync active thread with CopilotKit runtime
+  // 4. CopilotKit Rich Threads Sync
   useEffect(() => {
     if (!activeSessionId) return;
     try {
@@ -270,7 +280,117 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     } catch {}
   }, [activeSessionId, user, sessions]);
 
-  // 5. CopilotKit Voice: Browser Native SpeechRecognition (STT) Setup
+  // 5. Native File Upload Handler
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+
+      const isImg = file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
+      let localPreviewUrl: string | undefined = undefined;
+      if (isImg && typeof window !== "undefined") {
+        localPreviewUrl = URL.createObjectURL(file);
+      }
+
+      const fileType = isImg
+        ? "image"
+        : /\.(xlsx|xls|csv)$/i.test(file.name)
+        ? "spreadsheet"
+        : /\.(pdf|docx?|txt|md)$/i.test(file.name)
+        ? "document"
+        : "file";
+
+      const attachmentInfo: AttachmentInfo = {
+        filename: data.filename || file.name,
+        filePath: data.file_path || file.name,
+        fileType: fileType,
+        fileSize: data.file_size || file.size,
+        previewUrl: localPreviewUrl || data.preview_url,
+      };
+
+      setCurrentAttachment(attachmentInfo);
+      recordLearnedSkill(`Ingested ${fileType.toUpperCase()} (${file.name})`);
+    } catch (err: any) {
+      console.error("Upload error:", err);
+    } finally {
+      setIsUploading(false);
+      setShowAttachMenu(false);
+    }
+  };
+
+  // 6. Full Page Dropzone Listeners
+  useEffect(() => {
+    let dragCounter = 0;
+
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter++;
+      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+        setIsDraggingOver(true);
+      }
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        setIsDraggingOver(false);
+        dragCounter = 0;
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "copy";
+      }
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDraggingOver(false);
+      dragCounter = 0;
+
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        handleFileUpload(file);
+      }
+    };
+
+    window.addEventListener("dragenter", handleDragEnter);
+    window.addEventListener("dragleave", handleDragLeave);
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("drop", handleDrop);
+
+    return () => {
+      window.removeEventListener("dragenter", handleDragEnter);
+      window.removeEventListener("dragleave", handleDragLeave);
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
+  // Close attach menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 7. Voice Input (STT) Setup
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition =
@@ -322,7 +442,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   };
 
-  // Assistant Text-to-Speech (TTS) Voice Readout
+  // 8. Text-to-Speech (TTS) Readout
   const handleSpeakText = (id: string, text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
@@ -344,7 +464,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     window.speechSynthesis.speak(utterance);
   };
 
-  // 6. Load conversation messages when initialChatId or user changes
+  // 9. Load messages when initialChatId or user changes
   useEffect(() => {
     if (!user) return;
 
@@ -368,7 +488,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, [initialChatId, user]);
 
-  // Auto-scroll to bottom of conversation
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -377,7 +496,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     scrollToBottom();
   }, [messages, isStreaming]);
 
-  // Adjust textarea height dynamically
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -388,7 +506,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, [input]);
 
-  // Save session messages to localStorage (User-Wise)
   const saveSessionMessages = (userId: string, sessionId: string, msgs: MessageItem[]) => {
     try {
       localStorage.setItem(
@@ -398,14 +515,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     } catch {}
   };
 
-  // Save sessions list to localStorage (User-Wise)
   const saveSessionsList = (userId: string, list: ChatSession[]) => {
     try {
       localStorage.setItem(getUserSessionsKey(userId), JSON.stringify(list));
     } catch {}
   };
 
-  // Select an existing session and load its turns, updating URL
   const selectSession = (sessionId: string) => {
     setActiveSessionId(sessionId);
     setActiveChatCookie(sessionId);
@@ -425,7 +540,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   };
 
-  // Start a fresh, clean chat session
   const handleNewChat = () => {
     setActiveSessionId(null);
     setMessages([]);
@@ -434,7 +548,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     router.push("/chat");
   };
 
-  // Delete a session and clean up its stored turns
   const deleteSession = (sessionId: string) => {
     if (!user) return;
     const filtered = sessions.filter((s) => s.id !== sessionId);
@@ -453,7 +566,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   };
 
-  // Rename a session
   const renameSession = (sessionId: string, newTitle: string) => {
     if (!user) return;
     const updated = sessions.map((s) =>
@@ -463,7 +575,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     saveSessionsList(user.id, updated);
   };
 
-  // Handle user logout
   const handleLogout = () => {
     if (user?.role === "google") {
       signOut({ callbackUrl: "/login" });
@@ -473,14 +584,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   };
 
-  // Handle copy text
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Abort running stream
   const handleStopStream = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -489,7 +598,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     setIsStreaming(false);
   };
 
-  // Stream chat message to backend with Immediate Optimistic URL creation
+  // 10. Send message with immediate optimistic URL creation
   const handleSendMessage = async (textToSend?: string) => {
     const messageContent = (textToSend || input).trim();
     if (!messageContent && !currentAttachment) return;
@@ -501,7 +610,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       setIsListening(false);
     }
 
-    // 1. Immediate Optimistic URL & Chat ID Generation
     let currentSessionId = activeSessionId;
 
     if (!currentSessionId) {
@@ -509,13 +617,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       setActiveSessionId(currentSessionId);
       setActiveChatCookie(currentSessionId);
 
-      // Optimistically update the browser address bar immediately without reloading!
       window.history.pushState(null, "", `/chat/${currentSessionId}`);
 
       const titleCandidate =
         messageContent.length > 34
           ? `${messageContent.slice(0, 32)}...`
-          : messageContent;
+          : messageContent || (currentAttachment ? `Attached: ${currentAttachment.filename}` : "New Chat");
 
       const newSession: ChatSession = {
         id: currentSessionId,
@@ -544,37 +651,20 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       saveSessionsList(user.id, updatedSessions);
     }
 
-    // Record interaction skill in learning store
-    if (messageContent.toLowerCase().includes("flight")) {
-      recordLearnedSkill("Flight Booking Search");
-    } else if (messageContent.toLowerCase().includes("sales") || messageContent.toLowerCase().includes("revenue")) {
-      recordLearnedSkill("Enterprise Revenue Analysis");
-    } else if (messageContent.toLowerCase().includes("job")) {
-      recordLearnedSkill("Tech Career Discovery");
-    } else if (messageContent.toLowerCase().includes("code") || messageContent.toLowerCase().includes("python")) {
-      recordLearnedSkill("Full Stack Code Studio");
-    }
-
-    // 2. Create User Conversation Turn
+    // 11. Create User Turn with Attachment Info
     const userTurnId = `conv_user_${Date.now()}`;
     const userMessage: MessageItem = {
       id: userTurnId,
       sessionId: currentSessionId,
       role: "user",
       content: messageContent,
-      attachment: currentAttachment
-        ? {
-            filename: currentAttachment.filename,
-            filePath: currentAttachment.filePath,
-          }
-      : undefined,
+      attachment: currentAttachment ? { ...currentAttachment } : undefined,
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
     };
 
-    // 3. Create Placeholder Assistant Conversation Turn
     const asstTurnId = `conv_asst_${Date.now() + 1}`;
     const initialAssistantMessage: MessageItem = {
       id: asstTurnId,
@@ -633,7 +723,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       const processParsedEvent = (parsed: any, eventType: string) => {
         const evt = (parsed.event || eventType || "").toLowerCase();
 
-        // 1. Stage / Status updates
         if (evt === "status" || evt === "stage" || parsed.stage) {
           if (parsed.stage) activeStage = parsed.stage as AgentStage;
           if (parsed.detail) activeStageDetail = parsed.detail;
@@ -642,13 +731,11 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           }
         }
 
-        // 2. Delta / Text updates
         if (evt === "delta" || evt === "text_delta" || parsed.text || parsed.delta) {
           const deltaText = parsed.text ?? parsed.delta ?? "";
           accumulatedContent += deltaText;
         }
 
-        // 3. Generative UI Events
         if (evt === "genui" || parsed.genui || parsed.tool) {
           latestGenUI = {
             tool: parsed.tool || parsed.genui?.tool,
@@ -656,7 +743,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           };
         }
 
-        // 4. Update the state item in real time
         setMessages((prev) => {
           const updated = prev.map((msg) =>
             msg.id === asstTurnId
@@ -768,6 +854,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   };
 
+  // 12. Component Registry (All GenUI components including image and document analysis)
   const renderGenUIComponent = (genui: { tool: string; data: any }) => {
     switch (genui.tool) {
       case "get_weather_data":
@@ -794,6 +881,10 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         return <YouTubeVideoCard data={genui.data} />;
       case "fetch_website_info":
         return <WebsiteLinkCard data={genui.data} />;
+      case "analyze_image":
+        return <ImageAnalysisCard data={genui.data} />;
+      case "analyze_document":
+        return <DocumentAnalysisCard data={genui.data} />;
       default:
         return (
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs">
@@ -809,8 +900,8 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#131314] text-slate-800 dark:text-[#e3e3e3] font-sans antialiased">
-      {/* 1. Left Sidebar with Chronological History */}
+    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#131314] text-slate-800 dark:text-[#e3e3e3] font-sans antialiased relative">
+      {/* 1. Left Sidebar */}
       <ChatSidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -826,7 +917,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
 
       {/* 2. Main Chat Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Top Header with Realtime Sync & Learning Badges */}
+        {/* Top Header */}
         <ChatHeader
           user={user}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -841,7 +932,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
             <GeminiEmptyState
               userName={user?.name || "Explorer"}
               onSelectPrompt={(prompt: string) => handleSendMessage(prompt)}
-              onOpenUpload={() => setShowUploadModal(true)}
+              onOpenUpload={() => setShowAttachMenu(true)}
+              onToggleVoice={toggleVoiceInput}
+              isListening={isListening}
+              onAttachImage={() => imageInputRef.current?.click()}
+              onAttachDoc={() => docInputRef.current?.click()}
+              onBrowseGallery={() =>
+                handleSendMessage("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")
+              }
             />
           ) : (
             <div className="max-w-3xl mx-auto space-y-6 pb-28">
@@ -851,13 +949,39 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                     /* User Turn */
                     <div className="flex justify-end">
                       <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-3 bg-[#f0f4f9] dark:bg-[#282a2c] text-slate-900 dark:text-white text-sm">
+                        {/* Render Attached File if present */}
                         {msg.attachment && (
-                          <div className="flex items-center gap-2 p-2 mb-2 rounded-lg bg-white/70 dark:bg-black/20 border border-slate-200 dark:border-white/5 text-xs text-blue-600 dark:text-blue-400 font-medium">
-                            <FileSpreadsheet className="w-4 h-4 shrink-0" />
-                            <span className="truncate">{msg.attachment.filename}</span>
+                          <div className="mb-2 p-2 rounded-xl bg-white/80 dark:bg-black/30 border border-slate-200/80 dark:border-white/10 flex items-center gap-2.5">
+                            {msg.attachment.fileType === "image" && msg.attachment.previewUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={msg.attachment.previewUrl}
+                                alt={msg.attachment.filename}
+                                className="w-12 h-12 object-cover rounded-lg border border-slate-200 dark:border-white/10 shrink-0"
+                              />
+                            ) : msg.attachment.fileType === "spreadsheet" ? (
+                              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                <FileSpreadsheet className="w-5 h-5" />
+                              </div>
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <FileText className="w-5 h-5" />
+                              </div>
+                            )}
+
+                            <div className="truncate flex-1">
+                              <span className="font-semibold text-xs text-slate-900 dark:text-white block truncate">
+                                {msg.attachment.filename}
+                              </span>
+                              <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono block">
+                                {msg.attachment.fileSize
+                                  ? `${Math.round(msg.attachment.fileSize / 1024)} KB`
+                                  : msg.attachment.fileType.toUpperCase()}
+                              </span>
+                            </div>
                           </div>
                         )}
-                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                        {msg.content && <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>}
                       </div>
                     </div>
                   ) : (
@@ -896,10 +1020,9 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                           </div>
                         )}
 
-                        {/* Message Action Footer (with Voice TTS Readout) */}
+                        {/* Message Action Footer */}
                         {msg.content && !isStreaming && (
                           <div className="flex items-center gap-1.5 pt-1 text-slate-400 dark:text-zinc-500">
-                            {/* Text to Speech Voice Playback */}
                             <button
                               onClick={() => handleSpeakText(msg.id, msg.content)}
                               className={`p-1 rounded transition-colors cursor-pointer ${
@@ -951,31 +1074,59 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           )}
         </div>
 
-        {/* 3. Bottom Prompt Input Bar with Voice Input (STT) */}
+        {/* 3. Bottom Prompt Input Bar with Plus Attachment Button */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 dark:from-[#131314] dark:via-[#131314]/90 to-transparent pointer-events-none">
           <div className="max-w-3xl mx-auto pointer-events-auto">
-            {/* Active Attachment Pill */}
+            {/* Active Attachment Pill above Input */}
             {currentAttachment && (
-              <div className="flex items-center gap-2 mb-2 p-2 rounded-xl bg-blue-50 dark:bg-white/5 border border-blue-200 dark:border-white/10 w-fit text-xs text-blue-700 dark:text-blue-300">
-                <FileSpreadsheet className="w-4 h-4 shrink-0" />
-                <span className="font-medium truncate max-w-xs">{currentAttachment.filename}</span>
+              <div className="flex items-center gap-2 mb-2 p-1.5 pr-2.5 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 w-fit text-xs text-slate-800 dark:text-zinc-200 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                {currentAttachment.fileType === "image" && currentAttachment.previewUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={currentAttachment.previewUrl}
+                    alt={currentAttachment.filename}
+                    className="w-8 h-8 rounded-xl object-cover border border-slate-200 dark:border-white/10 shrink-0"
+                  />
+                ) : currentAttachment.fileType === "spreadsheet" ? (
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                )}
+
+                <div className="truncate max-w-xs">
+                  <span className="font-semibold text-xs block truncate">{currentAttachment.filename}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">
+                    {currentAttachment.fileSize
+                      ? `${Math.round(currentAttachment.fileSize / 1024)} KB`
+                      : currentAttachment.fileType.toUpperCase()}
+                  </span>
+                </div>
+
                 <button
+                  type="button"
                   onClick={() => setCurrentAttachment(null)}
-                  className="p-0.5 hover:bg-blue-200/50 dark:hover:bg-white/10 rounded-full cursor-pointer ml-1"
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full cursor-pointer ml-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  title="Remove attachment"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
 
-            {/* Input Form Box with Live Voice Pulsing */}
-            <div
-              className={`relative rounded-2xl bg-[#f0f4f9] dark:bg-[#1e1f20] border transition-all ${
-                isListening
-                  ? "border-rose-500/80 ring-2 ring-rose-500/20 shadow-md shadow-rose-500/10"
-                  : "border-slate-200/80 dark:border-white/10 shadow-xs focus-within:border-blue-500/50"
-              }`}
-            >
+            {/* Input Box with Plus (+) File Selector & Subtle Ambient Glow */}
+            <div className="relative group">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-amber-400/30 via-rose-400/25 to-blue-500/30 blur-xs opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 pointer-events-none" />
+              <div
+                className={`relative rounded-2xl bg-white dark:bg-[#1e1f20] border transition-all ${
+                  isListening
+                    ? "border-rose-500/80 ring-2 ring-rose-500/20 shadow-md shadow-rose-500/10"
+                    : "border-slate-200/90 dark:border-white/10 shadow-xs focus-within:border-blue-500/40"
+                }`}
+              >
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -990,12 +1141,108 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                 placeholder={
                   isListening
                     ? "Listening... speak now into your microphone"
-                    : "Ask about flights, sales charts, jobs, weather, or Miro plans..."
+                    : "Ask about flights, sales charts, jobs, weather, or drop any image / document..."
                 }
-                className="w-full resize-none bg-transparent px-4 py-3.5 pr-32 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none leading-relaxed"
+                className="w-full resize-none bg-transparent px-4 py-3.5 pl-12 pr-28 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none leading-relaxed"
               />
 
-              {/* Action Buttons in Input Box */}
+              {/* Left: Plus (+) Button for Direct Native File & Gallery Picker */}
+              <div ref={attachMenuRef} className="absolute left-2.5 bottom-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAttachMenu(!showAttachMenu)}
+                  disabled={isUploading}
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                    showAttachMenu
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10"
+                  }`}
+                  title="Add files (Image Gallery or System File Manager)"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  ) : (
+                    <Plus className={`w-4 h-4 transition-transform duration-200 ${showAttachMenu ? "rotate-45" : ""}`} />
+                  )}
+                </button>
+
+                {/* Floating Native Picker Selector Menu (Zero Drawer/Modal) */}
+                <AnimatePresence>
+                  {showAttachMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-10 left-0 z-40 w-60 p-1.5 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 shadow-xl space-y-1"
+                    >
+                      {/* Option 1: Image / Gallery (Native device photo picker) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          imageInputRef.current?.click();
+                          setShowAttachMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                          <ImageIcon className="w-4 h-4" />
+                        </div>
+                        <div className="truncate">
+                          <span className="block font-semibold">Image &amp; Gallery</span>
+                          <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
+                            Photo gallery &bull; PNG, JPG, WEBP
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Option 2: System File Manager (Native OS file picker) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          docInputRef.current?.click();
+                          setShowAttachMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                          <FolderOpen className="w-4 h-4" />
+                        </div>
+                        <div className="truncate">
+                          <span className="block font-semibold">System File Manager</span>
+                          <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
+                            PDF, Word, Excel, CSV, TXT
+                          </span>
+                        </div>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Hidden Native File Inputs */}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+                    e.target.value = "";
+                  }}
+                />
+                <input
+                  ref={docInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+
+              {/* Right: Voice Input + Send Button */}
               <div className="absolute right-2.5 bottom-2 flex items-center gap-1.5">
                 {/* Voice Input Microphone Button */}
                 <button
@@ -1013,16 +1260,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                   ) : (
                     <Mic className="w-4 h-4" />
                   )}
-                </button>
-
-                {/* File Attachment Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowUploadModal(true)}
-                  className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Upload Excel or CSV"
-                >
-                  <Paperclip className="w-4 h-4" />
                 </button>
 
                 {/* Send / Stop Streaming Button */}
@@ -1048,25 +1285,45 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                 )}
               </div>
             </div>
+            </div>
 
-            {/* Bottom Disclaimer with Active CopilotKit Capabilities */}
+            {/* Bottom Disclaimer */}
             <p className="text-[11px] text-center text-slate-400 dark:text-zinc-500 mt-2 select-none">
-              CopilotKit V2 &bull; Rich Threads &bull; Continual Learning &bull; Voice (STT/TTS) &bull; Realtime Sync
+              Full Page Drag &amp; Drop &bull; Native Gallery / File Manager &bull; Multimodal GenUI
             </p>
           </div>
         </div>
       </div>
 
-      {/* File Upload Modal */}
-      {showUploadModal && (
-        <FileUploadZone
-          onClose={() => setShowUploadModal(false)}
-          onFileUploaded={(fileData) => {
-            setCurrentAttachment(fileData);
-            setShowUploadModal(false);
-          }}
-        />
-      )}
+      {/* 4. Full Page Drag and Drop Overlay */}
+      <AnimatePresence>
+        {isDraggingOver && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 backdrop-blur-md bg-blue-600/10 dark:bg-blue-900/25 border-4 border-dashed border-blue-500/70 flex flex-col items-center justify-center pointer-events-none p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.85, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85, y: 12 }}
+              className="p-8 rounded-3xl bg-white/95 dark:bg-[#1e1f20]/95 border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col items-center text-center max-w-sm"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 mb-4 animate-bounce">
+                <UploadCloud className="w-8 h-8" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Drop your file to analyze
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+                Release anywhere to attach Images (PNG, JPG), Documents (PDF, DOCX), or Spreadsheets (Excel, CSV).
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

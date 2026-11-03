@@ -157,26 +157,45 @@ async def upload_file(file: UploadFile = File(...)):
             content_type=file.content_type or "application/octet-stream"
         )
 
-        # 3. If it's an Excel or CSV file, check parseability
+        # 3. Categorize file format & parse preview if applicable
+        file_ext = os.path.splitext(filename.lower())[1]
+        file_type = "file"
         parsed_preview = None
-        if filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".csv"):
+
+        if file_ext in [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"]:
+            file_type = "image"
+        elif file_ext in [".xlsx", ".xls", ".csv"]:
+            file_type = "spreadsheet"
             try:
                 parsed_preview = parse_sales_excel(file_path)
             except Exception as pe:
                 logger.warning(f"Could not parse preview: {pe}")
+        elif file_ext in [".pdf", ".doc", ".docx", ".txt", ".md"]:
+            file_type = "document"
 
         return {
             "success": True,
             "filename": filename,
             "file_path": file_path,
             "file_size": file_size,
-            "is_excel": bool(parsed_preview),
+            "file_type": file_type,
+            "is_excel": file_type == "spreadsheet" and bool(parsed_preview),
+            "preview_url": f"/api/files/{filename}",
             "parsed_preview": parsed_preview,
             "silo": silo_res
         }
     except Exception as e:
         logger.error(f"Failed to process upload: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@app.get("/api/files/{filename}")
+def serve_uploaded_file(filename: str):
+    """Serves uploaded images, documents, and spreadsheets for live preview & download."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found on server")
+    return FileResponse(file_path)
 
 
 @app.get("/api/download-sample-excel")

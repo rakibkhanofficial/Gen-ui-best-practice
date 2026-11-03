@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PanelLeft, Sun, Moon, Zap, Brain, Mic } from "lucide-react";
+import { PanelLeft, Sun, Moon, Zap, Brain, Settings } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { UserSession } from "@/lib/auth";
 
@@ -11,6 +11,7 @@ interface ChatHeaderProps {
   onToggleSidebar: () => void;
   syncStatus?: string | null;
   learnedCount?: number;
+  onOpenSettings?: () => void;
 }
 
 export function ChatHeader({
@@ -19,6 +20,7 @@ export function ChatHeader({
   onToggleSidebar,
   syncStatus,
   learnedCount = 3,
+  onOpenSettings,
 }: ChatHeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -74,12 +76,12 @@ export function ChatHeader({
         </div>
       </div>
 
-      {/* Right: Theme Switcher Only */}
-      <div className="flex items-center gap-2">
+      {/* Right: Theme Switcher & Settings matching Google AI Studio */}
+      <div className="flex items-center gap-1.5">
         <button
           onClick={toggleTheme}
           suppressHydrationWarning
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
           title={isMounted && theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {!isMounted ? (
@@ -90,6 +92,16 @@ export function ChatHeader({
             <Moon className="w-4 h-4 text-indigo-500" />
           )}
         </button>
+
+        {onOpenSettings && (
+          <button
+            onClick={onOpenSettings}
+            className="w-8 h-8 rounded-full flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </header>
   );

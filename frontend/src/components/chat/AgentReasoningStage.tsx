@@ -27,6 +27,7 @@ interface AgentReasoningStageProps {
   detail?: string;
   sources?: SearchSource[];
   durationMs?: number;
+  modelName?: string;
 }
 
 export function AgentReasoningStage({
@@ -34,6 +35,7 @@ export function AgentReasoningStage({
   detail,
   sources = [],
   durationMs,
+  modelName = "Gemini 3.8 Flash",
 }: AgentReasoningStageProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -50,7 +52,7 @@ export function AgentReasoningStage({
 
   if (stage === "Idle" || !stage) return null;
 
-  // Authentic Gemini Thought Labels matching Google Gemini 3.8 Flash
+  // Authentic Gemini Thought Labels matching Google Gemini 3.8 Flash & Google AI Studio
   const getStageLabel = (s: AgentStage) => {
     switch (s) {
       case "Thinking":
@@ -77,10 +79,10 @@ export function AgentReasoningStage({
       transition={{ duration: 0.2 }}
       className="my-2 select-none font-sans"
     >
-      {/* Line 1: GenUI Agent • Running for 13s / Thought for 4s */}
+      {/* Line 1: Gemini 3.8 Flash • Running for 13s / Thought for 4s */}
       <div className="flex items-center gap-1.5 text-[13px] text-slate-500 dark:text-zinc-400 font-normal leading-none">
         <span className="text-slate-700 dark:text-zinc-300 font-normal">
-          GenUI Agent
+          {modelName}
         </span>
         <span className="text-slate-400 dark:text-zinc-500">&bull;</span>
         {!isFinished ? (
@@ -103,50 +105,27 @@ export function AgentReasoningStage({
         )}
       </div>
 
-      {/* Line 2: (✦ Illuminating (Authentic rotating gradient arc with 4-point blue star) */}
+      {/* Line 2: (✦ Illuminating (Authentic coral arc + Google blue 4-point star matching Google AI Studio) */}
       {!isFinished && (
         <motion.div
           initial={{ opacity: 0, y: 2 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 mt-2 text-sm text-slate-600 dark:text-zinc-400 font-normal"
+          className="flex items-center gap-1.5 mt-1.5 text-sm text-slate-600 dark:text-zinc-400 font-normal"
         >
-          {/* Animated Gemini Arc + Star */}
-          <div className="relative w-4 h-4 flex items-center justify-center shrink-0">
-            {/* Rotating gradient arc */}
+          {/* Authentic coral red left arc bracket '(' + Google blue 4-point star '✦' */}
+          <div className="flex items-center gap-1 select-none">
+            <span className="text-[#EA4335] dark:text-[#ff6b60] text-sm font-semibold leading-none">
+              (
+            </span>
             <svg
-              className="w-4 h-4 animate-spin"
-              viewBox="0 0 24 24"
-              fill="none"
-              style={{ animationDuration: "1.6s" }}
-            >
-              <defs>
-                <linearGradient id="geminiSpinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#EA4335" />
-                  <stop offset="35%" stopColor="#FBBC05" />
-                  <stop offset="70%" stopColor="#4285F4" />
-                  <stop offset="100%" stopColor="#1A73E8" />
-                </linearGradient>
-              </defs>
-              <circle
-                cx="12"
-                cy="12"
-                r="9.5"
-                stroke="url(#geminiSpinGrad)"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeDasharray="22 38"
-              />
-            </svg>
-            {/* Central 4-pointed Gemini star in Google blue */}
-            <svg
-              className="absolute w-2.5 h-2.5 text-[#1a73e8] dark:text-[#8ab4f8] fill-current"
+              className="w-3 h-3 text-[#1a73e8] dark:text-[#8ab4f8] fill-current animate-pulse"
               viewBox="0 0 24 24"
             >
               <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" />
             </svg>
           </div>
 
-          <span>{stageLabel}</span>
+          <span className="text-slate-600 dark:text-zinc-400 tracking-tight">{stageLabel}</span>
 
           {detail && stage === "Searching" && (
             <span className="text-xs text-slate-400 dark:text-zinc-500 truncate max-w-sm hidden sm:inline">

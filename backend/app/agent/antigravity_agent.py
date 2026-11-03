@@ -17,6 +17,7 @@ from app.agent.tools.flight_tool import search_flights
 from app.agent.tools.currency_tool import convert_currency
 from app.agent.tools.youtube_tool import search_youtube_videos
 from app.agent.tools.website_tool import fetch_website_info
+from app.agent.tools.document_tool import analyze_document, analyze_image
 
 logger = logging.getLogger("genui.agent")
 
@@ -35,6 +36,8 @@ TOOL_REGISTRY = {
     "convert_currency": convert_currency,
     "search_youtube_videos": search_youtube_videos,
     "fetch_website_info": fetch_website_info,
+    "analyze_document": analyze_document,
+    "analyze_image": analyze_image,
 }
 
 

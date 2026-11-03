@@ -10,6 +10,7 @@ from google.genai import types
 from app.config import settings
 from app.agent.antigravity_agent import TOOL_REGISTRY, route_intent_heuristically
 from app.services.excel_service import parse_sales_excel
+from app.agent.tools.document_tool import analyze_document, analyze_image
 
 logger = logging.getLogger("genui.gemini")
 
@@ -372,40 +373,131 @@ async def stream_agent_reasoning(
     yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Illuminating intent & evaluating parameters with Antigravity Agent...'})}\n\n"
     await asyncio.sleep(1.2)
 
-    # Check for Excel Attachment analysis first
-    if attachment_path and (attachment_path.endswith(".xlsx") or attachment_path.endswith(".xls") or attachment_path.endswith(".csv")):
-        sources = resolve_sources_for_query(prompt, attachment_path=attachment_path)
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Inspecting uploaded spreadsheet: {os.path.basename(attachment_path)}...', 'sources': sources})}\n\n"
-        await asyncio.sleep(1.4)
+    # Check for Attachment analysis across supported formats
+    if attachment_path:
+        file_ext = os.path.splitext(attachment_path.lower())[1]
+        basename = os.path.basename(attachment_path)
 
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Executing pandas aggregate routines (summing revenues, calculating deal sizes, category shares)...', 'sources': sources})}\n\n"
-        await asyncio.sleep(1.2)
+        # 1. Image Attachment Analysis
+        if file_ext in [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"]:
+            sources = [
+                {
+                    "name": "Antigravity Computer Vision",
+                    "domain": "google.com",
+                    "favicon": "https://www.google.com/s2/favicons?domain=google.com&sz=128",
+                    "url": "https://deepmind.google/technologies/gemini/",
+                    "status": "Multimodal Vision Stream"
+                },
+                {
+                    "name": "OCR Text Extractor",
+                    "domain": "w3.org",
+                    "favicon": "https://www.google.com/s2/favicons?domain=w3.org&sz=128",
+                    "url": "https://www.w3.org",
+                    "status": "Geometry & Font Parser"
+                }
+            ]
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Inspecting uploaded image: {basename} across Vision layers...', 'sources': sources})}\n\n"
+            await asyncio.sleep(1.2)
 
-        try:
-            excel_data = parse_sales_excel(attachment_path)
-            yield f"data: {json.dumps({'event': 'genui', 'tool': 'get_sales_analytics', 'data': excel_data, 'sources': sources})}\n\n"
-            
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Extracting visual elements, color palettes, and text tokens...', 'sources': sources})}\n\n"
+            await asyncio.sleep(1.1)
+
+            image_data = analyze_image(attachment_path, prompt=prompt)
+            yield f"data: {json.dumps({'event': 'genui', 'tool': 'analyze_image', 'data': image_data, 'sources': sources})}\n\n"
+
             stream_text = (
-                f"### 📊 Uploaded Spreadsheet Ingested & Analyzed\n\n"
-                f"I have thoroughly parsed **`{os.path.basename(attachment_path)}`**.\n\n"
-                f"- **Total Revenue**: {excel_data['kpis'][0]['value']}\n"
-                f"- **Average Deal Size**: {excel_data['kpis'][1]['value']}\n"
-                f"- **Categories Processed**: {len(excel_data['category_breakdown'])}\n\n"
-                f"The interactive **Zen Analytics Dashboard & Ledger** has been dynamically mounted below for your review."
+                f"### 🖼️ Image Successfully Processed & Analyzed\n\n"
+                f"I have inspected **`{basename}`** using the Antigravity Vision pipeline.\n\n"
+                f"- **Format & Dimensions**: {image_data['format']} ({image_data['dimensions']})\n"
+                f"- **File Size**: {image_data['file_size_kb']} KB\n"
+                f"- **Primary Visual Category**: {image_data['detected_labels'][0]['label']} ({int(image_data['detected_labels'][0]['confidence']*100)}% confidence)\n\n"
+                f"The interactive **Image Visual Inspector Card** has been mounted below."
             )
             for token in stream_text.split(" "):
                 yield f"data: {json.dumps({'event': 'delta', 'text': token + ' '})}\n\n"
                 await asyncio.sleep(0.02)
 
-            yield f"data: {json.dumps({'event': 'status', 'stage': 'Completed', 'detail': 'Spreadsheet analysis mounted in GenUI.', 'sources': sources})}\n\n"
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Completed', 'detail': 'Image analysis mounted in GenUI.', 'sources': sources})}\n\n"
             yield f"data: {json.dumps({'event': 'done'})}\n\n"
             return
 
-        except Exception as e:
-            logger.error(f"Excel parse error: {e}")
-            yield f"data: {json.dumps({'event': 'delta', 'text': f'Error parsing uploaded file: {str(e)}'})}\n\n"
+        # 2. Document Attachment Analysis (PDF, Word DOCX/DOC, TXT)
+        elif file_ext in [".pdf", ".doc", ".docx", ".txt", ".md"]:
+            sources = [
+                {
+                    "name": "Document Ingestion Engine",
+                    "domain": "adobe.com",
+                    "favicon": "https://www.google.com/s2/favicons?domain=adobe.com&sz=128",
+                    "url": "https://www.adobe.com",
+                    "status": "Binary Text Parser"
+                },
+                {
+                    "name": "Executive Summarizer",
+                    "domain": "python.org",
+                    "favicon": "https://www.google.com/s2/favicons?domain=python.org&sz=128",
+                    "url": "https://www.python.org",
+                    "status": "Natural Language Tokenizer"
+                }
+            ]
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Parsing uploaded document: {basename}...', 'sources': sources})}\n\n"
+            await asyncio.sleep(1.2)
+
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Extracting sections, executive highlights, and compliance tags...', 'sources': sources})}\n\n"
+            await asyncio.sleep(1.1)
+
+            doc_data = analyze_document(attachment_path, query=prompt)
+            yield f"data: {json.dumps({'event': 'genui', 'tool': 'analyze_document', 'data': doc_data, 'sources': sources})}\n\n"
+
+            stream_text = (
+                f"### 📄 Document Ingested & Analyzed\n\n"
+                f"I have parsed the document **`{basename}`**.\n\n"
+                f"- **Type**: {doc_data['file_type']}\n"
+                f"- **Volume**: {doc_data['word_count']:,} words across ~{doc_data['page_count']} pages\n"
+                f"- **Key Takeaways Extracted**: {len(doc_data['key_takeaways'])}\n\n"
+                f"The interactive **Document Analysis & Summary Card** has been mounted below."
+            )
+            for token in stream_text.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': token + ' '})}\n\n"
+                await asyncio.sleep(0.02)
+
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Completed', 'detail': 'Document analysis mounted in GenUI.', 'sources': sources})}\n\n"
             yield f"data: {json.dumps({'event': 'done'})}\n\n"
             return
+
+        # 3. Spreadsheet Attachment Analysis (Excel / CSV)
+        elif file_ext in [".xlsx", ".xls", ".csv"]:
+            sources = resolve_sources_for_query(prompt, attachment_path=attachment_path)
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Inspecting uploaded spreadsheet: {basename}...', 'sources': sources})}\n\n"
+            await asyncio.sleep(1.4)
+
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Executing pandas aggregate routines (summing revenues, calculating deal sizes, category shares)...', 'sources': sources})}\n\n"
+            await asyncio.sleep(1.2)
+
+            try:
+                excel_data = parse_sales_excel(attachment_path)
+                yield f"data: {json.dumps({'event': 'genui', 'tool': 'get_sales_analytics', 'data': excel_data, 'sources': sources})}\n\n"
+                
+                stream_text = (
+                    f"### 📊 Uploaded Spreadsheet Ingested & Analyzed\n\n"
+                    f"I have thoroughly parsed **`{basename}`**.\n\n"
+                    f"- **Total Revenue**: {excel_data['kpis'][0]['value']}\n"
+                    f"- **Average Deal Size**: {excel_data['kpis'][1]['value']}\n"
+                    f"- **Categories Processed**: {len(excel_data['category_breakdown'])}\n\n"
+                    f"The interactive **Zen Analytics Dashboard & Ledger** has been dynamically mounted below for your review."
+                )
+                for token in stream_text.split(" "):
+                    yield f"data: {json.dumps({'event': 'delta', 'text': token + ' '})}\n\n"
+                    await asyncio.sleep(0.02)
+
+                yield f"data: {json.dumps({'event': 'status', 'stage': 'Completed', 'detail': 'Spreadsheet analysis mounted in GenUI.', 'sources': sources})}\n\n"
+                yield f"data: {json.dumps({'event': 'done'})}\n\n"
+                return
+
+            except Exception as e:
+                logger.error(f"Excel parse error: {e}")
+                yield f"data: {json.dumps({'event': 'delta', 'text': f'Error parsing uploaded file: {str(e)}'})}\n\n"
+                yield f"data: {json.dumps({'event': 'done'})}\n\n"
+                return
 
     # Check if a tool matches the user prompt
     matched_intent = route_intent_heuristically(prompt)
