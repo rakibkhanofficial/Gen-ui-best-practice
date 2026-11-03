@@ -17,8 +17,9 @@ if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your_gemini_api_key_h
     except Exception as e:
         logger.warning(f"Could not initialize Gemini Client for job_tool: {e}")
 
-# Known tech companies and their official domains / local assets
+# Known tech and enterprise conglomerate companies and their official domains / local assets
 KNOWN_COMPANIES: Dict[str, Dict[str, str]] = {
+    # Tech & Startups
     "brain station 23": {
         "domain": "brainstation-23.com",
         "logo": "/images/companies/brainstation.png",
@@ -87,6 +88,136 @@ KNOWN_COMPANIES: Dict[str, Dict[str, str]] = {
         "domain": "meta.com",
         "logo": "/images/companies/meta.png",
     },
+
+    # Bangladesh Top Conglomerates & Group Companies
+    "beximco group": {
+        "domain": "beximco.com",
+        "logo": "/images/companies/beximco.png",
+    },
+    "beximco": {
+        "domain": "beximco.com",
+        "logo": "/images/companies/beximco.png",
+    },
+    "square group": {
+        "domain": "squarepharma.com.bd",
+        "logo": "/images/companies/square.png",
+    },
+    "square pharmaceuticals": {
+        "domain": "squarepharma.com.bd",
+        "logo": "/images/companies/square.png",
+    },
+    "square": {
+        "domain": "squarepharma.com.bd",
+        "logo": "/images/companies/square.png",
+    },
+    "aci limited": {
+        "domain": "aci-bd.com",
+        "logo": "/images/companies/aci.png",
+    },
+    "aci group": {
+        "domain": "aci-bd.com",
+        "logo": "/images/companies/aci.png",
+    },
+    "aci": {
+        "domain": "aci-bd.com",
+        "logo": "/images/companies/aci.png",
+    },
+    "bashundhara group": {
+        "domain": "bashundharagroup.com",
+        "logo": "/images/companies/bashundhara.png",
+    },
+    "bashundhara": {
+        "domain": "bashundharagroup.com",
+        "logo": "/images/companies/bashundhara.png",
+    },
+    "walton group": {
+        "domain": "waltonbd.com",
+        "logo": "/images/companies/walton.png",
+    },
+    "walton": {
+        "domain": "waltonbd.com",
+        "logo": "/images/companies/walton.png",
+    },
+    "pran-rfl group": {
+        "domain": "pranrflgroup.com",
+        "logo": "/images/companies/pran.png",
+    },
+    "pran": {
+        "domain": "pranrflgroup.com",
+        "logo": "/images/companies/pran.png",
+    },
+    "akij group": {
+        "domain": "akij.net",
+        "logo": "/images/companies/akij.png",
+    },
+    "akij": {
+        "domain": "akij.net",
+        "logo": "/images/companies/akij.png",
+    },
+    "brac": {
+        "domain": "brac.net",
+        "logo": "/images/companies/brac.png",
+    },
+    "grameenphone": {
+        "domain": "grameenphone.com",
+        "logo": "/images/companies/grameenphone.png",
+    },
+    "summit group": {
+        "domain": "summitpowerinternational.com",
+        "logo": "/images/companies/summit.png",
+    },
+    "summit": {
+        "domain": "summitpowerinternational.com",
+        "logo": "/images/companies/summit.png",
+    },
+    "city group": {
+        "domain": "citygroup.com.bd",
+        "logo": "/images/companies/citygroup.png",
+    },
+    "jamuna group": {
+        "domain": "jamunagroup.com.bd",
+        "logo": "/images/companies/jamuna.png",
+    },
+    "navana group": {
+        "domain": "navana.com",
+        "logo": "/images/companies/navana.png",
+    },
+    "anwar group": {
+        "domain": "anwargroup.com",
+        "logo": "/images/companies/anwar.png",
+    },
+    "apex footwear": {
+        "domain": "apexfootwearltd.com",
+        "logo": "/images/companies/apex.png",
+    },
+    "apex group": {
+        "domain": "apexfootwearltd.com",
+        "logo": "/images/companies/apex.png",
+    },
+    "dbl group": {
+        "domain": "dbl-group.com",
+        "logo": "/images/companies/dbl.png",
+    },
+    "incepta pharmaceuticals": {
+        "domain": "inceptapharma.com",
+        "logo": "/images/companies/incepta.png",
+    },
+    "incepta": {
+        "domain": "inceptapharma.com",
+        "logo": "/images/companies/incepta.png",
+    },
+    "acme laboratories": {
+        "domain": "acmeglobal.com",
+        "logo": "/images/companies/acme.png",
+    },
+    "meghna group of industries": {
+        "domain": "mgi.org",
+        "logo": "/images/companies/mgi.png",
+    },
+    "mgi": {
+        "domain": "mgi.org",
+        "logo": "/images/companies/mgi.png",
+    },
 }
 
 
@@ -116,7 +247,7 @@ def _generate_dynamic_jobs(query: str, location: str, platform: str) -> Optional
 The user is searching for: "{query}" in location: "{location}". Platform filter: "{platform}".
 
 Search and generate 3 to 5 realistic, high-quality, currently hiring job openings tailored strictly to the user's query: "{query}".
-Include top employers in Bangladesh (e.g. Brain Station 23, Therap (BD) Ltd., bKash, Pathao, Chaldal, ShopUp, Enosis Solutions, Selise, TigerIT) or leading global remote tech companies (Vercel, Automattic, GitLab, Stripe).
+Include top employers in Bangladesh (e.g. Beximco Group, Square Group, ACI Limited, Bashundhara Group, Walton Hi-Tech, PRAN-RFL Group, Akij, BRAC, Grameenphone, Brain Station 23, Therap (BD) Ltd., bKash, Pathao, Chaldal, ShopUp, Enosis Solutions, Selise) or leading global remote tech companies (Vercel, Automattic, GitLab, Stripe).
 
 For each job return:
 - Title tailored directly to the query: "{query}" (e.g. "Senior Full-Stack Engineer", "Staff AI Engineer", "Mobile Lead", etc.)
@@ -167,6 +298,168 @@ def _get_curated_jobs_by_category(query: str, location: str, platform: str) -> J
 
     # Catalog of verified real jobs across specialties
     all_jobs = [
+        # Top Bangladesh Conglomerates & Group Companies
+        JobListing(
+            id="job-bd-beximco",
+            title="Lead Enterprise ERP & Solutions Architect",
+            company="Beximco Group",
+            company_logo="/images/companies/beximco.png",
+            location="Gulshan, Dhaka / Gazipur (Hybrid)",
+            platform="BDJobs",
+            salary_range="৳180,000 - ৳260,000 / month",
+            work_type="Hybrid",
+            experience_level="Lead",
+            tags=["ERP Systems", "SAP", "PostgreSQL", "Cloud Architecture", "Python"],
+            posted_time="Just now",
+            description="Architect and modernize mission-critical ERP, manufacturing intelligence, and textile automation pipelines across Beximco industrial parks.",
+            apply_url="https://jobs.bdjobs.com/jobdetails.asp?id=1149201",
+            match_score=98,
+            interview_tips=[
+                "Highlight experience with enterprise database replication and manufacturing supply-chain ERPs.",
+                "Discuss high-throughput transaction auditing and high-availability systems."
+            ]
+        ),
+        JobListing(
+            id="job-bd-square",
+            title="Senior Data & Digital Platforms Architect",
+            company="Square Pharmaceuticals PLC",
+            company_logo="/images/companies/square.png",
+            location="Square Centre, Mohakhali, Dhaka (On-site)",
+            platform="LinkedIn",
+            salary_range="৳170,000 - ৳250,000 / month",
+            work_type="On-site",
+            experience_level="Senior",
+            tags=["Data Engineering", "Python", "FastAPI", "PostgreSQL", "GxP Compliance"],
+            posted_time="1 day ago",
+            description="Lead digital health automation, batch-record validation platforms, and pharma supply chain analytics for Bangladesh's leading healthcare manufacturer.",
+            apply_url="https://www.linkedin.com/jobs/view/404112099",
+            match_score=97,
+            interview_tips=[
+                "Review pharmaceutical data validation standards, CFR 21 Part 11, and audit trails.",
+                "Prepare for questions on ETL pipeline orchestration and time-series sensor data."
+            ]
+        ),
+        JobListing(
+            id="job-bd-aci",
+            title="Lead AgTech IoT & Digital Ecosystems Engineer",
+            company="ACI Limited",
+            company_logo="/images/companies/aci.png",
+            location="ACI Centre, Tejgaon, Dhaka (Hybrid)",
+            platform="BDJobs",
+            salary_range="৳160,000 - ৳235,000 / month",
+            work_type="Hybrid",
+            experience_level="Lead",
+            tags=["IoT", "Python", "React", "Mobile AgTech", "FastAPI"],
+            posted_time="2 days ago",
+            description="Build modern precision agriculture platforms, IoT farm advisory telemetry, and eCommerce supply chain systems for ACI Agribusiness.",
+            apply_url="https://jobs.bdjobs.com/jobdetails.asp?id=1149312",
+            match_score=96,
+            interview_tips=[
+                "Showcase experience with distributed IoT edge devices, MQTT, and offline-first mobile synchronization.",
+                "Demonstrate ability to build intuitive, high-performance dashboards for rural users."
+            ]
+        ),
+        JobListing(
+            id="job-bd-bashundhara",
+            title="Head of Cloud Infrastructure & Enterprise Networks",
+            company="Bashundhara Group",
+            company_logo="/images/companies/bashundhara.png",
+            location="Bashundhara R/A, Dhaka (On-site)",
+            platform="LinkedIn",
+            salary_range="৳200,000 - ৳290,000 / month",
+            work_type="On-site",
+            experience_level="Lead",
+            tags=["Multi-Cloud", "Cisco Networking", "Kubernetes", "Disaster Recovery", "Cybersecurity"],
+            posted_time="Just now",
+            description="Direct enterprise multi-cloud infrastructure, campus-wide private networking, and cyber defense across Bashundhara conglomerate units.",
+            apply_url="https://www.linkedin.com/jobs/view/404118374",
+            match_score=98,
+            interview_tips=[
+                "Demonstrate experience architecting fault-tolerant data center failover strategies.",
+                "Prepare to present zero-trust access control architectures for multi-subsidiary environments."
+            ]
+        ),
+        JobListing(
+            id="job-bd-walton",
+            title="Senior Embedded IoT & Smart Device Firmware Architect",
+            company="Walton Hi-Tech Industries PLC",
+            company_logo="/images/companies/walton.png",
+            location="Walton Corporate Office, Bashundhara, Dhaka (Hybrid)",
+            platform="BDJobs",
+            salary_range="৳175,000 - ৳250,000 / month",
+            work_type="Hybrid",
+            experience_level="Senior",
+            tags=["C/C++", "RTOS", "Embedded Linux", "IoT Cloud", "BLE/WiFi"],
+            posted_time="1 day ago",
+            description="Design next-generation firmware architecture and cloud communication protocols for Walton Smart Life IoT appliances and consumer electronics.",
+            apply_url="https://jobs.bdjobs.com/jobdetails.asp?id=1149410",
+            match_score=95,
+            interview_tips=[
+                "Deep knowledge of memory-constrained RTOS kernels, OTA update security, and low-power BLE states.",
+                "Discuss end-to-end integration with MQTT brokers and mobile application SDKs."
+            ]
+        ),
+        JobListing(
+            id="job-bd-pran",
+            title="Senior Supply Chain Logistics & Tech Architect",
+            company="PRAN-RFL Group",
+            company_logo="/images/companies/pran.png",
+            location="PRAN-RFL Centre, Middle Badda, Dhaka (On-site)",
+            platform="BDJobs",
+            salary_range="৳155,000 - ৳225,000 / month",
+            work_type="On-site",
+            experience_level="Senior",
+            tags=["Supply Chain", "PostgreSQL", "Node.js", "Warehouse Tech", "Mobile"],
+            posted_time="3 days ago",
+            description="Scale national distributor management systems, automated warehouse dispatching, and field sales automation across 140+ countries.",
+            apply_url="https://jobs.bdjobs.com/jobdetails.asp?id=1149502",
+            match_score=94,
+            interview_tips=[
+                "Focus on handling spotty connectivity for field distribution agents and robust offline data syncing.",
+                "Prepare for questions on warehouse inventory tracking and barcode/RFID automated routing."
+            ]
+        ),
+        JobListing(
+            id="job-bd-gp",
+            title="Principal Telecom API & Cloud Platform Architect",
+            company="Grameenphone",
+            company_logo="/images/companies/grameenphone.png",
+            location="GPHouse, Bashundhara, Dhaka (Hybrid)",
+            platform="LinkedIn",
+            salary_range="৳220,000 - ৳320,000 / month",
+            work_type="Hybrid",
+            experience_level="Lead",
+            tags=["Golang", "Kubernetes", "Kafka", "Telecom APIs", "5G Edge"],
+            posted_time="Just now",
+            description="Drive cloud-native transformation, developer API gateways, and ultra-low-latency microservices powering 80M+ telecommunication subscribers.",
+            apply_url="https://www.linkedin.com/jobs/view/404129482",
+            match_score=99,
+            interview_tips=[
+                "Be ready to architect carrier-grade 99.999% availability distributed systems.",
+                "Discuss high-throughput Kafka streaming partitions and sub-millisecond API rate limiting."
+            ]
+        ),
+        JobListing(
+            id="job-bd-brac",
+            title="Lead FinTech & Microfinance Core Platform Engineer",
+            company="BRAC",
+            company_logo="/images/companies/brac.png",
+            location="BRAC Centre, Mohakhali, Dhaka (Hybrid)",
+            platform="LinkedIn",
+            salary_range="৳165,000 - ৳240,000 / month",
+            work_type="Hybrid",
+            experience_level="Lead",
+            tags=["FinTech", "Java", "Spring Boot", "PostgreSQL", "Microfinance"],
+            posted_time="2 days ago",
+            description="Lead the re-platforming of world-renowned social development and microfinance platforms enabling millions of rural entrepreneurs.",
+            apply_url="https://www.linkedin.com/jobs/view/404130192",
+            match_score=96,
+            interview_tips=[
+                "Focus on financial ledger double-entry bookkeeping accuracy and cryptographic audit trails.",
+                "Highlight experience with mission-driven social impact engineering at scale."
+            ]
+        ),
+
         # Full Stack
         JobListing(
             id="job-fs-01",
@@ -362,7 +655,9 @@ def _get_curated_jobs_by_category(query: str, location: str, platform: str) -> J
     # Filter and rank based on query relevance
     matched: List[JobListing] = []
 
-    if any(k in q_lower for k in ["full stack", "fullstack", "next.js", "nextjs", "web"]):
+    if any(k in q_lower for k in ["beximco", "square", "aci", "walton", "pran", "bashundhara", "akij", "brac", "summit", "gp", "grameenphone", "group", "conglomerate", "enterprise"]):
+        matched = [j for j in all_jobs if any(c in j.company.lower() for c in ["beximco", "square", "aci", "walton", "pran", "bashundhara", "akij", "brac", "grameenphone", "summit"])]
+    elif any(k in q_lower for k in ["full stack", "fullstack", "next.js", "nextjs", "web"]):
         matched = [j for j in all_jobs if "full-stack" in j.title.lower() or "full stack" in j.title.lower()]
     elif any(k in q_lower for k in ["frontend", "front end", "react", "ui", "design"]):
         matched = [j for j in all_jobs if "frontend" in j.title.lower() or "react" in j.title.lower()]

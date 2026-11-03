@@ -23,6 +23,13 @@ AIRPORTS: Dict[str, Tuple[str, str, str]] = {
     "chittagong": ("Shah Amanat International", "CGP", "Bangladesh"),
     "chattogram": ("Shah Amanat International", "CGP", "Bangladesh"),
     "sylhet": ("Osmani International", "ZYL", "Bangladesh"),
+    "cox's bazar": ("Cox's Bazar Airport", "CXB", "Bangladesh"),
+    "coxs bazar": ("Cox's Bazar Airport", "CXB", "Bangladesh"),
+    "jashore": ("Jashore Airport", "JSR", "Bangladesh"),
+    "jessore": ("Jashore Airport", "JSR", "Bangladesh"),
+    "saidpur": ("Saidpur Airport", "SPD", "Bangladesh"),
+    "rajshahi": ("Shah Makhdum Airport", "RJH", "Bangladesh"),
+    "barishal": ("Barishal Airport", "BZL", "Bangladesh"),
 
     # Japan & East Asia
     "tokyo": ("Narita International", "NRT", "Japan"),
@@ -82,6 +89,30 @@ AIRLINE_ASSETS = {
         "logo": "/images/airlines/airindia.png",
         "code": "AI",
     },
+    "SpiceJet": {
+        "logo": "/images/airlines/spicejet.png",
+        "code": "SG",
+    },
+    "Biman Bangladesh Airlines": {
+        "logo": "/images/airlines/biman.png",
+        "code": "BG",
+    },
+    "US-Bangla Airlines": {
+        "logo": "/images/airlines/usbangla.png",
+        "code": "BS",
+    },
+    "Novoair": {
+        "logo": "/images/airlines/novoair.png",
+        "code": "VQ",
+    },
+    "Air Astra": {
+        "logo": "/images/airlines/airastra.png",
+        "code": "2A",
+    },
+    "IndiGo": {
+        "logo": "/images/airlines/indigo.png",
+        "code": "6E",
+    },
     "All Nippon Airways": {
         "logo": "/images/airlines/ana.png",
         "code": "NH",
@@ -97,14 +128,6 @@ AIRLINE_ASSETS = {
     "Thai Airways": {
         "logo": "/images/airlines/thai.png",
         "code": "TG",
-    },
-    "Biman Bangladesh Airlines": {
-        "logo": "/images/airlines/biman.png",
-        "code": "BG",
-    },
-    "US-Bangla Airlines": {
-        "logo": "/images/airlines/usbangla.png",
-        "code": "BS",
     },
     "Emirates": {
         "logo": "/images/airlines/emirates.png",
@@ -129,10 +152,6 @@ AIRLINE_ASSETS = {
     "Cathay Pacific": {
         "logo": "/images/airlines/cathay.png",
         "code": "CX",
-    },
-    "IndiGo": {
-        "logo": "/images/airlines/indigo.png",
-        "code": "6E",
     },
     "Virgin Atlantic": {
         "logo": "/images/airlines/britishairways.png",
@@ -418,6 +437,262 @@ def search_flights(
         ]
 
     # -------------------------------------------------------------
+    # 2b. SPECIFIC ROUTE: INDIA <-> BANGLADESH (DEL, CCU, BOM <-> DAC, CGP)
+    # -------------------------------------------------------------
+    elif (o_code in ["DEL", "CCU", "BOM", "BLR", "HYD", "MAA"] and d_code in ["DAC", "CGP", "ZYL"]) or \
+         (d_code in ["DEL", "CCU", "BOM", "BLR", "HYD", "MAA"] and o_code in ["DAC", "CGP", "ZYL"]):
+        is_ccu = (o_code == "CCU" or d_code == "CCU")
+        dur_direct = "0h 50m" if is_ccu else "2h 30m"
+        dur_budget = "0h 55m" if is_ccu else "2h 35m"
+        dur_1stop = "4h 15m" if is_ccu else "5h 45m"
+        base_mult = 0.65 if is_ccu else 1.0
+
+        flights = [
+            FlightOption(
+                id="fl-in-bd-01",
+                price=round(115.00 * base_mult, 2),
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="Air India",
+                    airline_logo=AIRLINE_ASSETS["Air India"]["logo"],
+                    flight_number="AI 230",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="07:30",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="10:30",
+                    duration=dur_direct,
+                    aircraft="Airbus A320neo",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="25kg checked + 7kg cabin",
+                refundable=True,
+                score=98,
+                badge="Non-Stop Flagship",
+            ),
+            FlightOption(
+                id="fl-in-bd-02",
+                price=round(85.00 * base_mult, 2),
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="SpiceJet",
+                    airline_logo=AIRLINE_ASSETS["SpiceJet"]["logo"],
+                    flight_number="SG 72",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="11:45",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="14:50",
+                    duration=dur_budget,
+                    aircraft="Boeing 737-800",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="20kg checked + 7kg cabin",
+                refundable=True,
+                score=95,
+                badge="Best Budget Non-Stop",
+            ),
+            FlightOption(
+                id="fl-in-bd-03",
+                price=round(120.00 * base_mult, 2),
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="Biman Bangladesh Airlines",
+                    airline_logo=AIRLINE_ASSETS["Biman Bangladesh Airlines"]["logo"],
+                    flight_number="BG 397",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="15:10",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="18:05",
+                    duration=dur_direct,
+                    aircraft="Boeing 737-800",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="30kg checked + 7kg cabin",
+                refundable=True,
+                score=96,
+                badge="National Flag Carrier",
+            ),
+            FlightOption(
+                id="fl-in-bd-04",
+                price=round(105.00 * base_mult, 2),
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="US-Bangla Airlines",
+                    airline_logo=AIRLINE_ASSETS["US-Bangla Airlines"]["logo"],
+                    flight_number="BS 201",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="19:20",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="22:20",
+                    duration=dur_direct,
+                    aircraft="Boeing 737-800",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="23kg checked + 7kg cabin",
+                refundable=True,
+                score=94,
+                badge="Popular Daily Direct",
+            ),
+            FlightOption(
+                id="fl-in-bd-05",
+                price=round(95.00 * base_mult, 2),
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="IndiGo",
+                    airline_logo=AIRLINE_ASSETS["IndiGo"]["logo"],
+                    flight_number="6E 1112",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="13:15",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="16:15",
+                    duration=dur_direct,
+                    aircraft="Airbus A321neo",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="20kg checked + 7kg cabin",
+                refundable=True,
+                score=93,
+                badge="On-Time Guaranteed",
+            ),
+        ]
+
+    # -------------------------------------------------------------
+    # 2c. BANGLADESH DOMESTIC ROUTES (DAC, CGP, CXB, ZYL, JSR, SPD)
+    # -------------------------------------------------------------
+    elif (o_code in ["DAC", "CGP", "CXB", "ZYL", "JSR", "SPD", "RJH", "BZL"] and 
+          d_code in ["DAC", "CGP", "CXB", "ZYL", "JSR", "SPD", "RJH", "BZL"]):
+        flights = [
+            FlightOption(
+                id="fl-bd-dom-01",
+                price=40.00,
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="Biman Bangladesh Airlines",
+                    airline_logo=AIRLINE_ASSETS["Biman Bangladesh Airlines"]["logo"],
+                    flight_number="BG 433",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="08:15",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="09:10",
+                    duration="0h 55m",
+                    aircraft="Dash-8 Q400",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="20kg checked + 7kg cabin",
+                refundable=True,
+                score=97,
+                badge="National Carrier",
+            ),
+            FlightOption(
+                id="fl-bd-dom-02",
+                price=38.00,
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="US-Bangla Airlines",
+                    airline_logo=AIRLINE_ASSETS["US-Bangla Airlines"]["logo"],
+                    flight_number="BS 141",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="11:30",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="12:20",
+                    duration="0h 50m",
+                    aircraft="ATR 72-600",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="20kg checked + 7kg cabin",
+                refundable=True,
+                score=96,
+                badge="Frequent Daily Flights",
+            ),
+            FlightOption(
+                id="fl-bd-dom-03",
+                price=36.00,
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="Novoair",
+                    airline_logo=AIRLINE_ASSETS["Novoair"]["logo"],
+                    flight_number="VQ 921",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="14:45",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="15:35",
+                    duration="0h 50m",
+                    aircraft="ATR 72-500",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="20kg checked + 7kg cabin",
+                refundable=True,
+                score=95,
+                badge="On-Time Excellence",
+            ),
+            FlightOption(
+                id="fl-bd-dom-04",
+                price=34.00,
+                currency="USD",
+                trip_type="One Way",
+                outbound=FlightSegment(
+                    airline="Air Astra",
+                    airline_logo=AIRLINE_ASSETS["Air Astra"]["logo"],
+                    flight_number="2A 441",
+                    departure_airport=o_name,
+                    departure_code=o_code,
+                    departure_time="17:50",
+                    arrival_airport=d_name,
+                    arrival_code=d_code,
+                    arrival_time="18:45",
+                    duration="0h 55m",
+                    aircraft="ATR 72-600",
+                    cabin_class="Economy",
+                    stops=0,
+                    stop_cities=[],
+                ),
+                baggage="20kg checked + 7kg cabin",
+                refundable=True,
+                score=94,
+                badge="Modern Fleet Value",
+            ),
+        ]
+
+    # -------------------------------------------------------------
     # 3. SPECIFIC ROUTE: NEW YORK (JFK) -> LONDON (LHR)
     # -------------------------------------------------------------
     elif o_code in ["JFK", "EWR"] and d_code in ["LHR", "LGW"]:
@@ -595,8 +870,10 @@ def search_flights(
         candidates = []
         if o_country == "India" or d_country == "India":
             candidates.append(("Air India", "AI 882", "Boeing 787-8", 530.00, "Non-Stop Flagship"))
+            candidates.append(("SpiceJet", "SG 11", "Boeing 737-800", 410.00, "Budget Value Leader"))
         if o_country == "Bangladesh" or d_country == "Bangladesh":
             candidates.append(("Biman Bangladesh Airlines", "BG 044", "Boeing 787-9", 510.00, "Direct Carrier"))
+            candidates.append(("US-Bangla Airlines", "BS 302", "Boeing 737-800", 475.00, "Fast Connectivity"))
         if o_country == "Japan" or d_country == "Japan":
             candidates.append(("All Nippon Airways", "NH 702", "Boeing 787-9", 640.00, "Japanese Premium"))
 

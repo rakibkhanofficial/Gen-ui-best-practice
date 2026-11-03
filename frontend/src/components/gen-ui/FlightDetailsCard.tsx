@@ -95,8 +95,14 @@ function AirlineLogo({
       ? "/images/airlines/qatar.png"
       : aLower.includes("singapore")
       ? "/images/airlines/singapore.png"
-      : aLower.includes("air india")
+      : aLower.includes("air india") || aLower.includes("airindia")
       ? "/images/airlines/airindia.png"
+      : aLower.includes("spicejet") || aLower.includes("spice jet")
+      ? "/images/airlines/spicejet.png"
+      : aLower.includes("novoair") || aLower.includes("novo air")
+      ? "/images/airlines/novoair.png"
+      : aLower.includes("air astra") || aLower.includes("airastra")
+      ? "/images/airlines/airastra.png"
       : aLower.includes("indigo")
       ? "/images/airlines/indigo.png"
       : aLower.includes("thai")

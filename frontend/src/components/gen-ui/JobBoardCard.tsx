@@ -94,6 +94,44 @@ function CompanyLogo({
       ? "/images/companies/enosis.png"
       : nLower.includes("tigerit")
       ? "/images/companies/tigerit.png"
+      : nLower.includes("beximco")
+      ? "/images/companies/beximco.png"
+      : nLower.includes("square")
+      ? "/images/companies/square.png"
+      : nLower.includes("aci")
+      ? "/images/companies/aci.png"
+      : nLower.includes("bashundhara")
+      ? "/images/companies/bashundhara.png"
+      : nLower.includes("walton")
+      ? "/images/companies/walton.png"
+      : nLower.includes("pran")
+      ? "/images/companies/pran.png"
+      : nLower.includes("akij")
+      ? "/images/companies/akij.png"
+      : nLower.includes("brac")
+      ? "/images/companies/brac.png"
+      : nLower.includes("grameenphone") || nLower.includes(" gp") || nLower === "gp"
+      ? "/images/companies/grameenphone.png"
+      : nLower.includes("summit")
+      ? "/images/companies/summit.png"
+      : nLower.includes("city group") || nLower.includes("citygroup")
+      ? "/images/companies/citygroup.png"
+      : nLower.includes("jamuna")
+      ? "/images/companies/jamuna.png"
+      : nLower.includes("navana")
+      ? "/images/companies/navana.png"
+      : nLower.includes("anwar")
+      ? "/images/companies/anwar.png"
+      : nLower.includes("apex")
+      ? "/images/companies/apex.png"
+      : nLower.includes("dbl")
+      ? "/images/companies/dbl.png"
+      : nLower.includes("incepta")
+      ? "/images/companies/incepta.png"
+      : nLower.includes("acme")
+      ? "/images/companies/acme.png"
+      : nLower.includes("mgi") || nLower.includes("meghna group")
+      ? "/images/companies/mgi.png"
       : null;
 
   // 2. Resolve domain for Google S2 Favicon service
@@ -112,6 +150,28 @@ function CompanyLogo({
       ? "pathao.com"
       : nLower.includes("chaldal")
       ? "chaldal.com"
+      : nLower.includes("beximco")
+      ? "beximco.com"
+      : nLower.includes("square")
+      ? "squarepharma.com.bd"
+      : nLower.includes("aci")
+      ? "aci-bd.com"
+      : nLower.includes("bashundhara")
+      ? "bashundharagroup.com"
+      : nLower.includes("walton")
+      ? "waltonbd.com"
+      : nLower.includes("pran")
+      ? "pranrflgroup.com"
+      : nLower.includes("akij")
+      ? "akij.net"
+      : nLower.includes("brac")
+      ? "brac.net"
+      : nLower.includes("grameenphone")
+      ? "grameenphone.com"
+      : nLower.includes("summit")
+      ? "summitpowerinternational.com"
+      : nLower.includes("citygroup") || nLower.includes("city group")
+      ? "citygroup.com.bd"
       : `${cleanFirstWord}.com`);
 
   const s2FaviconUrl = `https://www.google.com/s2/favicons?domain=${derivedDomain}&sz=128`;
