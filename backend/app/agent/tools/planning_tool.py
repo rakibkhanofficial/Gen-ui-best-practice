@@ -1,3 +1,4 @@
+import re
 from typing import Dict, Any, List
 from app.models.schemas import PlanningBoardData, BoardColumn, StickyNote
 
@@ -5,6 +6,17 @@ from app.models.schemas import PlanningBoardData, BoardColumn, StickyNote
 def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -> Dict[str, Any]:
     """Generates an interactive Miro & Excalidraw style visual planning board tailored dynamically to the user's topic."""
     t_lower = topic.lower()
+
+    # Clean up user command prefixes so titles remain concise and clean
+    cleaned_topic = re.sub(
+        r"^(generate|create|show|build|make|give me|draw)\s+(a\s+)?(miro-style\s+|miro\s+)?(sprint\s+)?(planning\s+)?(board\s+)?(for\s+|about\s+|on\s+)?(our\s+|my\s+|the\s+)?",
+        "",
+        topic,
+        flags=re.IGNORECASE,
+    ).strip()
+    if not cleaned_topic or len(cleaned_topic) < 3:
+        cleaned_topic = "GenUI Architecture & Release"
+    topic_display = cleaned_topic.title()
 
     # 1. E-Commerce / Storefront Topic
     if any(k in t_lower for k in ["ecommerce", "shop", "store", "checkout", "cart", "product"]):
@@ -123,14 +135,13 @@ def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -
 
     # 4. Default / AI & Agentic Architecture Roadmap
     else:
-        topic_title = topic.strip().title()
         cols = [
             BoardColumn(
                 id="col-backlog",
                 title="Discovery & Backlog",
                 color_accent="#F59E0B",
                 notes=[
-                    StickyNote(id="n-1", title=f"Architectural Spec: {topic_title}", content=f"Define interfaces, schema boundaries, and SLO targets for {topic}.", color="yellow", tags=["Architecture", "Specs"], votes=15, assignee="Lead Architect", column_id="col-backlog"),
+                    StickyNote(id="n-1", title=f"Architecture: {topic_display}", content=f"Define interfaces, schema boundaries, and SLO targets for {cleaned_topic}.", color="yellow", tags=["Architecture", "Specs"], votes=15, assignee="Lead Architect", column_id="col-backlog"),
                     StickyNote(id="n-2", title="Multimodal Voice Streaming", content="Bidirectional audio WebSocket integration with Gemini 3.8 Live API.", color="pink", tags=["Gemini", "Voice"], votes=11, assignee="Sarah T.", column_id="col-backlog"),
                 ]
             ),
@@ -161,12 +172,12 @@ def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -
             ),
         ]
 
-    initial_mode = "canvas" if any(k in t_lower for k in ["excalidraw", "diagram", "canvas", "architecture", "flowchart", "wireframe", "schema", "draw"]) else "board"
+    initial_mode = "canvas" if any(k in t_lower for k in ["excalidraw", "diagram", "canvas", "flowchart", "wireframe", "schema", "draw"]) else "board"
 
     board = PlanningBoardData(
         board_id=f"board-{abs(hash(topic)) % 10000}",
-        title=f"Miro & Excalidraw Canvas: {topic.title()}",
-        description=f"Interactive collaborative planning canvas for '{topic}'. Drag notes, vote, or switch to live Excalidraw MCP canvas.",
+        title=f"Sprint Canvas: {topic_display}",
+        description=f"Interactive Miro-style collaborative sprint canvas for {topic_display}. Drag notes, vote, or switch to live Excalidraw MCP canvas.",
         last_updated="Just now",
         columns=cols,
         initial_mode=initial_mode,
