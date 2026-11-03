@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
 import { motion, AnimatePresence } from "framer-motion";
@@ -95,6 +95,7 @@ interface ChatContainerProps {
 
 export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: authSession, status: authStatus } = useSession();
 
   const [user, setUser] = useState<UserSession | null>(null);
@@ -567,6 +568,15 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Instantly reset to empty state whenever route is at /chat (unless actively streaming a new message)
+  useEffect(() => {
+    if (pathname === "/chat" && !isStreaming) {
+      setActiveSessionId(null);
+      setMessages([]);
+      setIsLoadingSession(false);
+    }
+  }, [pathname, isStreaming]);
+
   // 9. Load messages when initialChatId or user changes
   useEffect(() => {
     if (!user) return;
@@ -587,7 +597,8 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         setMessages([]);
       }
       setIsLoadingSession(false);
-    } else if (!activeSessionId) {
+    } else {
+      setActiveSessionId(null);
       setMessages([]);
       setIsLoadingSession(false);
     }
@@ -663,7 +674,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     setInput("");
     setCurrentAttachment(null);
     setIsLoadingSession(false);
-    router.push("/chat");
+    if (typeof document !== "undefined") {
+      document.cookie = "genui_active_chat=; path=/; max-age=0;";
+    }
+    if (pathname !== "/chat") {
+      router.push("/chat");
+    }
   };
 
   const deleteSession = (sessionId: string) => {

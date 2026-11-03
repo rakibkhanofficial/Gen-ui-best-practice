@@ -8,7 +8,12 @@ interface DynamicChatPageProps {
 
 async function ChatPageContent({ params }: DynamicChatPageProps) {
   const resolvedParams = await params;
-  return <ChatContainer initialChatId={resolvedParams.chatId} />;
+  return (
+    <ChatContainer
+      key={`chat-${resolvedParams.chatId}`}
+      initialChatId={resolvedParams.chatId}
+    />
+  );
 }
 
 export default function DynamicChatPage({ params }: DynamicChatPageProps) {

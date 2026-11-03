@@ -1,5 +1,5 @@
 import { ChatContainer } from "@/app/chat/ChatContainer";
 
 export default function ChatPage() {
-  return <ChatContainer />;
+  return <ChatContainer key="new-chat-root" />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Plus,
   MessageSquare,
@@ -156,13 +157,14 @@ export function ChatSidebar({
 
           {/* 2. Primary Action: + New Chat */}
           <div className="p-3 pb-2 space-y-2 shrink-0">
-            <button
+            <Link
+              href="/chat"
               onClick={onNewSession}
               className="w-full flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 font-medium text-xs shadow-xs transition-all cursor-pointer group"
             >
               <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform duration-200" />
               <span>New Chat</span>
-            </button>
+            </Link>
 
             {/* Quick Filter / Search */}
             {sessions.length > 3 && (
