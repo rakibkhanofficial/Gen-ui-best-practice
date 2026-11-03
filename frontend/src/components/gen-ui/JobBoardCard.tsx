@@ -13,15 +13,15 @@ import {
   ChevronUp,
   GraduationCap,
   CheckCircle2,
-  Filter,
-  Bookmark
+  Bookmark,
 } from "lucide-react";
 
-interface JobListing {
+export interface JobListing {
   id: string;
   title: string;
   company: string;
   company_logo?: string;
+  company_domain?: string;
   location: string;
   platform: "BDJobs" | "LinkedIn" | "RemoteGlobal";
   salary_range: string;
@@ -35,7 +35,7 @@ interface JobListing {
   interview_tips?: string[];
 }
 
-interface JobSearchData {
+export interface JobSearchData {
   query?: string;
   location?: string;
   total_jobs?: number;
@@ -48,6 +48,106 @@ interface JobBoardCardProps {
   status?: "inProgress" | "executing" | "complete";
 }
 
+/**
+ * Resilient, Authentic Company Favicon / Logo Component
+ * Guarantees crisp company branding without generic stock photos.
+ */
+function CompanyLogo({
+  name,
+  logoUrl,
+  domain,
+}: {
+  name: string;
+  logoUrl?: string;
+  domain?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+
+  // 1. Check local verified high-definition company assets
+  const nLower = name.toLowerCase();
+  const localLogo =
+    nLower.includes("brain station") || nLower.includes("brainstation")
+      ? "/images/companies/brainstation.png"
+      : nLower.includes("therap")
+      ? "/images/companies/therap.png"
+      : nLower.includes("vercel")
+      ? "/images/companies/vercel.png"
+      : nLower.includes("bkash")
+      ? "/images/companies/bkash.png"
+      : nLower.includes("pathao")
+      ? "/images/companies/pathao.png"
+      : nLower.includes("chaldal")
+      ? "/images/companies/chaldal.png"
+      : nLower.includes("shopup")
+      ? "/images/companies/shopup.png"
+      : nLower.includes("google")
+      ? "/images/companies/google.png"
+      : nLower.includes("microsoft")
+      ? "/images/companies/microsoft.png"
+      : nLower.includes("meta")
+      ? "/images/companies/meta.png"
+      : nLower.includes("optimizely")
+      ? "/images/companies/optimizely.png"
+      : nLower.includes("selise")
+      ? "/images/companies/selise.png"
+      : nLower.includes("enosis")
+      ? "/images/companies/enosis.png"
+      : nLower.includes("tigerit")
+      ? "/images/companies/tigerit.png"
+      : null;
+
+  // 2. Resolve domain for Google S2 Favicon service
+  const cleanFirstWord = nLower.split(" ")[0].replace(/[^a-z0-9]/g, "");
+  const derivedDomain =
+    domain ||
+    (nLower.includes("brain")
+      ? "brainstation-23.com"
+      : nLower.includes("therap")
+      ? "therapservices.net"
+      : nLower.includes("vercel")
+      ? "vercel.com"
+      : nLower.includes("bkash")
+      ? "bkash.com"
+      : nLower.includes("pathao")
+      ? "pathao.com"
+      : nLower.includes("chaldal")
+      ? "chaldal.com"
+      : `${cleanFirstWord}.com`);
+
+  const s2FaviconUrl = `https://www.google.com/s2/favicons?domain=${derivedDomain}&sz=128`;
+
+  // Filter out any unsplash stock photos
+  const isStockPhoto = logoUrl && (logoUrl.includes("unsplash.com") || logoUrl.includes("images.unsplash"));
+  const activeSrc = localLogo || (!isStockPhoto && logoUrl ? logoUrl : s2FaviconUrl);
+
+  if (hasError) {
+    const initials = name
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    return (
+      <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/40 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold text-xs shrink-0 shadow-2xs">
+        {initials || "JB"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/95 border border-slate-200/80 dark:border-white/10 flex items-center justify-center p-2 shrink-0 shadow-2xs overflow-hidden">
+      <img
+        src={activeSrc}
+        alt={name}
+        onError={() => setHasError(true)}
+        className="max-h-full max-w-full object-contain"
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
 export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>("All");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
@@ -55,7 +155,7 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
 
   if (status === "inProgress" || !data?.jobs) {
     return (
-      <div className="w-full max-w-3xl p-6 rounded-3xl bg-white dark:bg-[#1e1f20] animate-pulse border border-slate-200 dark:border-white/10 my-3">
+      <div className="w-full max-w-3xl p-6 rounded-2xl bg-white dark:bg-[#1e1f20] animate-pulse border border-slate-200 dark:border-white/10 my-3">
         <div className="h-6 w-56 bg-slate-200 dark:bg-slate-700 rounded-md mb-4" />
         <div className="space-y-3">
           <div className="h-28 bg-slate-100 dark:bg-slate-800 rounded-2xl" />
@@ -89,20 +189,21 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="w-full max-w-3xl my-4 rounded-3xl bg-white dark:bg-[#1e1f20] p-6 border border-slate-200/90 dark:border-white/10 shadow-xl shadow-cyan-500/5 relative overflow-hidden text-slate-800 dark:text-slate-100"
+      className="w-full max-w-3xl my-4 rounded-2xl bg-white dark:bg-[#1e1f20] p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-lg relative overflow-hidden text-slate-800 dark:text-slate-100"
     >
-      {/* Ambient background glow */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10 gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-cyan-500" />
-              {data.query || "Tech Career Opportunities"}
-            </h3>
-            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 font-medium">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 flex items-center justify-center shrink-0">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                {data.query || "Tech Career Opportunities"}
+              </h3>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 font-medium ml-1">
               <Sparkles className="w-3 h-3" /> Live Career Match
             </span>
           </div>
@@ -116,6 +217,7 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
           {["All", "BDJobs", "LinkedIn"].map((platform) => (
             <button
               key={platform}
+              type="button"
               onClick={() => setSelectedPlatform(platform)}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                 selectedPlatform === platform
@@ -148,17 +250,11 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
               {/* Top Row: Company Logo, Info & Action Buttons */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start space-x-3.5 min-w-0">
-                  {job.company_logo ? (
-                    <img
-                      src={job.company_logo}
-                      alt={job.company}
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-white/10 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold shrink-0">
-                      <Building2 className="w-6 h-6" />
-                    </div>
-                  )}
+                  <CompanyLogo
+                    name={job.company}
+                    logoUrl={job.company_logo}
+                    domain={job.company_domain}
+                  />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -180,7 +276,7 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
                         {job.location}
                       </span>
                       <span>&bull;</span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                         {job.salary_range}
                       </span>
                       <span>&bull;</span>
@@ -196,6 +292,7 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
                   </span>
 
                   <button
+                    type="button"
                     onClick={() => toggleSaveJob(job.id)}
                     className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
                       isSaved
@@ -211,7 +308,7 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
                     href={job.apply_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                   >
                     <span>Apply</span>
                     <ExternalLink className="w-3 h-3" />
@@ -231,6 +328,7 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
                 ))}
 
                 <button
+                  type="button"
                   onClick={() => setExpandedJobId(isExpanded ? null : job.id)}
                   className="ml-auto flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
