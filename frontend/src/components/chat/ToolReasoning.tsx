@@ -77,3 +77,4 @@ export function ToolReasoning({ name, args, status }: ToolReasoningProps) {
     </div>
   );
 }
+

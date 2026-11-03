@@ -395,8 +395,8 @@ async def stream_agent_reasoning(
     """Streams accurate, meaningful agent reasoning stages, SSE tokens, verified source chips, and GenUI events."""
     
     # 1. Real Stage: Thinking (Paced for smooth human perception)
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Illuminating intent & evaluating parameters with Antigravity Agent...'})}\n\n"
-    await asyncio.sleep(1.2)
+    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Evaluating intent & parameters...'})}\n\n"
+    await asyncio.sleep(0.8)
 
     # Check for Attachment analysis across supported formats
     if attachment_path:
@@ -532,15 +532,30 @@ async def stream_agent_reasoning(
         tool_args = matched_intent["args"]
         sources = resolve_sources_for_query(prompt, tool_name=tool_name, tool_args=tool_args)
 
-        # 2. Real Stage: Searching with Live Sources and Clear Tool Call
-        source_names = ", ".join([s["name"] for s in sources[:3]])
-        params_summary = ", ".join(f"{k}='{v}'" for k, v in list(tool_args.items())[:2])
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Calling agent tool `{tool_name}({params_summary})` across {len(sources)} verified sources ({source_names})...', 'sources': sources})}\n\n"
-        await asyncio.sleep(1.6)
+        # Clean, human-readable tool status without noisy dumps
+        friendly_action_map = {
+            "schedule_meeting": "Checking calendar availability & slots",
+            "search_flights": "Searching flight routes & live fares",
+            "get_sales_analytics": "Analyzing enterprise revenue & margins",
+            "generate_planning_board": "Generating collaborative sprint board",
+            "search_jobs": "Querying engineering job opportunities",
+            "get_weather_data": "Fetching local weather conditions",
+            "calculate_route_distance": "Calculating transit routing & distance",
+            "request_sensitive_action": "Preparing Human-in-the-Loop review",
+            "generate_code_snippet": "Synthesizing code architecture",
+            "convert_currency": "Converting currency exchange rates",
+            "search_youtube_videos": "Fetching video resources",
+            "fetch_website_info": "Inspecting website metadata",
+        }
+        friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 
-        # 3. Real Stage: Analysing & Structuring GenUI
-        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': f'Executing mathematical models and structuring GenUI `{tool_name}` component data...', 'sources': sources})}\n\n"
-        await asyncio.sleep(1.3)
+        # 2. Real Stage: Searching / Tool Execution
+        yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': friendly_detail, 'sources': sources})}\n\n"
+        await asyncio.sleep(1.0)
+
+        # 3. Real Stage: Structuring GenUI
+        yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Structuring interactive component...', 'sources': sources})}\n\n"
+        await asyncio.sleep(0.8)
 
         tool_fn = TOOL_REGISTRY[tool_name]
         component_data = tool_fn(**tool_args)

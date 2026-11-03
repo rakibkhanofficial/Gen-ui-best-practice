@@ -25,7 +25,9 @@ import {
   VolumeX,
   Plus,
   Loader2,
-  FolderOpen
+  FolderOpen,
+  Globe,
+  ExternalLink
 } from "lucide-react";
 
 import {
@@ -1100,22 +1102,21 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                       </div>
 
                       <div className="flex-1 min-w-0 space-y-3">
-                        {/* 1. Reasoning Stage */}
+                        {/* 1. Reasoning Stage (Clean & minimal) */}
                         {msg.stage && (
                           <AgentReasoningStage
                             stage={msg.stage}
                             detail={msg.stageDetail}
-                            sources={msg.sources}
                           />
                         )}
 
                         {/* 2. Generative UI Component */}
                         {msg.genui && (
                           <motion.div
-                            initial={{ opacity: 0, y: 8 }}
+                            initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="my-3"
+                            transition={{ duration: 0.25 }}
+                            className="my-2"
                           >
                             {renderGenUIComponent(msg.genui)}
                           </motion.div>
@@ -1125,6 +1126,45 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                         {msg.content && (
                           <div className="prose prose-slate dark:prose-invert max-w-none text-sm leading-relaxed">
                             <StreamingMessage content={msg.content} />
+                          </div>
+                        )}
+
+                        {/* 4. Verified Sources Reference Rail (Rendered cleanly AFTER Generative UI and message body) */}
+                        {msg.sources && msg.sources.length > 0 && !isStreaming && (
+                          <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-1.5">
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+                              <Globe className="w-3 h-3 text-emerald-500" />
+                              <span>Verified Sources &bull; {msg.sources.length} cited</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {msg.sources.map((src, idx) => (
+                                <a
+                                  key={idx}
+                                  href={src.url || `https://${src.domain}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-white/10 text-xs transition-colors"
+                                >
+                                  {src.favicon && (
+                                    <img
+                                      src={src.favicon}
+                                      alt=""
+                                      className="w-3.5 h-3.5 rounded-xs object-contain"
+                                      onError={(e) => {
+                                        (e.target as HTMLElement).style.display = "none";
+                                      }}
+                                    />
+                                  )}
+                                  <span className="font-medium text-[11px] text-slate-700 dark:text-zinc-300 group-hover:text-blue-500 transition-colors">
+                                    {src.name}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                                    {src.domain}
+                                  </span>
+                                  <ExternalLink className="w-2.5 h-2.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </a>
+                              ))}
+                            </div>
                           </div>
                         )}
 
@@ -1226,187 +1266,178 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
               </div>
             )}
 
-            {/* Input Box with Plus (+) File Selector & Subtle Ambient Glow */}
-            <div className="relative group">
-              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-amber-400/30 via-rose-400/25 to-blue-500/30 blur-xs opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 pointer-events-none" />
+            {/* Input Box: Sleek, perfectly aligned single-line bar */}
+            <div className="relative">
               <div
-                className={`relative rounded-2xl bg-white dark:bg-[#1e1f20] border transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-2xl bg-white dark:bg-[#1e1f20] border transition-all ${
                   isListening
-                    ? "border-rose-500/80 ring-2 ring-rose-500/20 shadow-md shadow-rose-500/10"
-                    : "border-slate-200/90 dark:border-white/10 shadow-xs focus-within:border-blue-500/40"
+                    ? "border-rose-500/80 ring-2 ring-rose-500/20 shadow-xs"
+                    : "border-slate-200/90 dark:border-white/10 shadow-xs focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10"
                 }`}
               >
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                rows={1}
-                placeholder={
-                  isListening
-                    ? "Listening... speak now into your microphone"
-                    : "Ask about flights, sales charts, jobs, weather, or drop any image / document..."
-                }
-                className="w-full resize-none bg-transparent px-4 py-3.5 pl-12 pr-28 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none leading-relaxed"
-              />
+                {/* Left: Plus (+) Button for Native File & Gallery Picker */}
+                <div ref={attachMenuRef} className="relative shrink-0 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAttachMenu(!showAttachMenu)}
+                    disabled={isUploading}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                      showAttachMenu
+                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                        : "text-slate-400 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                    }`}
+                    title="Add image or document"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                    ) : (
+                      <Plus className={`w-3.5 h-3.5 transition-transform duration-150 ${showAttachMenu ? "rotate-45" : ""}`} />
+                    )}
+                  </button>
 
-              {/* Left: Plus (+) Button for Direct Native File & Gallery Picker */}
-              <div ref={attachMenuRef} className="absolute left-2.5 bottom-2.5">
-                <button
-                  type="button"
-                  onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  disabled={isUploading}
-                  className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                    showAttachMenu
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10"
-                  }`}
-                  title="Add files (Image Gallery or System File Manager)"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                  ) : (
-                    <Plus className={`w-4 h-4 transition-transform duration-200 ${showAttachMenu ? "rotate-45" : ""}`} />
-                  )}
-                </button>
-
-                {/* Floating Native Picker Selector Menu (Zero Drawer/Modal) */}
-                <AnimatePresence>
-                  {showAttachMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 6, scale: 0.96 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute bottom-10 left-0 z-40 w-60 p-1.5 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 shadow-xl space-y-1"
-                    >
-                      {/* Option 1: Image / Gallery (Native device photo picker) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          imageInputRef.current?.click();
-                          setShowAttachMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                  {/* Floating Native Picker Selector Menu */}
+                  <AnimatePresence>
+                    {showAttachMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-10 left-0 z-40 w-52 p-1 rounded-xl bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 shadow-lg space-y-0.5"
                       >
-                        <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                          <ImageIcon className="w-4 h-4" />
-                        </div>
-                        <div className="truncate">
-                          <span className="block font-semibold">Image &amp; Gallery</span>
-                          <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
-                            Photo gallery &bull; PNG, JPG, WEBP
-                          </span>
-                        </div>
-                      </button>
+                        {/* Option 1: Image / Gallery */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            imageInputRef.current?.click();
+                            setShowAttachMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                        >
+                          <ImageIcon className="w-4 h-4 text-purple-500 shrink-0" />
+                          <span>Image Gallery</span>
+                        </button>
 
-                      {/* Option 2: System File Manager (Native OS file picker) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          docInputRef.current?.click();
-                          setShowAttachMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                          <FolderOpen className="w-4 h-4" />
-                        </div>
-                        <div className="truncate">
-                          <span className="block font-semibold">System File Manager</span>
-                          <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
-                            PDF, Word, Excel, CSV, TXT
-                          </span>
-                        </div>
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        {/* Option 2: System File Manager */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            docInputRef.current?.click();
+                            setShowAttachMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                        >
+                          <FolderOpen className="w-4 h-4 text-blue-500 shrink-0" />
+                          <span>File Manager</span>
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                {/* Hidden Native File Inputs */}
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
+                  {/* Hidden Native File Inputs */}
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {/* Center: Perfectly aligned single-line input */}
+                <textarea
+                  ref={textareaRef}
+                  value={input}
                   onChange={(e) => {
-                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
-                    e.target.value = "";
+                    setInput(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
                   }}
-                />
-                <input
-                  ref={docInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
-                    e.target.value = "";
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
                   }}
-                />
-              </div>
-
-              {/* Right: Voice Input + Send Button */}
-              <div className="absolute right-2.5 bottom-2 flex items-center gap-1.5">
-                {/* Voice Input Microphone Button */}
-                <button
-                  type="button"
-                  onClick={toggleVoiceInput}
-                  className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  rows={1}
+                  placeholder={
                     isListening
-                      ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30"
-                      : "text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10"
-                  }`}
-                  title={
-                    isTranscribingAudio
-                      ? "Transcribing audio via CopilotKit Gemini Voice..."
-                      : isListening
-                      ? "Stop listening"
-                      : "Start voice input (Speech-to-Text)"
+                      ? "Listening... speak now"
+                      : "Ask anything or drop files..."
                   }
-                >
-                  {isTranscribingAudio ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                  ) : isListening ? (
-                    <MicOff className="w-4 h-4 text-white" />
-                  ) : (
-                    <Mic className="w-4 h-4" />
-                  )}
-                </button>
+                  className="flex-1 min-w-0 resize-none bg-transparent py-1 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none leading-normal max-h-32"
+                  style={{ height: "24px" }}
+                />
 
-                {/* Send / Stop Streaming Button */}
-                {isStreaming ? (
+                {/* Right: Voice Input + Send Button */}
+                <div className="shrink-0 flex items-center gap-1">
+                  {/* Voice Input Microphone Button */}
                   <button
                     type="button"
-                    onClick={handleStopStream}
-                    className="p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-xs cursor-pointer"
-                    title="Stop generation"
+                    onClick={toggleVoiceInput}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                      isListening
+                        ? "bg-rose-500 text-white animate-pulse"
+                        : "text-slate-400 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                    }`}
+                    title={
+                      isTranscribingAudio
+                        ? "Transcribing audio..."
+                        : isListening
+                        ? "Stop listening"
+                        : "Voice input"
+                    }
                   >
-                    <Square className="w-4 h-4 fill-white" />
+                    {isTranscribingAudio ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                    ) : isListening ? (
+                      <MicOff className="w-3.5 h-3.5 text-white" />
+                    ) : (
+                      <Mic className="w-3.5 h-3.5" />
+                    )}
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSendMessage()}
-                    disabled={!input.trim() && !currentAttachment}
-                    className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 transition-all shadow-xs cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Send message"
-                  >
-                    <ArrowUp className="w-4 h-4" />
-                  </button>
-                )}
+
+                  {/* Send / Stop Streaming Button */}
+                  {isStreaming ? (
+                    <button
+                      type="button"
+                      onClick={handleStopStream}
+                      className="w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition-colors cursor-pointer"
+                      title="Stop generation"
+                    >
+                      <Square className="w-3 h-3 fill-white" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage()}
+                      disabled={!input.trim() && !currentAttachment}
+                      className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed"
+                      title="Send message"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
             </div>
 
             {/* Bottom Disclaimer */}
             <p className="text-[11px] text-center text-slate-400 dark:text-zinc-500 mt-2 select-none">
-              Full Page Drag &amp; Drop &bull; Native Gallery / File Manager &bull; Multimodal GenUI
+              Press Enter to send &bull; Shift + Enter for new line
             </p>
           </div>
         </div>
