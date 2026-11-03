@@ -75,10 +75,10 @@ export default function LoginPage() {
         </div>
 
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
-          Gemini Studio
+          Gen UI Best Practice
         </h1>
         <p className="text-xs text-slate-500 dark:text-[#9aa0a6] mb-6">
-          Google Antigravity SDK & CopilotKit Generative UI Showcase
+          CopilotKit &amp; Google Antigravity SDK Interactive Studio
         </p>
 
         {/* Feature Badges */}
@@ -89,7 +89,7 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col items-center gap-1">
             <Cpu className="w-4 h-4 text-blue-500" />
-            <span>Gemini 3.8 Flash</span>
+            <span>Antigravity Agent</span>
           </div>
           <div className="flex flex-col items-center gap-1">
             <Globe className="w-4 h-4 text-emerald-500" />

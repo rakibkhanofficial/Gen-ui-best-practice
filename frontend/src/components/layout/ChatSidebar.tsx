@@ -9,7 +9,7 @@ import {
   Edit2,
   Check,
   X,
-  Sparkles,
+  Layers,
   LogOut,
   PanelLeftClose,
 } from "lucide-react";
@@ -101,7 +101,7 @@ export function ChatSidebar({
     }
   });
 
-  const displayName = user?.name || "Guest Presenter";
+  const displayName = user?.name || "Developer";
   const userInitial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -114,213 +114,216 @@ export function ChatSidebar({
         />
       )}
 
-      {/* Clean Minimal Sidebar */}
+      {/* Clean Minimal Sidebar with Glitch-Free Fixed Inner Container */}
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 flex flex-col transition-all duration-300 ease-in-out border-r select-none
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 flex flex-col transition-all duration-300 ease-in-out select-none overflow-hidden
           ${
             isOpen
-              ? "w-64 translate-x-0"
-              : "-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 lg:pointer-events-none"
+              ? "w-64 translate-x-0 opacity-100 border-r border-slate-200/90 dark:border-white/10"
+              : "w-0 -translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 lg:pointer-events-none border-r-0"
           }
-          bg-[#f8f9fa] dark:bg-[#131314] text-slate-800 dark:text-[#e3e3e3] border-slate-200/90 dark:border-white/10
+          bg-[#f8f9fa] dark:bg-[#131314] text-slate-800 dark:text-[#e3e3e3]
         `}
       >
-        {/* 1. Brand Header */}
-        <div className="h-14 px-3.5 flex items-center justify-between border-b border-slate-200/70 dark:border-white/5 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-semibold text-sm tracking-tight text-slate-900 dark:text-white">
-                GenUI Studio
-              </span>
-              <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
-                Gemini 3.8 Flash
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={onToggle}
-            className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
-            title="Collapse sidebar"
-          >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* 2. Primary Action: + New Chat */}
-        <div className="p-3 pb-2 space-y-2 shrink-0">
-          <button
-            onClick={onNewSession}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 font-medium text-xs shadow-xs transition-all cursor-pointer group"
-          >
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-            <span>New Chat</span>
-          </button>
-
-          {/* Quick Filter / Search */}
-          {sessions.length > 3 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#1a1b1c] border border-slate-200/80 dark:border-white/5 text-xs">
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search sessions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-slate-900 dark:text-white outline-none placeholder:text-slate-400 text-xs"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 3. Sessions List (Chronological Groups) */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-4 text-xs font-sans">
-          {filteredSessions.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 dark:text-zinc-500">
-              <MessageSquare className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
-              <p className="text-xs">No chat sessions yet</p>
-              <p className="text-[11px] mt-0.5 opacity-70">
-                Start a conversation to create one
-              </p>
-            </div>
-          ) : (
-            Object.entries(groups).map(([groupTitle, groupSessions]) => {
-              if (groupSessions.length === 0) return null;
-              return (
-                <div key={groupTitle} className="space-y-1">
-                  <div className="px-2.5 py-1 text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
-                    {groupTitle}
-                  </div>
-                  {groupSessions.map((session) => {
-                    const isActive = session.id === activeSessionId;
-                    const isEditing = editingId === session.id;
-
-                    return (
-                      <div
-                        key={session.id}
-                        onClick={() => onSelectSession(session.id)}
-                        className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
-                          isActive
-                            ? "bg-slate-200/80 dark:bg-white/10 text-slate-900 dark:text-white font-medium shadow-2xs"
-                            : "text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden flex-1 mr-1">
-                          <MessageSquare
-                            className={`w-3.5 h-3.5 shrink-0 ${
-                              isActive
-                                ? "text-blue-600 dark:text-blue-400"
-                                : "opacity-60"
-                            }`}
-                          />
-
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editTitle}
-                              onChange={(e) => setEditTitle(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter")
-                                  saveEditing(session.id, e as any);
-                                if (e.key === "Escape") cancelEditing(e as any);
-                              }}
-                              autoFocus
-                              className="w-full bg-white dark:bg-black/50 px-1.5 py-0.5 rounded text-xs border border-blue-500 outline-none text-slate-900 dark:text-white"
-                            />
-                          ) : (
-                            <div className="truncate flex-1">
-                              <span className="truncate block text-xs">
-                                {session.title}
-                              </span>
-                              {session.turnsCount && session.turnsCount > 1 && (
-                                <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">
-                                  {session.turnsCount} turns
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Action buttons on hover */}
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                          {isEditing ? (
-                            <>
-                              <button
-                                onClick={(e) => saveEditing(session.id, e)}
-                                className="p-1 hover:text-emerald-500 cursor-pointer"
-                                title="Save"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={cancelEditing}
-                                className="p-1 hover:text-rose-500 cursor-pointer"
-                                title="Cancel"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={(e) => startEditing(session, e)}
-                                className="p-1 hover:text-blue-500 cursor-pointer"
-                                title="Rename session"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteSession(session.id);
-                                }}
-                                className="p-1 hover:text-rose-500 cursor-pointer"
-                                title="Delete session"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* 4. Footer: User Account */}
-        <div className="p-3 border-t border-slate-200/70 dark:border-white/5 shrink-0 bg-[#f8f9fa] dark:bg-[#131314]">
-          <div className="flex items-center justify-between px-2.5 py-2 rounded-xl bg-white dark:bg-[#1a1b1c] border border-slate-200/70 dark:border-white/5">
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
-                {userInitial}
+        {/* Fixed Width Inner Wrapper to Prevent Text Squishing / Layout Glitches during Collapse */}
+        <div className="w-64 h-full flex flex-col shrink-0">
+          {/* 1. Project Brand Header */}
+          <div className="h-14 px-3.5 flex items-center justify-between border-b border-slate-200/70 dark:border-white/5 shrink-0">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <Layers className="w-4 h-4" />
               </div>
-              <div className="truncate text-xs font-medium text-slate-800 dark:text-zinc-200">
-                {displayName}
+              <div className="truncate">
+                <span className="font-semibold text-sm tracking-tight text-slate-900 dark:text-white block truncate">
+                  Gen UI Best Practice
+                </span>
+                <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-mono truncate">
+                  Copilot & Antigravity
+                </span>
               </div>
             </div>
 
             <button
-              onClick={onLogout}
-              className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-              title="Sign out"
+              onClick={onToggle}
+              className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer shrink-0 ml-1"
+              title="Collapse sidebar"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <PanelLeftClose className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* 2. Primary Action: + New Chat */}
+          <div className="p-3 pb-2 space-y-2 shrink-0">
+            <button
+              onClick={onNewSession}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 font-medium text-xs shadow-xs transition-all cursor-pointer group"
+            >
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
+              <span>New Chat</span>
+            </button>
+
+            {/* Quick Filter / Search */}
+            {sessions.length > 3 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#1a1b1c] border border-slate-200/80 dark:border-white/5 text-xs">
+                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search sessions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent text-slate-900 dark:text-white outline-none placeholder:text-slate-400 text-xs"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Sessions List (Chronological Groups) */}
+          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-4 text-xs font-sans">
+            {filteredSessions.length === 0 ? (
+              <div className="text-center py-8 text-slate-400 dark:text-zinc-500">
+                <MessageSquare className="w-5 h-5 mx-auto mb-1.5 opacity-40" />
+                <p className="text-xs">No chat sessions yet</p>
+                <p className="text-[11px] mt-0.5 opacity-70">
+                  Start a conversation to create one
+                </p>
+              </div>
+            ) : (
+              Object.entries(groups).map(([groupTitle, groupSessions]) => {
+                if (groupSessions.length === 0) return null;
+                return (
+                  <div key={groupTitle} className="space-y-1">
+                    <div className="px-2.5 py-1 text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+                      {groupTitle}
+                    </div>
+                    {groupSessions.map((session) => {
+                      const isActive = session.id === activeSessionId;
+                      const isEditing = editingId === session.id;
+
+                      return (
+                        <div
+                          key={session.id}
+                          onClick={() => onSelectSession(session.id)}
+                          className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
+                            isActive
+                              ? "bg-slate-200/80 dark:bg-white/10 text-slate-900 dark:text-white font-medium shadow-2xs"
+                              : "text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 overflow-hidden flex-1 mr-1">
+                            <MessageSquare
+                              className={`w-3.5 h-3.5 shrink-0 ${
+                                isActive
+                                  ? "text-blue-600 dark:text-blue-400"
+                                  : "opacity-60"
+                              }`}
+                            />
+
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter")
+                                    saveEditing(session.id, e as any);
+                                  if (e.key === "Escape") cancelEditing(e as any);
+                                }}
+                                autoFocus
+                                className="w-full bg-white dark:bg-black/50 px-1.5 py-0.5 rounded text-xs border border-blue-500 outline-none text-slate-900 dark:text-white"
+                              />
+                            ) : (
+                              <div className="truncate flex-1">
+                                <span className="truncate block text-xs">
+                                  {session.title}
+                                </span>
+                                {session.turnsCount && session.turnsCount > 1 && (
+                                  <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">
+                                    {session.turnsCount} turns
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action buttons on hover */}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={(e) => saveEditing(session.id, e)}
+                                  className="p-1 hover:text-emerald-500 cursor-pointer"
+                                  title="Save"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="p-1 hover:text-rose-500 cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={(e) => startEditing(session, e)}
+                                  className="p-1 hover:text-blue-500 cursor-pointer"
+                                  title="Rename session"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteSession(session.id);
+                                  }}
+                                  className="p-1 hover:text-rose-500 cursor-pointer"
+                                  title="Delete session"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* 4. Footer: User Account */}
+          <div className="p-3 border-t border-slate-200/70 dark:border-white/5 shrink-0 bg-[#f8f9fa] dark:bg-[#131314]">
+            <div className="flex items-center justify-between px-2.5 py-2 rounded-xl bg-white dark:bg-[#1a1b1c] border border-slate-200/70 dark:border-white/5">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
+                  {userInitial}
+                </div>
+                <div className="truncate text-xs font-medium text-slate-800 dark:text-zinc-200">
+                  {displayName}
+                </div>
+              </div>
+
+              <button
+                onClick={onLogout}
+                className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                title="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>

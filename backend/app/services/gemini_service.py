@@ -369,7 +369,7 @@ async def stream_agent_reasoning(
     """Streams accurate, meaningful agent reasoning stages, SSE tokens, verified source chips, and GenUI events."""
     
     # 1. Real Stage: Thinking (Paced for smooth human perception)
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Illuminating intent & evaluating parameters with Gemini 3.8 Flash...'})}\n\n"
+    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Illuminating intent & evaluating parameters with Antigravity Agent...'})}\n\n"
     await asyncio.sleep(1.2)
 
     # Check for Excel Attachment analysis first
@@ -461,7 +461,7 @@ async def stream_agent_reasoning(
     yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': f'Scanning active knowledge base ({source_names})...', 'sources': sources})}\n\n"
     await asyncio.sleep(1.4)
 
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Synthesizing response with Gemini 3.8 Flash...', 'sources': sources})}\n\n"
+    yield f"data: {json.dumps({'event': 'status', 'stage': 'Analysing', 'detail': 'Synthesizing response & structuring Generative UI...', 'sources': sources})}\n\n"
     await asyncio.sleep(1.1)
 
     if client:

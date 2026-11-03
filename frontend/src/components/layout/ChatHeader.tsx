@@ -38,12 +38,12 @@ export function ChatHeader({
         )}
 
         <div className="flex items-center gap-2 px-1 py-1 text-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="font-semibold text-slate-800 dark:text-white">
-            Gemini 3.8 Flash
+            Gen UI Best Practice
           </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-600 dark:bg-white/10 dark:text-blue-300 font-mono">
-            GenUI
+            Copilot & Antigravity
           </span>
         </div>
       </div>

@@ -275,7 +275,7 @@ export default function ChatPage() {
       role: "assistant",
       content: "",
       stage: "Thinking",
-      stageDetail: "Illuminating intent & evaluating tools with Gemini 3.8 Flash...",
+      stageDetail: "Illuminating intent & evaluating tools with Antigravity Agent...",
       sources: [],
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -318,7 +318,7 @@ export default function ChatPage() {
       let accumulatedContent = "";
       let latestGenUI: any = null;
       let activeStage: AgentStage = "Thinking";
-      let activeStageDetail = "Illuminating intent & evaluating tools with Gemini 3.8 Flash...";
+      let activeStageDetail = "Illuminating intent & evaluating tools with Antigravity Agent...";
       let activeSources: SearchSource[] = [];
 
       const processParsedEvent = (parsed: any, eventType: string) => {
@@ -429,7 +429,7 @@ export default function ChatPage() {
                   ...msg,
                   content:
                     msg.content ||
-                    "I encountered an issue connecting to the Gemini 3.8 Flash backend. Please verify that the server is running on port 8000.",
+                    "I encountered an issue connecting to the Gen UI backend. Please verify that the server is running on port 8000.",
                   stage: "Completed" as AgentStage,
                 }
               : msg
@@ -567,7 +567,7 @@ export default function ChatPage() {
                           !msg.stage && isStreaming && (
                             <div className="flex items-center gap-1.5 text-xs text-slate-400 py-2">
                               <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                              <span>Gemini 3.8 Flash is generating response...</span>
+                              <span>GenUI Agent is generating response...</span>
                             </div>
                           )
                         )}
@@ -690,7 +690,7 @@ export default function ChatPage() {
 
               {/* Disclaimer Subtext */}
               <p className="text-[11px] text-center text-slate-400 dark:text-zinc-500 mt-2">
-                Gemini 3.8 Flash &bull; Google Antigravity SDK &bull; CopilotKit V2 &bull; Session: {activeSessionId}
+                Gen UI Best Practice &bull; CopilotKit V2 &bull; Antigravity SDK &bull; Session: {activeSessionId}
               </p>
             </div>
           </div>

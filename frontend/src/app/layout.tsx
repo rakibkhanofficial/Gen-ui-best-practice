@@ -5,9 +5,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Gemini Studio | Generative UI & Google Antigravity Agent",
+  title: "Gen UI Best Practice | CopilotKit & Google Antigravity SDK",
   description:
-    "Production-grade replica of Gemini / ChatGPT interface with dynamic Generative UI mounting, streaming reasoning stages, and multi-turn chat history.",
+    "Production-grade Generative UI architecture powered by CopilotKit and Google Antigravity SDK with dynamic interactive components, paced reasoning deliberation, and multi-turn chat history.",
 };
 
 export default function RootLayout({

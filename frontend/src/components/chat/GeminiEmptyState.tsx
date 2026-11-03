@@ -88,7 +88,7 @@ export function GeminiEmptyState({
         className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs text-slate-600 dark:text-zinc-400 font-medium mb-5 shadow-2xs"
       >
         <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-        <span>Gemini 3.8 Flash &bull; Google Antigravity SDK</span>
+        <span>Gen UI Best Practice &bull; CopilotKit &amp; Antigravity SDK</span>
       </motion.div>
 
       {/* 2. Headline & Subtitle */}

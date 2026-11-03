@@ -97,7 +97,7 @@ def health_check():
         "model": "gemini-3.8-flash",
         "gemini_api_key_configured": bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your_gemini_api_key_here"),
         "available_tools": list(TOOL_REGISTRY.keys()),
-        "architecture": "Google Antigravity SDK + Gemini 3.8 Flash + CopilotKit GenUI"
+        "architecture": "Google Antigravity SDK + CopilotKit GenUI"
     }
 
 
@@ -239,7 +239,7 @@ async def chat_handler(payload: ChatRequest):
         return {
             "role": "assistant",
             "content": (
-                "Hello! I am your **Generative UI Agent** running on **Gemini 3.8 Flash**.\n"
+                "Hello! I am your **Generative UI Agent** powered by **CopilotKit & Google Antigravity SDK**.\n"
                 "You can upload your own Excel sales data or test any of our interactive GenUI components!"
             ),
             "tool_calls": []

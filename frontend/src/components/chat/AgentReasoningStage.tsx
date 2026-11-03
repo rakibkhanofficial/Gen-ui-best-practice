@@ -77,10 +77,10 @@ export function AgentReasoningStage({
       transition={{ duration: 0.2 }}
       className="my-2 select-none font-sans"
     >
-      {/* Line 1: Gemini 3.8 Flash • Running for 13s / Thought for 4s (Authentic Gemini format) */}
+      {/* Line 1: GenUI Agent • Running for 13s / Thought for 4s */}
       <div className="flex items-center gap-1.5 text-[13px] text-slate-500 dark:text-zinc-400 font-normal leading-none">
         <span className="text-slate-700 dark:text-zinc-300 font-normal">
-          Gemini 3.8 Flash
+          GenUI Agent
         </span>
         <span className="text-slate-400 dark:text-zinc-500">&bull;</span>
         {!isFinished ? (
