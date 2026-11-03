@@ -24,7 +24,7 @@ import { ChatSidebar, ConversationThread } from "@/components/layout/ChatSidebar
 import { ChatHeader } from "@/components/layout/ChatHeader";
 import { GeminiEmptyState } from "@/components/chat/GeminiEmptyState";
 import { StreamingMessage } from "@/components/chat/StreamingMessage";
-import { AgentReasoningStage, AgentStage } from "@/components/chat/AgentReasoningStage";
+import { AgentReasoningStage, AgentStage, SearchSource } from "@/components/chat/AgentReasoningStage";
 import { FileUploadZone } from "@/components/chat/FileUploadZone";
 
 // Generative UI Showcase Components
@@ -47,6 +47,7 @@ export interface MessageItem {
   content: string;
   stage?: AgentStage;
   stageDetail?: string;
+  sources?: SearchSource[];
   genui?: {
     tool: string;
     data: any;
@@ -274,6 +275,7 @@ export default function ChatPage() {
       content: "",
       stage: "Thinking",
       stageDetail: "Gemini 3.8 Flash evaluating query & tools...",
+      sources: [],
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -315,6 +317,7 @@ export default function ChatPage() {
       let latestGenUI: any = null;
       let activeStage: AgentStage = "Thinking";
       let activeStageDetail = "Gemini 3.8 Flash evaluating query & tools...";
+      let activeSources: SearchSource[] = [];
 
       const processParsedEvent = (parsed: any, eventType: string) => {
         const evt = (parsed.event || eventType || "").toLowerCase();
@@ -323,6 +326,9 @@ export default function ChatPage() {
         if (evt === "status" || evt === "stage" || parsed.stage) {
           if (parsed.stage) activeStage = parsed.stage as AgentStage;
           if (parsed.detail) activeStageDetail = parsed.detail;
+          if (parsed.sources && Array.isArray(parsed.sources)) {
+            activeSources = parsed.sources;
+          }
         }
 
         // 2. Delta / Text updates
@@ -339,6 +345,9 @@ export default function ChatPage() {
           };
           if (parsed.stage) {
             activeStage = parsed.stage as AgentStage;
+          }
+          if (parsed.sources && Array.isArray(parsed.sources)) {
+            activeSources = parsed.sources;
           }
         }
 
@@ -361,6 +370,7 @@ export default function ChatPage() {
                 content: accumulatedContent,
                 stage: activeStage,
                 stageDetail: activeStageDetail,
+                sources: activeSources.length > 0 ? activeSources : msg.sources,
                 genui: latestGenUI || msg.genui,
               };
             }
@@ -430,6 +440,7 @@ export default function ChatPage() {
             return {
               ...msg,
               stage: "Completed" as AgentStage,
+              sources: activeSources.length > 0 ? activeSources : msg.sources,
               genui: latestGenUI || msg.genui,
             };
           }
@@ -562,11 +573,12 @@ export default function ChatPage() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        {/* Agent Reasoning Badge */}
+                        {/* Agent Reasoning Badge & Live Source Rail */}
                         {msg.stage && (
                           <AgentReasoningStage
                             stage={msg.stage}
                             detail={msg.stageDetail}
+                            sources={msg.sources}
                           />
                         )}
 

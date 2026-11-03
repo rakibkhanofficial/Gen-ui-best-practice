@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play,
@@ -11,7 +11,8 @@ import {
   ThumbsUp,
   Tv,
   Sparkles,
-  Share2
+  Share2,
+  Volume2
 } from "lucide-react";
 
 export interface YouTubeVideo {
@@ -41,6 +42,7 @@ interface YouTubeVideoCardProps {
 
 export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
 
   if (!data || !data.videos || data.videos.length === 0) {
     return (
@@ -52,6 +54,12 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
 
   const { query = "Recommended Videos", videos = [] } = data;
   const activeVideo = videos.find((v) => v.video_id === activeVideoId);
+
+  useEffect(() => {
+    if (activeVideoId && playerRef.current) {
+      playerRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activeVideoId]);
 
   return (
     <motion.div
@@ -72,14 +80,14 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
             </span>
           </div>
           <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs font-medium">
-            {videos.length} Suggestions
+            {videos.length} Videos Available
           </span>
         </div>
         <h3 className="text-lg font-bold tracking-tight text-white line-clamp-1">
           {query}
         </h3>
         <p className="text-xs text-red-100/90 mt-0.5">
-          Click any video thumbnail below to preview and stream directly in the chat.
+          Click any video or &quot;Watch Preview&quot; to play directly in this GenUI widget.
         </p>
       </div>
 
@@ -87,16 +95,17 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
       <AnimatePresence>
         {activeVideo && (
           <motion.div
+            ref={playerRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="p-4 bg-black/90 border-b border-white/10"
+            className="p-4 bg-slate-950 border-b border-red-500/30 text-white"
           >
-            <div className="flex items-center justify-between pb-3 text-white">
+            <div className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-xs font-bold truncate">{activeVideo.title}</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs font-bold truncate text-slate-100">{activeVideo.title}</span>
               </div>
               <button
                 onClick={() => setActiveVideoId(null)}
@@ -107,26 +116,30 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
               </button>
             </div>
 
-            {/* 16:9 Embedded YouTube Iframe */}
-            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-2xl">
+            {/* 16:9 Embedded YouTube Iframe with strict-origin referrerpolicy */}
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-2xl border border-white/10">
               <iframe
-                src={`https://www.youtube.com/embed/${activeVideo.video_id}?autoplay=1&rel=0`}
+                src={`https://www.youtube-nocookie.com/embed/${activeVideo.video_id}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
                 title={activeVideo.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
                 className="w-full h-full border-0"
               />
             </div>
 
             <div className="flex items-center justify-between mt-3 text-xs text-slate-300">
-              <span className="truncate">{activeVideo.channel_name} &bull; {activeVideo.views}</span>
+              <div className="flex items-center gap-2 truncate">
+                <Volume2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span className="truncate">{activeVideo.channel_name} &bull; {activeVideo.views}</span>
+              </div>
               <a
                 href={`https://www.youtube.com/watch?v=${activeVideo.video_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-red-400 hover:text-red-300 font-medium"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-white border border-red-500/40 text-xs font-medium transition-all"
               >
-                <span>Open on YouTube</span>
+                <span>Watch on YouTube</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -145,7 +158,7 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
               whileHover={{ y: -2 }}
               className={`rounded-xl border transition-all duration-200 overflow-hidden flex flex-col justify-between ${
                 isPlaying
-                  ? "border-red-500 bg-red-50/20 dark:bg-red-950/20"
+                  ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/20 dark:bg-red-950/20"
                   : "border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50/60 dark:bg-[#282a2c]/60"
               }`}
             >
@@ -168,7 +181,7 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
 
                 {/* Centered Play Button Overlay */}
                 <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-red-600/90 group-hover:bg-red-600 group-hover:scale-110 transition-all text-white flex items-center justify-center shadow-lg">
+                  <div className="w-12 h-12 rounded-full bg-red-600/95 group-hover:bg-red-600 group-hover:scale-110 transition-all text-white flex items-center justify-center shadow-lg">
                     <Play className="w-5 h-5 fill-white ml-0.5" />
                   </div>
                 </div>
@@ -212,11 +225,13 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                     <span>{vid.published}</span>
                   </div>
 
-                  {vid.like_count && (
-                    <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                      <ThumbsUp className="w-3 h-3" /> {vid.like_count}
-                    </span>
-                  )}
+                  <button
+                    onClick={() => setActiveVideoId(vid.video_id)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-[11px] transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Play className="w-3 h-3 fill-white" />
+                    <span>Play Video</span>
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -226,4 +241,3 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
     </motion.div>
   );
 }
-
