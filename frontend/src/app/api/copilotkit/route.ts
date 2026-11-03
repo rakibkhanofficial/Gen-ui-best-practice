@@ -1,33 +1,54 @@
 import {
   CopilotRuntime,
-  GoogleGenerativeAIAdapter,
-  EmptyAdapter,
-  copilotRuntimeNextJSAppRouterEndpoint,
-} from "@copilotkit/runtime";
+  BuiltInAgent,
+  createCopilotRuntimeHandler,
+} from "@copilotkit/runtime/v2";
 import { NextRequest } from "next/server";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
+// Read API key strictly from environment variables (.env.local / .env)
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
-let serviceAdapter: any;
+// Configure CopilotKit V2 Runtime with full Generative UI capabilities:
+// - A2UI (Agent-to-UI) declarative schema support
+// - Open Generative UI protocol middleware
+// - Rich Threads with open guest access
+// - Gemini 3.8 Flash model execution
+const runtime = new CopilotRuntime({
+  agents: {
+    default: new BuiltInAgent({
+      model: "google/gemini-3.8-flash",
+      apiKey: apiKey,
+    }),
+  },
+  a2ui: {
+    enabled: true,
+  },
+  openGenerativeUI: true,
+  generativeUI: true,
+  threads: {
+    access: "open",
+  },
+  identifyUser: () => ({
+    id: "guest_presenter",
+    name: "Guest Presenter",
+  }),
+});
 
-if (apiKey && apiKey !== "your_gemini_api_key_here") {
-  serviceAdapter = new GoogleGenerativeAIAdapter({
-    model: "gemini-2.5-flash",
-  });
-} else {
-  // Empty adapter for standalone or test mode
-  serviceAdapter = new EmptyAdapter();
-}
+const handleRequest = createCopilotRuntimeHandler({
+  runtime,
+  basePath: "/api/copilotkit",
+  mode: "single-route",
+  cors: true,
+});
 
-const runtime = new CopilotRuntime();
-
-export const POST = async (req: NextRequest) => {
-  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-    runtime,
-    serviceAdapter,
-    endpoint: "/api/copilotkit",
-  });
-
+export const GET = async (req: NextRequest) => {
   return handleRequest(req);
 };
 
+export const POST = async (req: NextRequest) => {
+  return handleRequest(req);
+};
+
+export const OPTIONS = async (req: NextRequest) => {
+  return handleRequest(req);
+};

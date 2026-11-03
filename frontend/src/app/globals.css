@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
-  --primary: #3b82f6;
+  --background: #ffffff;
+  --foreground: #1f1f1f;
+  --card: #f8fafc;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #334155;
-  --secondary-foreground: #f8fafc;
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
-  --accent: #38bdf8;
-  --accent-foreground: #0f172a;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #0284c7;
+  --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #2563eb;
   --radius: 0.75rem;
+}
+
+.dark {
+  --background: #131314;
+  --foreground: #e3e3e3;
+  --card: #1e1f20;
+  --card-foreground: #e3e3e3;
+  --popover: #1e1f20;
+  --popover-foreground: #e3e3e3;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #282a2c;
+  --secondary-foreground: #e3e3e3;
+  --muted: #282a2c;
+  --muted-foreground: #9aa0a6;
+  --accent: #38bdf8;
+  --accent-foreground: #0f172a;
+  --destructive: #f87171;
+  --destructive-foreground: #ffffff;
+  --border: #333538;
+  --input: #1e1f20;
+  --ring: #3b82f6;
 }
 
 body {
@@ -28,6 +52,7 @@ body {
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom scrollbars */
@@ -36,28 +61,53 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgba(150, 150, 150, 0.2);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: rgba(150, 150, 150, 0.4);
 }
 
-/* Glassmorphism utility */
+/* Glassmorphism panel adapting to light & dark */
 .glass-panel {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.glass-panel-elevated {
-  background: rgba(30, 41, 59, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+.dark .glass-panel {
+  background: rgba(30, 31, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Markdown prose overrides for Streamdown */
+.streamdown-content p {
+  margin-bottom: 0.75rem;
+  line-height: 1.65;
+}
+.streamdown-content p:last-child {
+  margin-bottom: 0;
+}
+.streamdown-content ul, .streamdown-content ol {
+  margin-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.streamdown-content li {
+  margin-bottom: 0.25rem;
+}
+.streamdown-content pre {
+  margin: 0.75rem 0;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+.streamdown-content code {
+  font-size: 0.875em;
 }

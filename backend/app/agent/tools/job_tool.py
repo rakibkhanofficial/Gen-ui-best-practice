@@ -112,3 +112,4 @@ def search_jobs(
         jobs=filtered
     )
     return data.model_dump()
+

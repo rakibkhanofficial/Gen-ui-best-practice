@@ -275,3 +275,4 @@ export function JobBoardCard({ data, status = "complete" }: JobBoardCardProps) {
     </motion.div>
   );
 }
+

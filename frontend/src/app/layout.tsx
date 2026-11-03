@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import "@copilotkit/react-ui/styles.css";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Generative UI Studio | Google Antigravity & CopilotKit",
+  title: "Gemini Studio | Generative UI & Google Antigravity Agent",
   description:
-    "Enterprise-grade Generative UI demonstration platform featuring dynamic component mounting, agent reasoning, and human-in-the-loop approval workflows.",
+    "Production-grade replica of Gemini / ChatGPT interface with dynamic Generative UI mounting, streaming reasoning stages, and multi-turn chat history.",
 };
 
 export default function RootLayout({
@@ -17,12 +18,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className="bg-slate-950 text-slate-100 antialiased min-h-screen"
+        className="bg-white dark:bg-[#131314] text-slate-900 dark:text-[#e3e3e3] antialiased min-h-screen selection:bg-blue-500/20"
         suppressHydrationWarning
       >
-        <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
-          {children}
-        </Suspense>
+        <ThemeProvider>
+          <Suspense fallback={<div className="min-h-screen bg-white dark:bg-[#131314]" />}>
+            {children}
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -227,3 +227,4 @@ export function CodeStudioCard({ data, status = "complete" }: CodeStudioCardProp
     </motion.div>
   );
 }
+

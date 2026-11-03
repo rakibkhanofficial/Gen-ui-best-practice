@@ -5,31 +5,29 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
-  CloudSun,
-  BarChart3,
-  Kanban,
-  Laptop,
-  Navigation,
-  ShieldAlert,
-  Play,
   Paperclip,
-  Send,
+  ArrowUp,
+  Square,
   FileSpreadsheet,
-  Download,
-  Terminal,
-  Brain,
-  RotateCcw,
-  CheckCircle2,
-  Cpu,
-  Layers,
-  User,
+  X,
+  Copy,
+  Check,
+  RotateCw,
+  ThumbsUp,
+  ThumbsDown,
   Bot,
-  Code2,
-  Briefcase
+  User as UserIcon,
 } from "lucide-react";
 
-import { getGuestUser, UserSession } from "@/lib/auth";
+import { getGuestUser, clearGuestSession, UserSession } from "@/lib/auth";
+import { ChatSidebar, ConversationThread } from "@/components/layout/ChatSidebar";
 import { ChatHeader } from "@/components/layout/ChatHeader";
+import { GeminiEmptyState } from "@/components/chat/GeminiEmptyState";
+import { StreamingMessage } from "@/components/chat/StreamingMessage";
+import { AgentReasoningStage, AgentStage } from "@/components/chat/AgentReasoningStage";
+import { FileUploadZone } from "@/components/chat/FileUploadZone";
+
+// Generative UI Showcase Components
 import { WeatherCard } from "@/components/gen-ui/WeatherCard";
 import { SalesDashboard } from "@/components/gen-ui/SalesDashboard";
 import { PlanningBoard } from "@/components/gen-ui/PlanningBoard";
@@ -38,13 +36,10 @@ import { RouteDistanceCard } from "@/components/gen-ui/RouteDistanceCard";
 import { HITLApprovalCard } from "@/components/gen-ui/HITLApprovalCard";
 import { CodeStudioCard } from "@/components/gen-ui/CodeStudioCard";
 import { JobBoardCard } from "@/components/gen-ui/JobBoardCard";
-import { StreamingMessage } from "@/components/chat/StreamingMessage";
-import { AgentReasoningStage, AgentStage } from "@/components/chat/AgentReasoningStage";
-import { FileUploadZone } from "@/components/chat/FileUploadZone";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-interface MessageItem {
+export interface MessageItem {
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -61,108 +56,262 @@ interface MessageItem {
   timestamp: string;
 }
 
+const STORAGE_THREADS_KEY = "gemini_chat_threads_v2";
+const STORAGE_THREAD_PREFIX = "gemini_thread_v2_";
+
 export default function ChatPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserSession | null>(null);
-  const [input, setInput] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [threads, setThreads] = useState<ConversationThread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [currentStage, setCurrentStage] = useState<AgentStage>("Idle");
-  const [stageDetail, setStageDetail] = useState("");
-  const [activeLog, setActiveLog] = useState<string[]>([]);
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [currentAttachment, setCurrentAttachment] = useState<{
+    filename: string;
+    filePath: string;
+    preview?: any;
+  } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Check guest session on load
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-scroll to bottom of conversation
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isStreaming]);
+
+  // Check guest authentication session on load
   useEffect(() => {
     const session = getGuestUser();
     if (!session) {
       router.replace("/login");
-    } else {
-      setUser(session);
-      addLog(`Authenticated as ${session.name} (${session.role})`);
-      addLog("Initialized Gemini 3.8 Flash & Google Antigravity Agent Engine");
-
-      // Initial welcome message
-      setMessages([
-        {
-          id: "welcome-1",
-          role: "assistant",
-          content: (
-            "### 👋 Welcome to Generative UI Studio\n\n" +
-            "Powered by **Gemini 3.8 Flash**, **Google Antigravity SDK**, and **Streamdown**.\n\n" +
-            "Here you can test real-time **SSE streaming**, upload your own **Excel sales data**, or click any **Demo Preset** above to experience dynamic Generative UI."
-          ),
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ]);
+      return;
     }
+    setUser(session);
+
+    // Load conversation threads from localStorage
+    try {
+      const stored = localStorage.getItem(STORAGE_THREADS_KEY);
+      if (stored) {
+        const parsed: ConversationThread[] = JSON.parse(stored);
+        setThreads(parsed);
+        if (parsed.length > 0) {
+          selectThread(parsed[0].id);
+          return;
+        }
+      }
+    } catch {}
+
+    // If no threads exist, create an initial default thread
+    createNewThread();
   }, [router]);
 
-  // Auto scroll chat
+  // Adjust textarea height dynamically
   useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        180
+      )}px`;
     }
-  }, [messages, currentStage, stageDetail]);
+  }, [input]);
 
-  const addLog = (msg: string) => {
-    setActiveLog((prev) => [
-      `[${new Date().toLocaleTimeString()}] ${msg}`,
-      ...prev.slice(0, 20),
-    ]);
+  // Save current thread messages to localStorage
+  const saveThreadMessages = (threadId: string, msgs: MessageItem[]) => {
+    try {
+      localStorage.setItem(
+        `${STORAGE_THREAD_PREFIX}${threadId}`,
+        JSON.stringify(msgs)
+      );
+    } catch {}
   };
 
-  const executeSSEStream = async (promptText: string, attachmentPath?: string, filename?: string) => {
-    if (isStreaming || (!promptText.trim() && !attachmentPath)) return;
+  // Save threads list to localStorage
+  const saveThreadsList = (list: ConversationThread[]) => {
+    try {
+      localStorage.setItem(STORAGE_THREADS_KEY, JSON.stringify(list));
+    } catch {}
+  };
 
-    const userMsgId = `usr-${Date.now()}`;
-    const assistantMsgId = `ast-${Date.now()}`;
+  // Select an existing thread
+  const selectThread = (id: string) => {
+    setActiveThreadId(id);
+    try {
+      const stored = localStorage.getItem(`${STORAGE_THREAD_PREFIX}${id}`);
+      if (stored) {
+        setMessages(JSON.parse(stored));
+      } else {
+        setMessages([]);
+      }
+    } catch {
+      setMessages([]);
+    }
+  };
 
-    // Append User Message
+  // Create a brand new thread
+  const createNewThread = () => {
+    const newId = `thread_${Date.now()}`;
+    const newThread: ConversationThread = {
+      id: newId,
+      title: "New Chat",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const updatedList = [newThread, ...threads];
+    setThreads(updatedList);
+    saveThreadsList(updatedList);
+    setActiveThreadId(newId);
+    setMessages([]);
+    saveThreadMessages(newId, []);
+  };
+
+  // Delete a thread
+  const deleteThread = (id: string) => {
+    const filtered = threads.filter((t) => t.id !== id);
+    setThreads(filtered);
+    saveThreadsList(filtered);
+    try {
+      localStorage.removeItem(`${STORAGE_THREAD_PREFIX}${id}`);
+    } catch {}
+
+    if (activeThreadId === id) {
+      if (filtered.length > 0) {
+        selectThread(filtered[0].id);
+      } else {
+        createNewThread();
+      }
+    }
+  };
+
+  // Rename a thread
+  const renameThread = (id: string, newTitle: string) => {
+    const updated = threads.map((t) =>
+      t.id === id ? { ...t, title: newTitle, updatedAt: Date.now() } : t
+    );
+    setThreads(updated);
+    saveThreadsList(updated);
+  };
+
+  // Handle user logout
+  const handleLogout = () => {
+    clearGuestSession();
+    router.replace("/login");
+  };
+
+  // Handle copy text
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Abort running stream
+  const handleStopStream = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  };
+
+  // Stream chat message to backend
+  const handleSendMessage = async (textToSend?: string) => {
+    const messageContent = (textToSend || input).trim();
+    if (!messageContent && !currentAttachment) return;
+    if (isStreaming) return;
+
+    const currentThreadId = activeThreadId || `thread_${Date.now()}`;
+    if (!activeThreadId) {
+      setActiveThreadId(currentThreadId);
+    }
+
+    // Update thread title if it was "New Chat"
+    const activeThread = threads.find((t) => t.id === currentThreadId);
+    if (activeThread && activeThread.title === "New Chat" && messageContent) {
+      const titleCandidate =
+        messageContent.length > 30
+          ? `${messageContent.slice(0, 28)}...`
+          : messageContent;
+      renameThread(currentThreadId, titleCandidate);
+    }
+
+    // Create User Message
+    const userMsgId = `user_${Date.now()}`;
     const userMessage: MessageItem = {
       id: userMsgId,
       role: "user",
-      content: promptText || `Uploaded file: ${filename}`,
-      attachment: attachmentPath ? { filename: filename || "dataset", filePath: attachmentPath } : undefined,
-      timestamp: new Date().toLocaleTimeString(),
+      content: messageContent,
+      attachment: currentAttachment
+        ? {
+            filename: currentAttachment.filename,
+            filePath: currentAttachment.filePath,
+          }
+        : undefined,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
-    // Prepare Placeholder Assistant Message
-    const assistantMessage: MessageItem = {
+    // Placeholder Assistant Message
+    const assistantMsgId = `asst_${Date.now() + 1}`;
+    const initialAssistantMessage: MessageItem = {
       id: assistantMsgId,
       role: "assistant",
       content: "",
       stage: "Thinking",
-      stageDetail: "Evaluating prompt and model reasoning...",
-      timestamp: new Date().toLocaleTimeString(),
+      stageDetail: "Gemini 3.8 Flash evaluating query & tools...",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    const newMessages = [...messages, userMessage, initialAssistantMessage];
+    setMessages(newMessages);
     setInput("");
+    const attachmentToSubmit = currentAttachment;
+    setCurrentAttachment(null);
     setIsStreaming(true);
-    setCurrentStage("Thinking");
-    setStageDetail("Evaluating prompt and model reasoning with Gemini 3.8 Flash...");
-    addLog(`User prompt dispatched: "${promptText}"`);
+
+    // Prepare abort controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: promptText || "Analyze this uploaded dataset",
-          attachment_path: attachmentPath,
-          history: messages.map((m) => ({ role: m.role, content: m.content })),
+          message: messageContent,
+          attachment_path: attachmentToSubmit?.filePath,
+          session_id: currentThreadId,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok || !response.body) {
-        throw new Error(`SSE stream failed with status ${response.status}`);
+        throw new Error(`SSE stream failed with HTTP ${response.status}`);
       }
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
+      const decoder = new TextDecoder();
       let buffer = "";
+      let accumulatedContent = "";
+      let latestGenUI: any = null;
+      let activeStage: AgentStage = "Thinking";
+      let activeStageDetail = "";
 
       while (true) {
         const { value, done } = await reader.read();
@@ -172,398 +321,345 @@ export default function ChatPage() {
         const lines = buffer.split("\n\n");
         buffer = lines.pop() || "";
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.replace("data: ", "").trim();
-          if (!jsonStr) continue;
+        for (const block of lines) {
+          if (!block.trim()) continue;
+
+          let eventType = "message";
+          let dataStr = "";
+
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event: ")) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith("data: ")) {
+              dataStr = line.slice(6).trim();
+            }
+          }
+
+          if (!dataStr) continue;
 
           try {
-            const parsed = JSON.parse(jsonStr);
+            const parsed = JSON.parse(dataStr);
 
-            if (parsed.event === "status") {
-              setCurrentStage(parsed.stage);
-              setStageDetail(parsed.detail || "");
-              addLog(`Agent Stage: [${parsed.stage}] - ${parsed.detail}`);
-
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, stage: parsed.stage, stageDetail: parsed.detail }
-                    : m
-                )
-              );
-            } else if (parsed.event === "delta") {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, content: m.content + parsed.text }
-                    : m
-                )
-              );
-            } else if (parsed.event === "genui") {
-              addLog(`GenUI Component Emitted: ${parsed.tool}`);
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, genui: { tool: parsed.tool, data: parsed.data } }
-                    : m
-                )
-              );
-            } else if (parsed.event === "done") {
-              setCurrentStage("Completed");
-              setStageDetail("Streaming completed");
-              addLog("SSE stream closed successfully");
+            if (eventType === "stage") {
+              activeStage = parsed.stage as AgentStage;
+              activeStageDetail = parsed.detail || "";
+            } else if (eventType === "text_delta") {
+              accumulatedContent += parsed.delta || "";
+            } else if (eventType === "tool_call") {
+              latestGenUI = {
+                tool: parsed.tool,
+                data: parsed.data,
+              };
+              activeStage = "Completed";
+            } else if (eventType === "complete") {
+              activeStage = "Completed";
             }
-          } catch (e) {
-            console.error("SSE parse error:", e);
+
+            // Update assistant message in real-time
+            setMessages((prev) => {
+              const updated = prev.map((msg) => {
+                if (msg.id === assistantMsgId) {
+                  return {
+                    ...msg,
+                    content: accumulatedContent,
+                    stage: activeStage,
+                    stageDetail: activeStageDetail,
+                    genui: latestGenUI || msg.genui,
+                  };
+                }
+                return msg;
+              });
+              saveThreadMessages(currentThreadId, updated);
+              return updated;
+            });
+          } catch {
+            // Ignore non-JSON chunks
           }
         }
       }
     } catch (err: any) {
-      console.error("Stream error:", err);
-      addLog(`Stream error: ${err.message}`);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId
-            ? { ...m, content: m.content + `\n\n*(Error connecting to agent stream: ${err.message})*` }
-            : m
-        )
-      );
+      if (err.name === "AbortError") {
+        // User deliberately aborted stream
+      } else {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: `⚠️ Connection to Gemini 3.8 Flash backend failed: ${err.message}. Please verify the FastAPI service is running on port 8000.`,
+                  stage: "Completed",
+                }
+              : msg
+          )
+        );
+      }
     } finally {
       setIsStreaming(false);
-      setTimeout(() => {
-        setCurrentStage("Idle");
-        setStageDetail("");
-      }, 1500);
+      abortControllerRef.current = null;
     }
   };
 
-  const handleFileUpload = (fileData: { filename: string; filePath: string; isExcel: boolean; preview?: any }) => {
-    addLog(`Uploaded file: ${fileData.filename} (${fileData.isExcel ? "Excel" : "Media"})`);
-    executeSSEStream(
-      `Please analyze my uploaded spreadsheet "${fileData.filename}" and generate the sales dashboard.`,
-      fileData.filePath,
-      fileData.filename
-    );
-  };
+  // Render appropriate Generative UI component based on tool call
+  const renderGenUIComponent = (genui?: { tool: string; data: any }) => {
+    if (!genui || !genui.tool) return null;
 
-  const triggerPreset = (promptText: string) => {
-    executeSSEStream(promptText);
-  };
+    const { tool, data } = genui;
 
-  const renderGenUIComponent = (tool: string, data: any) => {
-    switch (tool) {
-      case "get_weather_data":
-        return <WeatherCard data={data} status="complete" />;
-      case "get_sales_analytics":
-        return <SalesDashboard data={data} status="complete" />;
-      case "generate_planning_board":
-        return <PlanningBoard data={data} status="complete" />;
-      case "search_product_catalog":
-        return <ProductCatalogCard data={data} status="complete" />;
-      case "calculate_route_distance":
-        return <RouteDistanceCard data={data} status="complete" />;
-      case "generate_code_snippet":
-        return <CodeStudioCard data={data} status="complete" />;
-      case "search_jobs":
-        return <JobBoardCard data={data} status="complete" />;
-      case "request_sensitive_action":
-        return (
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="mt-4"
+      >
+        {tool === "get_weather_data" && <WeatherCard data={data} />}
+        {tool === "get_sales_analytics" && <SalesDashboard data={data} />}
+        {tool === "generate_planning_board" && <PlanningBoard data={data} />}
+        {tool === "search_product_catalog" && <ProductCatalogCard data={data} />}
+        {tool === "calculate_route_distance" && <RouteDistanceCard data={data} />}
+        {tool === "generate_code_snippet" && <CodeStudioCard data={data} />}
+        {tool === "search_jobs" && <JobBoardCard data={data} />}
+        {(tool === "request_sensitive_action" ||
+          tool === "execute_approved_action") && (
           <HITLApprovalCard
             data={data}
-            status="complete"
             onDecision={async (actionId, decision) => {
-              addLog(`Human Decision: [${decision.toUpperCase()}] on ${actionId}`);
-              await fetch(`${BACKEND_URL}/api/actions/approve`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action_id: actionId, decision }),
-              });
+              console.log("HITL action decision:", actionId, decision);
             }}
           />
-        );
-      default:
-        return null;
-    }
+        )}
+      </motion.div>
+    );
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-xs">
-        Checking session credentials...
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100">
-      {/* Header */}
-      <ChatHeader user={user} />
+    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#131314] text-slate-900 dark:text-[#e3e3e3] antialiased transition-colors">
+      {/* Collapsible Left Sidebar (Gemini / ChatGPT Replica) */}
+      <ChatSidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        threads={threads}
+        activeThreadId={activeThreadId}
+        onSelectThread={selectThread}
+        onNewThread={createNewThread}
+        onDeleteThread={deleteThread}
+        onRenameThread={renameThread}
+        user={user}
+        onLogout={handleLogout}
+      />
 
-      {/* Showcase Presets Quick-Bar */}
-      <div className="bg-slate-900/60 border-b border-slate-800/80 px-6 py-2.5 flex items-center gap-2 overflow-x-auto">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
-          <Play className="w-3 h-3 text-sky-400" /> Presets:
-        </span>
+      {/* Main Chat Canvas Area */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+        {/* Top Header Bar */}
+        <ChatHeader
+          user={user}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onOpenUpload={() => setShowUploadModal(true)}
+        />
 
-        <button
-          onClick={() => triggerPreset("What is the weather in Tokyo?")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-xs text-slate-200 transition-colors"
-        >
-          <CloudSun className="w-3.5 h-3.5 text-amber-400" />
-          <span>🌤️ Tokyo Weather</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("Show sales analytics for Q3 and compare with target")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-xs text-slate-200 transition-colors"
-        >
-          <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
-          <span>📊 Q3 Zen Sales &amp; Table</span>
-        </button>
-
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-800 text-xs text-emerald-300 font-medium transition-colors"
-        >
-          <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-          <span>📁 Upload Excel Sales Data</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("Plan architecture roadmap for our GenUI deployment")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-xs text-slate-200 transition-colors"
-        >
-          <Kanban className="w-3.5 h-3.5 text-amber-400" />
-          <span>📝 Miro Sticky Board</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("Compare MacBook Pro M4 Max vs ThinkPad P1 AI Studio")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-xs text-slate-200 transition-colors"
-        >
-          <Laptop className="w-3.5 h-3.5 text-purple-400" />
-          <span>💻 Tech Specs Matrix</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("What is the driving distance from San Francisco to Lake Tahoe?")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-xs text-slate-200 transition-colors"
-        >
-          <Navigation className="w-3.5 h-3.5 text-teal-400" />
-          <span>🗺️ SF to Tahoe Route</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("Show production TypeScript and Python code for FastAPI SSE Streaming")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-950/70 hover:bg-blue-900/80 border border-blue-800 text-xs text-blue-300 transition-colors"
-        >
-          <Code2 className="w-3.5 h-3.5 text-blue-400" />
-          <span>💻 Code Studio (SSE Stream)</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("Search Frontend Next.js and AI Engineer jobs in Dhaka on BDJobs and LinkedIn")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-800 text-xs text-cyan-300 transition-colors"
-        >
-          <Briefcase className="w-3.5 h-3.5 text-cyan-400" />
-          <span>💼 BDJobs &amp; LinkedIn Search</span>
-        </button>
-
-        <button
-          onClick={() => triggerPreset("Request refund of $1,250 for order ORD-8921 due to billing error")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/60 border border-amber-800/80 text-xs text-amber-300 transition-colors"
-        >
-          <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-          <span>🛡️ HITL Refund Approval</span>
-        </button>
-      </div>
-
-      {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left / Center: Interactive Chat Stream */}
-        <div className="flex-1 flex flex-col justify-between p-4 max-w-4xl mx-auto w-full h-[calc(100vh-130px)]">
-          {/* Scrollable Messages Area */}
-          <div ref={chatScrollRef} className="flex-1 overflow-y-auto space-y-4 pr-2">
-            {messages.map((msg) => (
-              <div key={msg.id} className="flex flex-col space-y-2">
-                <div
-                  className={`flex gap-3 ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  {msg.role === "assistant" && (
-                    <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 mt-1 shadow-sm">
-                      <Bot className="w-4 h-4" />
-                    </div>
-                  )}
-
-                  <div
-                    className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white shadow-md self-end"
-                        : "bg-slate-900 border border-slate-800/80 text-slate-200 shadow-xl"
-                    }`}
-                  >
-                    {msg.attachment && (
-                      <div className="mb-2.5 p-2 rounded-lg bg-blue-700/80 border border-blue-500/50 flex items-center gap-2 text-[11px] font-medium">
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
-                        <span>Attached: {msg.attachment.filename}</span>
+        {/* Message Viewport */}
+        <main className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
+          {messages.length === 0 ? (
+            <GeminiEmptyState
+              userName={user?.name || "Presenter"}
+              onSelectPrompt={(p) => handleSendMessage(p)}
+            />
+          ) : (
+            <div className="w-full max-w-3xl sm:max-w-4xl mx-auto space-y-6 pb-24">
+              {messages.map((msg) => (
+                <div key={msg.id} className="w-full">
+                  {msg.role === "user" ? (
+                    /* User Message: Clean right-aligned bubble */
+                    <div className="flex justify-end mb-4">
+                      <div className="max-w-[85%] sm:max-w-[75%] rounded-3xl px-5 py-3.5 bg-slate-100 dark:bg-[#282a2c] text-slate-900 dark:text-[#e3e3e3] text-sm shadow-xs leading-relaxed">
+                        {/* File Attachment Pill */}
+                        {msg.attachment && (
+                          <div className="flex items-center gap-2 mb-2 p-2 rounded-xl bg-white/70 dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{msg.attachment.filename}</span>
+                          </div>
+                        )}
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                        <div className="text-[10px] text-slate-400 dark:text-[#9aa0a6] text-right mt-1.5">
+                          {msg.timestamp}
+                        </div>
                       </div>
-                    )}
+                    </div>
+                  ) : (
+                    /* Assistant Message: Clean Gemini layout */
+                    <div className="flex items-start gap-3 sm:gap-4 my-4">
+                      {/* Gemini Sparkle Avatar */}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-rose-400 p-0.5 shrink-0 shadow-xs mt-1">
+                        <div className="w-full h-full bg-white dark:bg-[#131314] rounded-full flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                        </div>
+                      </div>
 
-                    {msg.role === "assistant" ? (
-                      <div>
-                        {/* Live Agent Reasoning Stage */}
-                        {msg.stage && msg.stage !== "Completed" && (
+                      <div className="flex-1 min-w-0">
+                        {/* Agent Reasoning Badge */}
+                        {msg.stage && (
                           <AgentReasoningStage
                             stage={msg.stage}
                             detail={msg.stageDetail}
                           />
                         )}
 
-                        {/* Streamdown Markdown Renderer */}
-                        <StreamingMessage content={msg.content} />
+                        {/* Streaming Text Content */}
+                        {msg.content ? (
+                          <div className="streamdown-content text-sm text-slate-800 dark:text-[#e3e3e3] leading-relaxed">
+                            <StreamingMessage content={msg.content} />
+                          </div>
+                        ) : (
+                          isStreaming && (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400 py-2">
+                              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                              <span>Gemini 3.8 Flash is generating response...</span>
+                            </div>
+                          )
+                        )}
 
-                        {/* Generative UI Component Mount */}
-                        {msg.genui && (
-                          <div className="mt-3 pt-2 border-t border-slate-800">
-                            {renderGenUIComponent(msg.genui.tool, msg.genui.data)}
+                        {/* Mounted Generative UI Component */}
+                        {renderGenUIComponent(msg.genui)}
+
+                        {/* Bottom Action Bar */}
+                        {msg.content && !isStreaming && (
+                          <div className="flex items-center gap-2 mt-3 pt-1 text-slate-400">
+                            <button
+                              onClick={() => handleCopy(msg.id, msg.content)}
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors"
+                              title="Copy response"
+                            >
+                              {copiedId === msg.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <button
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors"
+                              title="Good response"
+                            >
+                              <ThumbsUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors"
+                              title="Bad response"
+                            >
+                              <ThumbsDown className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <span>{msg.content}</span>
-                    )}
-
-                    <div className="text-[10px] opacity-40 mt-1.5 text-right font-mono">
-                      {msg.timestamp}
-                    </div>
-                  </div>
-
-                  {msg.role === "user" && (
-                    <div className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0 mt-1">
-                      <User className="w-4 h-4" />
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </main>
 
-            {/* Active Streaming Stage indicator */}
-            {isStreaming && currentStage !== "Idle" && currentStage !== "Completed" && (
-              <div className="max-w-md">
-                <AgentReasoningStage stage={currentStage} detail={stageDetail} />
+        {/* Floating Bottom Input Bar (Signature Gemini / ChatGPT Capsule) */}
+        <div className="sticky bottom-0 left-0 right-0 px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 dark:to-transparent z-10 transition-colors">
+          <div className="w-full max-w-3xl sm:max-w-4xl mx-auto">
+            {/* File Attachment Chip */}
+            {currentAttachment && (
+              <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1e1f20] border border-slate-300 dark:border-white/10 text-xs w-fit shadow-xs">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {currentAttachment.filename}
+                </span>
+                <button
+                  onClick={() => setCurrentAttachment(null)}
+                  className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             )}
-          </div>
 
-          {/* Chat Input & File Upload Bar */}
-          <div className="pt-3 border-t border-slate-800 relative">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                executeSSEStream(input);
-              }}
-              className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-2xl p-2 shadow-2xl focus-within:border-blue-500 transition-colors"
-            >
+            {/* Main Floating Capsule */}
+            <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-3xl bg-slate-100 dark:bg-[#1e1f20] border border-slate-200 dark:border-[#333538] shadow-md focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500 dark:focus-within:border-blue-400 transition-all">
+              {/* Paperclip Button for Ingestion */}
               <button
                 type="button"
-                onClick={() => setShowUploadModal(!showUploadModal)}
-                title="Upload Excel or Image"
-                className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition-colors"
+                onClick={() => setShowUploadModal(true)}
+                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-[#9aa0a6] hover:text-slate-900 dark:hover:text-white transition-colors"
+                title="Attach Excel spreadsheet (.xlsx, .csv) or image"
               >
                 <Paperclip className="w-4 h-4" />
               </button>
 
-              <input
-                type="text"
-                placeholder="Ask about weather, sales data, plan a roadmap, or upload Excel..."
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                disabled={isStreaming}
-                className="flex-1 bg-transparent border-0 text-xs text-white placeholder-slate-400 focus:outline-none px-2"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                rows={1}
+                placeholder="Ask Gemini anything, request Miro plans, or analyze sales data..."
+                className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#9aa0a6] max-h-36 py-1 leading-normal"
               />
 
-              <button
-                type="submit"
-                disabled={isStreaming || !input.trim()}
-                className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-xl shadow-md transition-all disabled:opacity-40"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Right Sidebar: Real-time Agent Telemetry & Reasoning Bus */}
-        <aside className="hidden xl:flex w-80 flex-col bg-slate-950 border-l border-slate-800 p-4 overflow-y-auto">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300 pb-3 border-b border-slate-800">
-            <Terminal className="w-4 h-4 text-sky-400" />
-            <span>Agent Telemetry &amp; Protocol Bus</span>
-          </div>
-
-          {/* Connected Agent info card */}
-          <div className="my-3 p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px] space-y-1.5">
-            <div className="flex justify-between text-slate-400">
-              <span>Model:</span>
-              <span className="text-emerald-400 font-bold font-mono">gemini-3.8-flash</span>
-            </div>
-            <div className="flex justify-between text-slate-400">
-              <span>Markdown:</span>
-              <span className="text-white font-mono">streamdown (Vercel)</span>
-            </div>
-            <div className="flex justify-between text-slate-400">
-              <span>Transport:</span>
-              <span className="text-sky-400 font-mono">Server-Sent Events (SSE)</span>
-            </div>
-            <div className="flex justify-between text-slate-400">
-              <span>Excel Engine:</span>
-              <span className="text-indigo-400">pandas + openpyxl</span>
-            </div>
-          </div>
-
-          {/* Active Reasoning Stage Card */}
-          <div className="my-2">
-            <div className="text-[10px] uppercase font-bold text-slate-500 mb-1.5 tracking-wider">
-              Active Agent Stage
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-200">{currentStage}</span>
-              <span className={`w-2 h-2 rounded-full ${isStreaming ? "bg-amber-400 animate-ping" : "bg-emerald-400"}`} />
-            </div>
-          </div>
-
-          {/* Live Activity Stream */}
-          <div className="flex-1 flex flex-col mt-2">
-            <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-wider">
-              Live Protocol Event Log
-            </div>
-            <div className="flex-1 bg-slate-900/40 rounded-xl p-2.5 border border-slate-800/80 font-mono text-[10px] space-y-1.5 text-slate-400 overflow-y-auto max-h-[360px]">
-              {activeLog.map((log, i) => (
-                <div
-                  key={i}
-                  className="leading-tight py-0.5 border-b border-slate-800/40 last:border-0"
+              {/* Action Button: Stop or Send */}
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={handleStopStream}
+                  className="p-2 rounded-full bg-slate-800 text-white hover:bg-slate-900 dark:bg-white dark:text-black dark:hover:bg-slate-200 transition-all shadow-xs"
+                  title="Stop generating"
                 >
-                  {log}
-                </div>
-              ))}
+                  <Square className="w-4 h-4 fill-current" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!input.trim() && !currentAttachment}
+                  onClick={() => handleSendMessage()}
+                  className={`p-2 rounded-full transition-all shadow-xs ${
+                    input.trim() || currentAttachment
+                      ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200 cursor-pointer"
+                      : "bg-slate-200 text-slate-400 dark:bg-white/10 dark:text-slate-600 cursor-not-allowed"
+                  }`}
+                  title="Send message"
+                >
+                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              )}
             </div>
-          </div>
-        </aside>
-      </div>
 
-      {/* Excel & File Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg">
-            <FileUploadZone
-              onFileUploaded={handleFileUpload}
-              onClose={() => setShowUploadModal(false)}
-            />
+            {/* Disclaimer Subtext */}
+            <p className="text-[11px] text-center text-slate-400 dark:text-[#9aa0a6] mt-2">
+              Gemini 3.8 Flash &bull; Google Antigravity SDK &bull; CopilotKit V2 &bull; Generative UI components mount dynamically.
+            </p>
           </div>
         </div>
-      )}
+
+        {/* File Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-lg">
+              <FileUploadZone
+                onFileUploaded={(data) => {
+                  setCurrentAttachment({
+                    filename: data.filename,
+                    filePath: data.filePath,
+                    preview: data.preview,
+                  });
+                  setShowUploadModal(false);
+                }}
+                onClose={() => setShowUploadModal(false)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

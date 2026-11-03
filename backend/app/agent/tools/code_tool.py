@@ -140,3 +140,4 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
         ]
     )
     return data.model_dump()
+
