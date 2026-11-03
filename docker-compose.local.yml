@@ -112,3 +112,4 @@ volumes:
   postgres_local_data:
   redis_local_data:
   silo_local_data:
+
