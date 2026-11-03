@@ -6,6 +6,7 @@ import {
 } from "@copilotkit/runtime/v2";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { GeminiTranscriptionService } from "@/lib/transcription-service";
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
@@ -15,10 +16,11 @@ const defaultAgent = new BuiltInAgent({
   apiKey: apiKey,
 });
 
-// CopilotRuntime with OpenGenerativeUI, A2UI, and Excalidraw MCP Apps
+// CopilotRuntime with OpenGenerativeUI, A2UI, Excalidraw MCP Apps, and Voice Transcription
 const runtime = new CopilotRuntime({
   agents: { default: defaultAgent },
   runner: new InMemoryAgentRunner(),
+  transcriptionService: new GeminiTranscriptionService(apiKey),
   openGenerativeUI: true,
   a2ui: {
     injectA2UITool: false,

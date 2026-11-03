@@ -40,6 +40,7 @@ interface GeminiEmptyStateProps {
   onOpenUpload?: () => void;
   onToggleVoice?: () => void;
   isListening?: boolean;
+  isTranscribingAudio?: boolean;
   onAttachImage?: () => void;
   onAttachDoc?: () => void;
   currentAttachment?: AttachmentInfo | null;
@@ -56,6 +57,7 @@ export function GeminiEmptyState({
   onOpenUpload,
   onToggleVoice,
   isListening = false,
+  isTranscribingAudio = false,
   onAttachImage,
   onAttachDoc,
   currentAttachment,
@@ -305,9 +307,17 @@ export function GeminiEmptyState({
                     ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30"
                     : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                 }`}
-                title={isListening ? "Stop voice listening" : "Start voice input (Speech-to-Text)"}
+                title={
+                  isTranscribingAudio
+                    ? "Transcribing audio via CopilotKit Gemini Voice..."
+                    : isListening
+                    ? "Stop voice listening"
+                    : "Start voice input (Speech-to-Text)"
+                }
               >
-                {isListening ? (
+                {isTranscribingAudio ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                ) : isListening ? (
                   <MicOff className="w-4 h-4 text-white" />
                 ) : (
                   <Mic className="w-4 h-4" />

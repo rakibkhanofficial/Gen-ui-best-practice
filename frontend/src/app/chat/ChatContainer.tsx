@@ -115,8 +115,11 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const [syncStatus, setSyncStatus] = useState<string | null>("Realtime sync connected to Copilot Runtime");
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Continual Learning & Behavioral Memory Store
   const [learnedMemory, setLearnedMemory] = useState<{
@@ -274,6 +277,20 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       setSyncStatus(`Meeting booked for ${date} at ${time} (Realtime Synced)`);
       recordLearnedSkill(`Calendar Booking (${date} ${time})`);
       return { success: true, slotId, date, time, status: "Confirmed" };
+    },
+  });
+
+  useCopilotAction({
+    name: "transcribeVoiceAudio",
+    description: "Transcribe spoken audio input using Gemini Voice transcription and CopilotKit audio service",
+    parameters: [
+      { name: "audioText", type: "string", description: "Transcribed speech text to insert into prompt", required: true },
+    ],
+    handler: async ({ audioText }) => {
+      setInput((prev) => (prev ? `${prev} ${audioText}` : audioText));
+      setSyncStatus(`Voice input transcribed: "${audioText.slice(0, 30)}..."`);
+      recordLearnedSkill("Voice Input Transcription");
+      return { success: true, audioText };
     },
   });
 
@@ -437,25 +454,91 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, []);
 
-  const toggleVoiceInput = () => {
-    if (!speechSupported || !recognitionRef.current) {
-      alert("Speech recognition is supported in Chrome, Edge, and Safari. Please verify microphone permissions.");
+  const toggleVoiceInput = async () => {
+    // 1. Live browser SpeechRecognition (streaming transcription while speaking)
+    if (speechSupported && recognitionRef.current) {
+      if (isListening) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+        setIsListening(false);
+      } else {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch {
+          setIsListening(false);
+        }
+      }
       return;
     }
 
-    if (isListening) {
+    // 2. Cross-browser MediaRecorder fallback with CopilotKit Gemini Transcription
+    if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      if (isListening && mediaRecorderRef.current) {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {}
+        setIsListening(false);
+        return;
+      }
+
       try {
-        recognitionRef.current.stop();
-      } catch {}
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunksRef.current = [];
+        const recorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = recorder;
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          stream.getTracks().forEach((track) => track.stop());
+
+          if (audioChunksRef.current.length > 0) {
+            setIsTranscribingAudio(true);
+            try {
+              const audioBlob = new Blob(audioChunksRef.current, {
+                type: recorder.mimeType || "audio/webm",
+              });
+              const formData = new FormData();
+              formData.append("audio", audioBlob, "voice-input.webm");
+
+              const res = await fetch("/api/copilotkit/transcribe", {
+                method: "POST",
+                body: formData,
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                if (data.text?.trim()) {
+                  setInput((prev) => (prev ? `${prev} ${data.text.trim()}` : data.text.trim()));
+                  setSyncStatus("Voice transcribed via CopilotKit Gemini Voice Service");
+                  recordLearnedSkill("CopilotKit Gemini Voice Input");
+                }
+              }
+            } catch (err) {
+              console.error("Audio transcription error:", err);
+            } finally {
+              setIsTranscribingAudio(false);
+            }
+          }
+        };
+
+        recorder.start();
         setIsListening(true);
-      } catch {
+      } catch (err) {
+        console.error("Microphone permission error:", err);
+        alert("Microphone access was denied or is not supported. Please verify browser permissions.");
         setIsListening(false);
       }
+      return;
     }
+
+    alert("Voice input is not supported in this browser. Please use Chrome, Edge, Safari, or a WebRTC-capable browser.");
   };
 
   // 8. Text-to-Speech (TTS) Readout
@@ -956,6 +1039,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
               onOpenUpload={() => setShowAttachMenu(true)}
               onToggleVoice={toggleVoiceInput}
               isListening={isListening}
+              isTranscribingAudio={isTranscribingAudio}
               onAttachImage={() => imageInputRef.current?.click()}
               onAttachDoc={() => docInputRef.current?.click()}
               currentAttachment={currentAttachment}
@@ -1278,9 +1362,17 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                       ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30"
                       : "text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10"
                   }`}
-                  title={isListening ? "Stop listening" : "Start voice input (Speech-to-Text)"}
+                  title={
+                    isTranscribingAudio
+                      ? "Transcribing audio via CopilotKit Gemini Voice..."
+                      : isListening
+                      ? "Stop listening"
+                      : "Start voice input (Speech-to-Text)"
+                  }
                 >
-                  {isListening ? (
+                  {isTranscribingAudio ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  ) : isListening ? (
                     <MicOff className="w-4 h-4 text-white" />
                   ) : (
                     <Mic className="w-4 h-4" />

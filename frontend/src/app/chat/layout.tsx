@@ -12,6 +12,8 @@ export default function ChatLayout({
     <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
       <CopilotKit
         runtimeUrl="/api/copilotkit"
+        transcribeAudioUrl="/api/copilotkit/transcribe"
+        enableInspector={true}
         showDevConsole={true}
       >
         {children}
