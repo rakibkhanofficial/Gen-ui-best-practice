@@ -14,6 +14,7 @@ const cpkIntelligenceKey =
   process.env.CPK_INTELLIGENCE_API_KEY ||
   process.env.COPILOTKIT_INTELLIGENCE_API_KEY;
 
+const projectId = process.env.COPILOTKIT_PROJECT_ID || "17614";
 const learningContainerId =
   process.env.COPILOTKIT_LEARNING_CONTAINER_ID || "genui-learning-container";
 
@@ -44,6 +45,7 @@ const runtime = new CopilotRuntime({
         runner: new InMemoryAgentRunner(),
         threads: { access: "open" },
       }),
+  telemetryId: projectId,
   identifyUser: async (req: Request) => {
     const cookieUser = req.headers.get("x-user-id");
     return {
@@ -132,14 +134,14 @@ const inspectorLearningHandler = (c: any) => {
   const origin = new URL(c.req.url).origin;
   return c.json({
     schemaVersion: 1,
-    projectKey: "prj_genui_best_practice",
+    projectKey: `prj_${projectId}`,
     snapshotVersion: "1.84.0",
     webAppOrigin: origin,
     configuration: {
       state: "configured",
       container: {
         id: learningContainerId,
-        name: "GenUI Learning Container",
+        name: `GenUI Learning Space (${projectId})`,
       },
     },
     pendingThreadCount: 0,
