@@ -35,7 +35,7 @@ export function AgentReasoningStage({
   detail,
   sources = [],
   durationMs,
-  modelName = "Gemini 3.8 Flash",
+  modelName = "GenUI Agent",
 }: AgentReasoningStageProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);

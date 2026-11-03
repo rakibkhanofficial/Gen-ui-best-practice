@@ -7,14 +7,20 @@ import {
   Plus,
   Mic,
   MicOff,
-  ChevronDown,
-  ArrowRight,
+  ArrowUp,
   Image as ImageIcon,
   FolderOpen,
   FileSpreadsheet,
   FileText,
   X,
   Loader2,
+  Plane,
+  BarChart3,
+  Kanban,
+  Briefcase,
+  Code2,
+  Sun,
+  FileSearch,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -57,91 +63,97 @@ export function GeminiEmptyState({
   onBrowseGallery,
 }: GeminiEmptyStateProps) {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [showModeMenu, setShowModeMenu] = useState(false);
-  const [selectedMode, setSelectedMode] = useState("Default mode");
 
-  // Suggestion Pills matching Google AI Studio Image 2
+  // Real, dynamic GenUI capabilities of our project
   const suggestions = [
     {
-      icon: "🚗",
-      label: "Create a game",
-      prompt: "Create an interactive game component with animations and score tracking",
+      icon: Plane,
+      label: "Flights to Tokyo",
+      prompt: "Find flights from Dhaka to Tokyo with airlines and pricing",
     },
     {
-      icon: "⚡",
-      label: "Three.js 3D scenes",
-      prompt: "Build an interactive Three.js 3D scene preview with lighting and orbit controls",
+      icon: BarChart3,
+      label: "Q3 Sales Analytics",
+      prompt: "Show enterprise revenue breakdown for Q3 2026 with interactive charts",
     },
     {
-      icon: "🧪",
-      label: "Add Bioscience Skills",
-      prompt: "Analyze bioscience protein data and molecular structure with AlphaFold visualization",
+      icon: Kanban,
+      label: "Miro Sprint Board",
+      prompt: "Generate a Miro-style sprint planning board for our GenUI release",
     },
     {
-      icon: "🤖",
-      label: "Build an Android app",
-      prompt: "Design an Android native interface with Jetpack Compose preview",
+      icon: Briefcase,
+      label: "BDJobs & LinkedIn",
+      prompt: "Find Senior Full Stack Engineer jobs on BDJobs and LinkedIn",
     },
     {
-      icon: "☁️",
-      label: "Build a fullstack app >",
-      prompt: "Build a fullstack real-time data dashboard with SSE streaming and interactive charts",
+      icon: Code2,
+      label: "FastAPI Code Studio",
+      prompt: "Write a high-performance Python script for async SSE streaming with FastAPI",
+    },
+    {
+      icon: Sun,
+      label: "Tokyo Weather",
+      prompt: "What is the weather in Tokyo today?",
+    },
+    {
+      icon: FileSearch,
+      label: "Analyze Spreadsheet / Doc",
+      prompt: "Analyze our quarterly enterprise financial report and extract key metrics",
     },
   ];
 
   const handleSend = () => {
     if (input.trim() || currentAttachment) {
       onSendMessage();
-    } else {
-      // If prompt is empty and user clicks "I'm feeling lucky", pick a dynamic creative prompt!
-      const randomPrompt = suggestions[Math.floor(Math.random() * suggestions.length)].prompt;
-      onSendMessage(randomPrompt);
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 sm:py-14 flex flex-col items-center justify-center min-h-[78vh] select-none font-sans">
-      {/* 1. Introducing Pill Badge */}
+    <div className="w-full max-w-3xl mx-auto px-4 py-10 sm:py-16 flex flex-col items-center justify-center min-h-[75vh] select-none font-sans">
+      {/* 1. Project Engine Badge */}
       <motion.div
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs text-slate-700 dark:text-zinc-300 font-medium mb-6 shadow-2xs hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
-        onClick={() => onSendMessage("What is new in Gemini 4 Argon and Gen UI Architecture?")}
+        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs text-slate-700 dark:text-zinc-300 font-medium mb-5 shadow-2xs"
       >
-        <span className="w-5 h-5 rounded-full bg-[#1a73e8] text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-xs">
-          4
-        </span>
-        <span>Introducing Gemini 4 Argon</span>
+        <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+        <span>Gen UI Best Practice &bull; CopilotKit &amp; Antigravity SDK</span>
       </motion.div>
 
-      {/* 2. Hero Headline matching Google AI Studio */}
-      <motion.h1
+      {/* 2. Hero Headline & Subtitle */}
+      <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.05 }}
-        className="text-3xl sm:text-4xl md:text-[42px] font-normal text-slate-900 dark:text-white tracking-tight leading-tight text-center mb-8"
+        className="text-center mb-7 max-w-xl"
       >
-        Build your ideas with Gemini
-      </motion.h1>
+        <h1 className="text-3xl sm:text-4xl font-normal text-slate-900 dark:text-white tracking-tight leading-tight">
+          What would you like to explore?
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed">
+          Ask questions, generate dynamic UI components, analyze documents, or plan architecture.
+        </p>
+      </motion.div>
 
-      {/* 3. Signature Ambient Rainbow Glowing Prompt Container */}
+      {/* 3. Single Clean Prompt Container */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.1 }}
-        className="w-full max-w-2xl relative group"
+        className="w-full relative group"
       >
-        {/* Soft Multi-color Ambient Border Glow (Coral/Peach top-left to Sky Blue bottom-right) */}
+        {/* Subtle Ambient Focus Ring */}
         <div
-          className={`absolute -inset-[1.5px] rounded-3xl bg-gradient-to-br from-amber-400/40 via-rose-400/35 to-blue-500/45 blur-[1.5px] transition-opacity duration-300 pointer-events-none ${
+          className={`absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-sky-500/20 blur-xs transition-opacity duration-200 pointer-events-none ${
             isListening
-              ? "opacity-100 ring-2 ring-rose-500/40"
-              : "opacity-80 group-hover:opacity-100 group-focus-within:opacity-100"
+              ? "opacity-100 ring-2 ring-rose-500/30"
+              : "opacity-0 group-hover:opacity-60 group-focus-within:opacity-100"
           }`}
         />
 
-        <div className="relative w-full bg-white dark:bg-[#1e1f20] rounded-[23px] border border-slate-200/70 dark:border-white/10 p-4 shadow-lg shadow-blue-500/5 transition-all">
+        <div className="relative w-full bg-white dark:bg-[#1e1f20] rounded-3xl border border-slate-200/90 dark:border-white/10 p-4 shadow-lg shadow-blue-500/5 transition-all">
           {/* Active Attached File Pill inside Prompt Box */}
           {currentAttachment && (
             <div className="flex items-center gap-2 mb-3 p-1.5 pr-2.5 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 w-fit text-xs text-slate-800 dark:text-zinc-200 shadow-2xs animate-in fade-in slide-in-from-bottom-1">
@@ -197,14 +209,14 @@ export function GeminiEmptyState({
             placeholder={
               isListening
                 ? "Listening... speak now into your microphone"
-                : "Describe an app and let Gemini do the rest"
+                : "Ask about flights, sales charts, Miro plans, tech jobs, code, or drop files..."
             }
             className="w-full bg-transparent border-0 outline-none resize-none text-[15px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-sans"
           />
 
-          {/* Bottom Bar inside the prompt box */}
+          {/* Bottom Bar inside prompt box */}
           <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5 mt-2">
-            {/* Left: Plus (+) Button for Native File & Photo Attachment */}
+            {/* Left: Plus (+) Button for Native File Attachment */}
             <div className="relative">
               <button
                 type="button"
@@ -248,7 +260,7 @@ export function GeminiEmptyState({
                       <div className="truncate">
                         <span className="block font-semibold">Image &amp; Gallery</span>
                         <span className="block text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
-                          Photo gallery &bull; PNG, JPG
+                          Photo gallery &bull; PNG, JPG, WEBP
                         </span>
                       </div>
                     </button>
@@ -276,49 +288,8 @@ export function GeminiEmptyState({
               </AnimatePresence>
             </div>
 
-            {/* Right: Default mode ⌵, Mic, I'm feeling lucky */}
+            {/* Right: Voice Input + Send Button */}
             <div className="flex items-center gap-2">
-              {/* Mode Selector Dropdown */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowModeMenu(!showModeMenu)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                  <span>{selectedMode}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <AnimatePresence>
-                  {showModeMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                      transition={{ duration: 0.12 }}
-                      className="absolute right-0 bottom-10 z-40 w-44 p-1.5 rounded-xl bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 shadow-xl text-xs space-y-0.5"
-                    >
-                      {["Default mode", "Fast mode", "Creative mode"].map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setSelectedMode(m);
-                            setShowModeMenu(false);
-                          }}
-                          className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                            selectedMode === m
-                              ? "bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-blue-400 font-semibold"
-                              : "text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/5"
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
               {/* Microphone Voice Button */}
               <button
                 type="button"
@@ -337,56 +308,45 @@ export function GeminiEmptyState({
                 )}
               </button>
 
-              {/* I'm feeling lucky / Submit Button */}
+              {/* Send Button */}
               <button
                 type="button"
+                disabled={!input.trim() && !currentAttachment}
                 onClick={handleSend}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-800 dark:text-zinc-200 border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer shadow-2xs active:scale-98"
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all shadow-xs cursor-pointer ${
+                  input.trim() || currentAttachment
+                    ? "bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 cursor-pointer"
+                    : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-zinc-600 cursor-not-allowed"
+                }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#1a73e8]" />
-                <span>I&apos;m feeling lucky</span>
+                <span>Send</span>
+                <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" />
               </button>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* 4. Quick Suggestion Pills below prompt box */}
+      {/* 4. Quick Suggestion Pills */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.15 }}
-        className="flex flex-wrap items-center justify-center gap-2 mt-5 max-w-3xl"
+        className="flex flex-wrap items-center justify-center gap-2 mt-5 max-w-2xl"
       >
-        {suggestions.map((item, idx) => (
-          <button
-            key={idx}
-            onClick={() => onSendMessage(item.prompt)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100/80 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-normal text-slate-700 dark:text-zinc-300 transition-all shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
-          >
-            <span className="text-sm shrink-0">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </motion.div>
-
-      {/* 5. Bottom Gallery Card matching Google AI Studio */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.2 }}
-        className="w-full max-w-2xl mt-12 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200/70 dark:border-white/10 flex items-center justify-between shadow-xs"
-      >
-        <span className="text-xs sm:text-sm font-normal text-slate-800 dark:text-zinc-200">
-          Explore apps built with Gemini 4 Argon
-        </span>
-        <button
-          onClick={onBrowseGallery ? onBrowseGallery : () => onSendMessage("Show me interactive Gen UI showcases for flights, sales, kanban, and jobs")}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
-        >
-          <span>Browse the app gallery</span>
-          <ArrowRight className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
-        </button>
+        {suggestions.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={idx}
+              onClick={() => onSendMessage(item.prompt)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-medium text-slate-700 dark:text-zinc-300 transition-all shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
+            >
+              <Icon className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </motion.div>
     </div>
   );

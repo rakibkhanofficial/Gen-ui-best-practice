@@ -11,7 +11,6 @@ interface ChatHeaderProps {
   onToggleSidebar: () => void;
   syncStatus?: string | null;
   learnedCount?: number;
-  onOpenSettings?: () => void;
 }
 
 export function ChatHeader({
@@ -20,7 +19,6 @@ export function ChatHeader({
   onToggleSidebar,
   syncStatus,
   learnedCount = 3,
-  onOpenSettings,
 }: ChatHeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -31,7 +29,7 @@ export function ChatHeader({
 
   return (
     <header className="h-14 px-4 border-b border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#131314]/90 backdrop-blur-md flex items-center justify-between sticky top-0 z-20 transition-colors select-none font-sans">
-      {/* Left: Sidebar Toggle + Clean Model Status Badge */}
+      {/* Left: Sidebar Toggle + Clean Project Title */}
       <div className="flex items-center gap-2">
         {!sidebarOpen && (
           <button
@@ -76,8 +74,8 @@ export function ChatHeader({
         </div>
       </div>
 
-      {/* Right: Theme Switcher & Settings matching Google AI Studio */}
-      <div className="flex items-center gap-1.5">
+      {/* Right: Theme Switcher Only */}
+      <div className="flex items-center gap-2">
         <button
           onClick={toggleTheme}
           suppressHydrationWarning
@@ -92,16 +90,6 @@ export function ChatHeader({
             <Moon className="w-4 h-4 text-indigo-500" />
           )}
         </button>
-
-        {onOpenSettings && (
-          <button
-            onClick={onOpenSettings}
-            className="w-8 h-8 rounded-full flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            title="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </header>
   );
