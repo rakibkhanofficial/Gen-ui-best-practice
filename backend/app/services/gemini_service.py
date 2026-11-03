@@ -653,6 +653,7 @@ async def stream_agent_reasoning(
             "search_agri_products": "Querying ACI Agribusiness & crop care catalog",
             "search_places_map": "Locating places & embedding interactive Google Maps",
             "solve_math_problem": "Deriving mathematical solution & LaTeX graph coordinates",
+            "search_hotels": "Searching premier luxury hotels, suites & live rates",
         }
         friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 

@@ -2,6 +2,9 @@
 
 import React from "react";
 import { Streamdown } from "streamdown";
+import { createMathPlugin } from "@streamdown/math";
+
+const mathPlugin = createMathPlugin({ singleDollarTextMath: true });
 
 interface StreamingMessageProps {
   content: string;
@@ -13,6 +16,7 @@ export function StreamingMessage({ content }: StreamingMessageProps) {
   return (
     <div className="prose dark:prose-invert prose-xs max-w-none text-slate-800 dark:text-[#e3e3e3] leading-relaxed font-sans overflow-x-auto">
       <Streamdown
+        plugins={{ math: mathPlugin }}
         components={{
           h3: ({ children }) => (
             <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-3 mb-1.5 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1">

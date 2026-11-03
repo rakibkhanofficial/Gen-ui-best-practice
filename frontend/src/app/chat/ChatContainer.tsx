@@ -69,6 +69,7 @@ import { DoctorDirectoryCard } from "@/components/gen-ui/DoctorDirectoryCard";
 import { AgriProductCard } from "@/components/gen-ui/AgriProductCard";
 import { GoogleMapCard } from "@/components/gen-ui/GoogleMapCard";
 import { MathSolverCard } from "@/components/gen-ui/MathSolverCard";
+import { HotelBookingCard } from "@/components/gen-ui/HotelBookingCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -1105,6 +1106,8 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         return <GoogleMapCard data={genui.data} />;
       case "solve_math_problem":
         return <MathSolverCard data={genui.data} />;
+      case "search_hotels":
+        return <HotelBookingCard data={genui.data} />;
       default:
         return (
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs">

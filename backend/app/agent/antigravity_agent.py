@@ -26,6 +26,7 @@ from app.agent.tools.doctor_tool import search_doctors
 from app.agent.tools.agri_tool import search_agri_products
 from app.agent.tools.map_tool import search_places_map
 from app.agent.tools.math_tool import solve_math_problem
+from app.agent.tools.hotel_tool import search_hotels
 
 logger = logging.getLogger("genui.agent")
 
@@ -52,6 +53,7 @@ TOOL_REGISTRY = {
     "search_agri_products": search_agri_products,
     "search_places_map": search_places_map,
     "solve_math_problem": solve_math_problem,
+    "search_hotels": search_hotels,
 }
 
 
@@ -264,6 +266,19 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     "required": ["reason"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_hotels",
+                "description": "Find premier luxury hotels, resorts, boutique stays, nightly pricing, and amenities in Dhaka, Bangladesh, or globally.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "City or neighborhood, e.g. 'Dhaka', 'Gulshan', 'Cox\\'s Bazar'"}
+                    }
+                }
+            }
         }
     ]
 
@@ -288,6 +303,7 @@ class ToolCallDecision(BaseModel):
         "search_agri_products",
         "search_places_map",
         "solve_math_problem",
+        "search_hotels",
         "none"
     ]
     query: Optional[str] = None
@@ -330,7 +346,8 @@ Available interactive tools:
 - get_sales_analytics(quarter): For enterprise sales, ARR, revenue metrics, dashboards.
 - search_jobs(query): For tech jobs, hiring, vacancies on BDJobs/LinkedIn.
 - convert_currency(from_currency, to_currency, amount): For currency exchange and forex.
-- calculate_route_distance(origin, destination): For driving distances, travel routes, directions, maps.
+- calculate_route_distance(origin, destination): For driving distances, travel routes, directions, maps, OpenStreetMap navigation between places (e.g. Mohakhali to Airport Road).
+- search_hotels(location): For finding luxury 5-star hotels, resorts, boutique stays, room rates, amenities, and hotel booking in Dhaka, Bangladesh, or globally.
 - search_product_catalog(query): For comparing hardware, laptops, MacBooks, gadgets, specs.
 - request_sensitive_action(reason): For human-in-the-loop approvals (refunds, prod deploys).
 - schedule_meeting(reason, duration_minutes): For booking time slots, calendar availability, Google Meet scheduling.
@@ -421,8 +438,10 @@ Decide the most appropriate tool to display interactive GenUI component for the 
         elif tool == "search_product_catalog":
             args["query"] = data.get("query") or prompt
         elif tool == "calculate_route_distance":
-            args["origin"] = data.get("origin") or "San Francisco, CA"
-            args["destination"] = data.get("destination") or "Lake Tahoe, CA"
+            args["origin"] = data.get("origin") or "Mohakhali, Dhaka"
+            args["destination"] = data.get("destination") or "Airport Road, Dhaka"
+        elif tool == "search_hotels":
+            args["location"] = data.get("location") or "Dhaka, Bangladesh"
         elif tool == "request_sensitive_action":
             args["action_type"] = "customer_refund"
             args["target_id"] = "ORD-8921"
@@ -639,14 +658,36 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     ):
         return {"tool": "search_product_catalog", "args": {"query": prompt}}
 
-    # 11. Geographic transit routing & distances
-    if re.search(r"\b(distance\s+from|driving\s+route|driving\s+distance|directions\s+to|drive\s+from|how\s+far\s+is\s+.*from)\b", p):
-        origin = "San Francisco, CA"
-        destination = "Lake Tahoe, CA"
-        if "to" in p:
-            parts = p.split("to")
-            if len(parts) > 1:
-                destination = parts[1].strip().title()
+    # 11. OpenStreetMap Directions, Route Planning & Travel Distances
+    is_route_request = bool(
+        re.search(r"\b(directions?|driving\s*directions?|routes?|driving\s*route|driving\s*distance|how\s+to\s+go|how\s+far|navigation|distance\s+from|distance\s+between)\b", p) and
+        (re.search(r"\bfrom\s+.+\s+to\s+", p) or re.search(r"\bto\s+.+\s+from\s+", p) or re.search(r"\bbetween\s+.+\s+and\s+", p) or " to " in p)
+    ) or bool(
+        re.search(r"\b(direction|directions|route|navigation)\s+from\b", p)
+    ) or bool(
+        re.search(r"\b(distance|route|how\s+far)\s+(from|between)\b", p)
+    )
+
+    if is_route_request:
+        origin = "Mohakhali, Dhaka"
+        destination = "Airport Road, Dhaka"
+
+        from_to_match = re.search(r"\bfrom\s+(.+?)\s+to\s+(.+)$", p, re.IGNORECASE)
+        if from_to_match:
+            raw_orig = from_to_match.group(1).strip()
+            raw_dest = from_to_match.group(2).strip()
+            raw_orig = re.sub(r"^(the|a|my)\s+", "", raw_orig, flags=re.IGNORECASE).strip()
+            raw_dest = re.sub(r"\s+(on\s+map|on\s+google\s+map|on\s+osm|please|directions?|route|distance)$", "", raw_dest, flags=re.IGNORECASE).strip()
+            if raw_orig:
+                origin = raw_orig.title()
+            if raw_dest:
+                destination = raw_dest.title()
+        else:
+            between_match = re.search(r"\bbetween\s+(.+?)\s+and\s+(.+)$", p, re.IGNORECASE)
+            if between_match:
+                origin = between_match.group(1).strip().title()
+                destination = re.sub(r"\s+(on\s+map|please)$", "", between_match.group(2).strip(), flags=re.IGNORECASE).title()
+
         return {"tool": "calculate_route_distance", "args": {"origin": origin, "destination": destination}}
 
     # 12. Human-in-the-Loop Sensitive Action Gatekeeper
@@ -685,12 +726,12 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
             category = "Crop Care"
         return {"tool": "search_agri_products", "args": {"query": prompt, "category": category}}
 
-    # 16. Google Maps & Interactive Location Explorer
+    # 16. Google Maps & Interactive Location Explorer (Specific Landmark/Place/Hospital)
     if (
-        re.search(r"\b(google\s*maps?|maps?|locations?|directions?|where\s+is|find\s+on\s+map|show\s+on\s+map|hospital\s+location|coordinates?|near\s+me\s+map)\b", p) or
-        (re.search(r"\b(map|location)\b", p) and re.search(r"\b(dhaka|hospital|clinic|university|center|station|airport|mirpur|gulshan)\b", p))
+        re.search(r"\b(where\s+is|find\s+on\s+map|show\s+on\s+map|location\s+of|coordinates\s+of|hospital\s+location|place\s+location|landmark)\b", p) or
+        (re.search(r"\b(google\s*maps?|maps?)\b", p) and not is_route_request and re.search(r"\b(where|find|show|locate|hospital|clinic|university|center|station|airport|mirpur|gulshan)\b", p))
     ):
-        cleaned_loc = re.sub(r"^(show|find|open|search|where is|get|give me)\s+(the\s+)?(google\s+)?(map\s+(for|of|to)?|location\s+(of|for)?|directions\s+(to)?)\s*", "", p, flags=re.IGNORECASE).strip()
+        cleaned_loc = re.sub(r"^(show|find|open|search|where is|get|give me)\s+(the\s+)?(google\s+)?(map\s+(for|of|to)?|location\s+(of|for)?)\s*", "", p, flags=re.IGNORECASE).strip()
         return {"tool": "search_places_map", "args": {"query": cleaned_loc or prompt, "location": "Dhaka, Bangladesh"}}
 
     # 17. Math Problem Solver & Grapher
@@ -700,6 +741,22 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     ):
         p_type = "Calculus" if any(k in p for k in ["deriv", "calculus", "integral", "diff"]) else "Algebra"
         return {"tool": "solve_math_problem", "args": {"expression": prompt, "problem_type": p_type}}
+
+    # 18. Hotel Booking & Resort Directory (Dhaka, Cox's Bazar, Gulshan, near me, etc.)
+    if (
+        re.search(r"\b(hotels?|resorts?|motels?|guest\s*houses?|luxury\s*hotel|boutique\s*hotel|hotel\s*rooms?|hotel\s*rates?|hotel\s*price|stay\s+at\s+hotel|book\s+hotel|hotels?\s+in\b|hotels?\s+near\s+me)\b", p) or
+        (re.search(r"\b(find|search|show|recommend|book|top|best)\b", p) and re.search(r"\b(hotel|resort|stay|suite)\b", p))
+    ):
+        loc = "Dhaka, Bangladesh"
+        for candidate_city in ["cox's bazar", "coxs bazar", "cox bazar", "gulshan", "banani", "uttara", "chittagong", "sylhet", "tokyo", "dubai", "london", "singapore", "bangkok", "new york"]:
+            if candidate_city in p:
+                loc = candidate_city.title() + (", Bangladesh" if candidate_city in ["cox's bazar", "coxs bazar", "cox bazar", "gulshan", "banani", "uttara", "chittagong", "sylhet"] else "")
+                break
+
+        if "near me" in p or "this location" in p or "current location" in p or "current region" in p:
+            loc = "Dhaka, Bangladesh"
+
+        return {"tool": "search_hotels", "args": {"location": loc}}
 
     return None
 

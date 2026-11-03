@@ -165,6 +165,12 @@ class RouteDistanceData(BaseModel):
     waypoints: List[RouteWaypoint]
     steps: List[NavigationStep]
     map_summary: str
+    osm_embed_url: Optional[str] = None
+    osm_directions_url: Optional[str] = None
+    google_maps_directions_url: Optional[str] = None
+    origin_coords: Optional[List[float]] = None
+    destination_coords: Optional[List[float]] = None
+    route_summary_notes: Optional[str] = None
 
 
 # --- 6. Human-in-the-Loop (HITL) Action Approval Schemas ---
@@ -530,3 +536,44 @@ class MathSolverData(BaseModel):
     graph_coordinates: Optional[List[Dict[str, float]]] = None
     formula_identity: Optional[str] = None
     practical_application: str
+
+
+# --- 19. Hotel Search & Booking Schemas ---
+class HotelRoomType(BaseModel):
+    name: str
+    price_bdt: float
+    bed_type: str
+    capacity: str
+    features: List[str]
+
+
+class HotelItem(BaseModel):
+    id: str
+    name: str
+    star_rating: int  # 3, 4, 5
+    category: str     # "5-Star Luxury", "Business Boutique", "Airport Hotel", "Resort"
+    location_area: str  # "Gulshan-2, Dhaka", "Airport Road, Dhaka", "Banani"
+    address: str
+    rating: float     # 4.8
+    review_count: int # 2450
+    price_per_night_bdt: float
+    image_url: str
+    amenities: List[str]  # ["Free WiFi", "Swimming Pool", "Airport Shuttle", "Breakfast Included", "Spa & Wellness", "Gym"]
+    featured_badge: Optional[str] = None  # "Top Luxury", "Near Airport", "Best Value"
+    room_types: List[HotelRoomType]
+    check_in_time: str = "2:00 PM"
+    check_out_time: str = "12:00 PM"
+    booking_url: str = "https://www.booking.com"
+    free_cancellation: bool = True
+    distance_to_center_km: Optional[float] = None
+
+
+class HotelSearchData(BaseModel):
+    query: str
+    location: str
+    check_in: str
+    check_out: str
+    guests: int = 2
+    total_results: int
+    hotels: List[HotelItem]
+    price_range_summary: str

@@ -47,3 +47,4 @@ export function MathView({ math, displayMode = false, className = "" }: MathView
     />
   );
 }
+
