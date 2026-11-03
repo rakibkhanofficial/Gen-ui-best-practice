@@ -1,0 +1,56 @@
+# Docker Compose for GenUI Practice & Presentation Platform
+# Backing services: PostgreSQL, Redis, and Silo S3-Compatible Object Storage (pgsty/silo)
+# Application code runs directly on the host (Backend: `uv run`, Frontend: `npm run dev`)
+# No Docker image rebuilding required when changing application code!
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: genui-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: genui_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d genui_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: genui-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  silo:
+    image: pgsty/silo:latest
+    container_name: genui-silo
+    restart: unless-stopped
+    command: silo server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: siloadmin
+      MINIO_ROOT_PASSWORD: silopassword
+    volumes:
+      - silo_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  silo_data:

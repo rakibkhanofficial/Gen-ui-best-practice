@@ -1,0 +1,31 @@
+[project]
+name = "genui-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "rakibkhanofficial", email = "khanrakib218@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "google-antigravity>=0.1.23",
+    "google-genai>=2.34.0",
+    "httpx>=0.28.1",
+    "minio>=7.2.20",
+    "openpyxl>=3.1.5",
+    "pandas>=3.1.0",
+    "pydantic>=2.14.2",
+    "pydantic-settings>=2.16.2",
+    "python-dotenv>=1.2.4",
+    "redis>=8.1.0",
+    "sse-starlette>=3.6.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+genui-backend = "genui_backend:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"

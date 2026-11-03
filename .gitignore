@@ -1,0 +1,30 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# Node / Next.js
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+dist/
+build/
+
+# Python / UV Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+backend/.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+
+# Uploads cache
+backend/app/uploads/*
+!backend/app/uploads/.gitkeep
+
+# Docker volumes & logs
+*.log
+.DS_Store
