@@ -583,24 +583,85 @@ async def stream_agent_reasoning(
         yield f"data: {json.dumps({'event': 'genui', 'tool': tool_name, 'data': component_data, 'sources': sources})}\n\n"
 
         # 5. Stream descriptive text using Gemini or smart fallback
-        explanation = f"I have prepared the requested interactive **{tool_name.replace('_', ' ').title()}** component below. You can interact directly with the cards, toggle parameters, or review metrics in real-time."
-        
-        # If client is available, get a brief commentary from Gemini 3.8 Flash
-        if client:
-            try:
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=f"You are a helpful GenUI AI assistant. The user asked: '{prompt}'. You have just rendered an interactive {tool_name} widget. Briefly provide a 2-sentence helpful introduction to the user.",
-                )
-                if response.text:
-                    explanation = response.text
-            except Exception as e:
-                logger.warning(f"Gemini call fallback: {e}")
+        if tool_name == "generate_code_snippet":
+            files_list = component_data.get("files", [])
+            files_info = ", ".join([f.get("filename", "") for f in files_list])
+            has_html = any(f.get("filename", "").endswith(".html") or f.get("language") == "html" for f in files_list)
 
-        # Stream text words
-        for word in explanation.split(" "):
-            yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
-            await asyncio.sleep(0.02)
+            code_explain_prompt = f"""You are a senior software architect (like ChatGPT or DeepSeek).
+The user asked: "{prompt}".
+An interactive Code Studio displaying the implementation files ({files_info}) has just been mounted in the conversation above.
+
+Write a clean, beautifully formatted technical markdown response explaining the solution.
+Formatting guidelines:
+- Structure your response with clear sections:
+  ### 📌 Architecture & Design
+  Explain the architectural flow, design choices, and why this design is efficient and maintainable.
+  ### ⚡ Key Highlights
+  List 3-4 concise bullet points detailing specific technical features (e.g. non-blocking I/O, error boundaries, type safety, state management).
+  ### 🚀 Quickstart & Execution
+  Provide clean bash code blocks with exact CLI commands to install dependencies, run the server/client, and test the endpoints or output.
+{"- **Interactive Sandbox Note**: Mention that they can toggle the **Preview** tab in the Code Studio above to run and interact with the live UI directly in the sandbox!" if has_html else ""}
+- DO NOT repeat the entire raw source code because it is already displayed in the interactive code card above.
+- Keep the writing sharp, high-density, professional, and well-organized."""
+
+            streamed_code_explanation = False
+            if client:
+                try:
+                    for model_candidate in ["gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.8-flash"]:
+                        try:
+                            stream = client.models.generate_content_stream(
+                                model=model_candidate,
+                                contents=code_explain_prompt,
+                            )
+                            for chunk in stream:
+                                if chunk.text:
+                                    streamed_code_explanation = True
+                                    yield f"data: {json.dumps({'event': 'delta', 'text': chunk.text})}\n\n"
+                            if streamed_code_explanation:
+                                break
+                        except Exception as m_err:
+                            logger.debug(f"Model {model_candidate} streaming failed: {m_err}")
+                            continue
+                except Exception as e:
+                    logger.warning(f"Error during code explanation streaming: {e}")
+
+            if not streamed_code_explanation:
+                fallback_code_md = (
+                    f"### 📌 Architecture & Design\n\n"
+                    f"This solution implements a production-grade, modular architecture tailored for **{prompt}**.\n\n"
+                    f"### ⚡ Key Highlights\n"
+                    f"- **High Performance**: Asynchronous, non-blocking routines ensuring minimal latency.\n"
+                    f"- **Type Safety**: Strictly typed interfaces and input validation schemas.\n"
+                    f"- **Clean Modularity**: Decoupled handlers with resilient exception boundaries.\n\n"
+                    f"### 🚀 Quickstart & Execution\n"
+                    f"```bash\n"
+                    f"{component_data.get('execution_command') or '# Run the project\nuvicorn main:app --reload --port 8000'}\n"
+                    f"```\n"
+                )
+                for word in fallback_code_md.split(" "):
+                    yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                    await asyncio.sleep(0.015)
+
+        else:
+            explanation = f"I have prepared the requested interactive **{tool_name.replace('_', ' ').title()}** component below. You can interact directly with the cards, toggle parameters, or review metrics in real-time."
+            
+            # If client is available, get a brief commentary from Gemini 3.8 Flash
+            if client:
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=f"You are a helpful GenUI AI assistant. The user asked: '{prompt}'. You have just rendered an interactive {tool_name} widget. Briefly provide a 2-sentence helpful introduction to the user.",
+                    )
+                    if response.text:
+                        explanation = response.text
+                except Exception as e:
+                    logger.warning(f"Gemini call fallback: {e}")
+
+            # Stream text words
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.02)
 
         yield f"data: {json.dumps({'event': 'status', 'stage': 'Completed', 'detail': f'Turn complete. Validated across {len(sources)} sources.', 'sources': sources})}\n\n"
         yield f"data: {json.dumps({'event': 'done'})}\n\n"

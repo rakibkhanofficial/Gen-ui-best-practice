@@ -1,306 +1,313 @@
-from typing import Dict, Any, List
+import logging
+import json
+from typing import Dict, Any, List, Optional
+from google import genai
+
+from app.config import settings
 from app.models.schemas import CodeSnippetData, CodeFile
 
+logger = logging.getLogger("genui.code")
 
-def generate_code_snippet(topic: str = "FastAPI SSE Streaming with React Client", language: str = "TypeScript") -> Dict[str, Any]:
-    """Generates multi-file production-grade code snippets dynamically tailored to the user's coding topic."""
-    t_lower = topic.lower()
-
-    # 1. Binary Search / Algorithms
-    if any(k in t_lower for k in ["binary search", "tree", "bst", "algorithm", "sort", "graph"]):
-        py_code = '''# Production-Grade Binary Search Tree (BST) with Type Annotations
-from typing import Optional, List
-
-class TreeNode:
-    def __init__(self, val: int):
-        self.val: int = val
-        self.left: Optional[TreeNode] = None
-        self.right: Optional[TreeNode] = None
-
-class BinarySearchTree:
-    def __init__(self):
-        self.root: Optional[TreeNode] = None
-
-    def insert(self, val: int) -> None:
-        """Inserts a value into the BST in O(log n) average time."""
-        if not self.root:
-            self.root = TreeNode(val)
-            return
-
-        curr = self.root
-        while True:
-            if val < curr.val:
-                if not curr.left:
-                    curr.left = TreeNode(val)
-                    break
-                curr = curr.left
-            elif val > curr.val:
-                if not curr.right:
-                    curr.right = TreeNode(val)
-                    break
-                curr = curr.right
-            else:
-                break  # Duplicate values ignored
-
-    def search(self, target: int) -> bool:
-        """Search for a target value in O(log n) time."""
-        curr = self.root
-        while curr:
-            if curr.val == target:
-                return True
-            curr = curr.left if target < curr.val else curr.right
-        return False
-
-# Benchmark Example
-bst = BinarySearchTree()
-for num in [50, 30, 70, 20, 40, 60, 80]:
-    bst.insert(num)
-
-print(f"Search 40 in BST: {bst.search(40)}")  # True
-print(f"Search 99 in BST: {bst.search(99)}")  # False'''
-
-        ts_code = '''// Type-safe Binary Search Tree implementation in TypeScript
-export class BSTNode<T> {
-  value: T;
-  left: BSTNode<T> | null = null;
-  right: BSTNode<T> | null = null;
-
-  constructor(value: T) {
-    this.value = value;
-  }
-}
-
-export class BinarySearchTree<T> {
-  root: BSTNode<T> | null = null;
-
-  insert(value: T): void {
-    const newNode = new BSTNode(value);
-    if (!this.root) {
-      this.root = newNode;
-      return;
-    }
-
-    let current = this.root;
-    while (true) {
-      if (value < current.value) {
-        if (!current.left) {
-          current.left = newNode;
-          break;
-        }
-        current = current.left;
-      } else if (value > current.value) {
-        if (!current.right) {
-          current.right = newNode;
-          break;
-        }
-        current = current.right;
-      } else {
-        break;
-      }
-    }
-  }
-
-  has(target: T): boolean {
-    let current = this.root;
-    while (current) {
-      if (current.value === target) return true;
-      current = target < current.value ? current.left : current.right;
-    }
-    return false;
-  }
-}'''
-
-        files = [
-            CodeFile(
-                filename="bst_algorithm.py",
-                language="python",
-                code=py_code,
-                explanation="Binary Search Tree with iterative logarithmic insertion and search routines to avoid recursion depth limits.",
-                output_simulation="Search 40 in BST: True\nSearch 99 in BST: False\nBenchmark: 100,000 node inserts executed in 14.2ms.",
-                complexity="O(log n) average, O(n) worst-case",
-            ),
-            CodeFile(
-                filename="BinarySearchTree.ts",
-                language="typescript",
-                code=ts_code,
-                explanation="Generic TypeScript implementation supporting comparable primitives and custom comparator hooks.",
-                output_simulation="[TypeScript 5.6] All type checks passed with 0 errors.",
-                complexity="O(log n)",
-            )
-        ]
-
-    # 2. Authentication / JWT / Security
-    elif any(k in t_lower for k in ["auth", "jwt", "login", "token", "security", "middleware"]):
-        ts_code = '''// Next.js 16 Edge Middleware JWT Verification
-import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify, SignJWT } from "jose";
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "secure-secret-key");
-
-export async function verifyAuthToken(req: NextRequest) {
-  const token = req.cookies.get("session_token")?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: "Missing authentication token" }, { status: 401 });
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, SECRET, {
-      algorithms: ["HS256"],
-    });
-
-    // Attach user context headers
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set("x-user-id", String(payload.sub));
-    requestHeaders.set("x-user-role", String(payload.role || "user"));
-
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
-  } catch (err) {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 403 });
-  }
-}'''
-
-        py_code = '''# FastAPI JWT Authentication Dependency with PyJWT
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-from datetime import datetime, timedelta, timezone
-
-SECRET_KEY = "super-secret-genui-signing-key"
-ALGORITHM = "HS256"
-security = HTTPBearer()
-
-def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=24)) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
+# Initialize Gemini client if API key is present
+_client = None
+if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your_gemini_api_key_here":
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
-        return {"user_id": user_id, "role": payload.get("role", "user")}
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=403, detail="Could not validate credentials")'''
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    except Exception as e:
+        logger.warning(f"Could not initialize Gemini Client for code_tool: {e}")
 
-        files = [
-            CodeFile(
-                filename="auth_middleware.ts",
-                language="typescript",
-                code=ts_code,
-                explanation="Edge-runtime JWT validator using jose library for sub-millisecond verification without cold starts.",
-                output_simulation="✓ Valid token received for subject: usr_9941\n✓ Headers injected: x-user-id, x-user-role\n✓ Handshake completed in 1.4ms.",
-                complexity="O(1)",
-            ),
-            CodeFile(
-                filename="security_deps.py",
-                language="python",
-                code=py_code,
-                explanation="FastAPI HTTPBearer dependency with strict token expiration and role-based access control (RBAC).",
-                output_simulation="Generated token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\nVerification: HTTP 200 OK for sub='usr_9941'.",
-                complexity="O(1)",
-            )
-        ]
 
-    # 3. Default / SSE Streaming & GenUI Pattern
-    else:
-        ts_code = '''// Real-time SSE Stream Consumer in Next.js 16 with Streamdown
-import { useState, useEffect } from "react";
+def _generate_dynamic_code(topic: str, language: str) -> Optional[CodeSnippetData]:
+    """Uses Gemini 3.5 Flash Lite to dynamically synthesize customized production-grade code for any prompt."""
+    if not _client:
+        return None
 
-export function useSSEStream(endpoint: string) {
-  const [content, setContent] = useState("");
-  const [stage, setStage] = useState<"Thinking" | "Searching" | "Analysing" | "Completed">("Thinking");
+    try:
+        prompt = f"""You are an expert software engineer. The user is asking for code implementation for: "{topic}".
+Preferred primary language: {language}.
 
-  const startStream = async (prompt: string) => {
-    setContent("");
-    setStage("Thinking");
+Generate a production-grade, complete, working code solution.
+Requirements:
+1. Provide 1 to 2 focused, clean, practical files.
+2. The primary file MUST be placed first at index 0 and be in the requested language ({language}), with an appropriate filename (e.g. main.py for Python, index.html for HTML, useDebounce.ts for TypeScript, scraper.py for scraping).
+3. If the user asks for HTML, CSS, JS, web component, interactive calculator, game, dashboard, or web UI artifact:
+   - Provide a complete, self-contained single-file HTML document named "index.html" (language: "html") that includes modern responsive styling (<style>) and interactive JavaScript (<script>) so it can be previewed live in an iframe sandbox without build tools. You can also load Tailwind via `<script src="https://cdn.tailwindcss.com"></script>`.
+4. Do not truncate code with placeholders like "TODO: implement here". Write real, idiomatic, fully functional code with clear comments.
+5. Give a clean, concise title (e.g. "FastAPI Async SSE Streaming", "Interactive Calculator", "Binary Search Algorithm"). Do NOT repeat raw prompts like "Write a script for...".
+6. Provide a 1-sentence description.
+"""
 
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: prompt }),
-    });
+        for model_name in ["gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.8-flash"]:
+            try:
+                response = _client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config={
+                        "response_mime_type": "application/json",
+                        "response_schema": CodeSnippetData,
+                        "temperature": 0.2,
+                    },
+                )
+                if response and response.text:
+                    data = json.loads(response.text)
+                    return CodeSnippetData(**data)
+            except Exception as model_err:
+                logger.debug(f"Code generation with {model_name} failed: {model_err}")
+                continue
 
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
+        return None
+    except Exception as e:
+        logger.warning(f"Dynamic code synthesis failed: {e}")
+        return None
 
-    while (reader) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const text = decoder.decode(value);
 
-      for (const line of text.split("\\n\\n")) {
-        if (!line.startsWith("data: ")) continue;
-        const data = JSON.parse(line.replace("data: ", ""));
-        if (data.event === "delta") setContent((c) => c + data.text);
-        if (data.event === "status") setStage(data.stage);
+def _get_static_fallback_code(topic: str, language: str) -> CodeSnippetData:
+    """High-quality categorized fallback code if dynamic generation is unavailable."""
+    t_lower = topic.lower()
+    is_html = "html" in language.lower() or any(k in t_lower for k in ["calc", "game", "canvas", "artifact", "website", "landing page"])
+    is_python = "python" in language.lower() or "py" in language.lower() or "fastapi" in t_lower
+
+    if is_html:
+        html_code = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-xs bg-slate-800 rounded-2xl p-5 shadow-2xl border border-slate-700">
+    <div id="display" class="w-full h-16 bg-slate-950 rounded-xl mb-4 px-4 flex items-center justify-end text-3xl font-mono text-emerald-400 overflow-x-auto">
+      0
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+      <button onclick="clearDisplay()" class="col-span-2 p-3 bg-rose-600/80 hover:bg-rose-600 rounded-xl font-bold transition">AC</button>
+      <button onclick="deleteLast()" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">⌫</button>
+      <button onclick="appendOp('/')" class="p-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold transition">÷</button>
+
+      <button onclick="appendNum('7')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">7</button>
+      <button onclick="appendNum('8')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">8</button>
+      <button onclick="appendNum('9')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">9</button>
+      <button onclick="appendOp('*')" class="p-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold transition">×</button>
+
+      <button onclick="appendNum('4')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">4</button>
+      <button onclick="appendNum('5')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">5</button>
+      <button onclick="appendNum('6')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">6</button>
+      <button onclick="appendOp('-')" class="p-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold transition">-</button>
+
+      <button onclick="appendNum('1')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">1</button>
+      <button onclick="appendNum('2')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">2</button>
+      <button onclick="appendNum('3')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">3</button>
+      <button onclick="appendOp('+')" class="p-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold transition">+</button>
+
+      <button onclick="appendNum('0')" class="col-span-2 p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">0</button>
+      <button onclick="appendNum('.')" class="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition">.</button>
+      <button onclick="calculate()" class="p-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold transition">=</button>
+    </div>
+  </div>
+  <script>
+    let current = '0';
+    const display = document.getElementById('display');
+    function update() { display.innerText = current; }
+    function clearDisplay() { current = '0'; update(); }
+    function deleteLast() { current = current.length > 1 ? current.slice(0, -1) : '0'; update(); }
+    function appendNum(n) { current = current === '0' && n !== '.' ? n : current + n; update(); }
+    function appendOp(op) { if (!['+','-','*','/'].includes(current.slice(-1))) current += op; update(); }
+    function calculate() {
+      try {
+        current = String(Function('"use strict";return (' + current + ')')());
+      } catch (e) {
+        current = 'Error';
       }
+      update();
     }
-  };
+  </script>
+</body>
+</html>"""
+        return CodeSnippetData(
+            title="Interactive Calculator",
+            description="Complete single-file web artifact with modern styling and responsive arithmetic calculation logic.",
+            active_language="html",
+            execution_command="Open in browser or click Preview",
+            files=[
+                CodeFile(
+                    filename="index.html",
+                    language="html",
+                    code=html_code,
+                    explanation="Interactive calculator web application with embedded Tailwind CSS and JavaScript handlers.",
+                )
+            ]
+        )
 
-  return { content, stage, startStream };
-}'''
-
-        py_code = '''# FastAPI Server-Sent Events (SSE) Streaming Endpoint with Gemini 3.8 Flash
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+    if is_python:
+        code = '''"""High-Performance Async Server-Sent Events (SSE) Streaming with FastAPI."""
 import asyncio
 import json
+from typing import AsyncGenerator
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
 
-app = FastAPI()
+app = FastAPI(title="Async SSE Streaming Service")
 
-async def event_generator(prompt: str):
-    # Stage 1: Thinking
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Thinking', 'detail': 'Evaluating query with Gemini 3.8 Flash'})}\\n\\n"
-    await asyncio.sleep(1.2)
 
-    # Stage 2: Searching
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Searching', 'detail': 'Scanning active knowledge tools'})}\\n\\n"
-    await asyncio.sleep(1.6)
+async def event_stream_generator() -> AsyncGenerator[str, None]:
+    """Simulates an asynchronous real-time event generator streaming metrics."""
+    stages = ["Initializing", "Searching Knowledge Base", "Synthesizing", "Completed"]
+    for idx, stage in enumerate(stages, start=1):
+        payload = {
+            "step": idx,
+            "stage": stage,
+            "progress_pct": idx * 25,
+            "status": "in_progress" if idx < len(stages) else "done",
+        }
+        # Standard SSE format requires 'data: <json>\\n\\n'
+        yield f"data: {json.dumps(payload)}\\n\\n"
+        await asyncio.sleep(0.5)
 
-    # Stage 3: Streaming Tokens
-    tokens = ["Generative", "UI", "empowers", "AI", "agents", "with", "React!"]
-    for token in tokens:
-        yield f"data: {json.dumps({'event': 'delta', 'text': token + ' '})}\\n\\n"
-        await asyncio.sleep(0.04)
 
-    yield f"data: {json.dumps({'event': 'status', 'stage': 'Completed'})}\\n\\n"
-    yield f"data: {json.dumps({'event': 'done'})}\\n\\n"
+@app.get("/stream/events")
+async def stream_events(request: Request):
+    """Streams server-sent events to connected HTTP clients."""
+    return StreamingResponse(
+        event_stream_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
-@app.post("/api/chat/stream")
-def stream_chat(prompt: str):
-    return StreamingResponse(event_generator(prompt), media_type="text/event-stream")'''
 
-        files = [
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+'''
+        reqs = '''fastapi>=0.115.0
+uvicorn>=0.30.0
+pydantic>=2.8.0
+'''
+        return CodeSnippetData(
+            title="FastAPI Async SSE Streaming",
+            description="Production-grade asynchronous Server-Sent Events (SSE) streaming endpoint with non-blocking event generators.",
+            active_language="python",
+            execution_command="uvicorn main:app --reload --port 8000",
+            files=[
+                CodeFile(
+                    filename="main.py",
+                    language="python",
+                    code=code,
+                    explanation="Asynchronous generator yielding standard SSE chunks with proper streaming response headers.",
+                    output_simulation="INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)\nStreaming 4 SSE chunks successfully.",
+                    complexity="O(1) memory buffer",
+                ),
+                CodeFile(
+                    filename="requirements.txt",
+                    language="plaintext",
+                    code=reqs,
+                    explanation="Runtime dependencies required for FastAPI and Uvicorn ASGI server.",
+                    output_simulation="Successfully installed fastapi uvicorn pydantic.",
+                    complexity="N/A",
+                ),
+            ],
+        )
+
+    # TypeScript / Frontend fallback
+    ts_code = '''/**
+ * Real-time Server-Sent Events (SSE) React Hook.
+ * Consumes streaming text and status events with auto-reconnect.
+ */
+import { useState, useCallback } from "react";
+
+export interface StreamEvent {
+  event: "delta" | "status" | "done";
+  text?: string;
+  stage?: string;
+}
+
+export function useSSEStream(endpoint: string) {
+  const [content, setContent] = useState<string>("");
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const startStream = useCallback(
+    async (prompt: string) => {
+      setContent("");
+      setError(null);
+      setIsStreaming(true);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt }),
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\\n\\n");
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data: StreamEvent = JSON.parse(line.replace("data: ", ""));
+            if (data.event === "delta" && data.text) {
+              setContent((prev) => prev + data.text);
+            }
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Stream error");
+      } finally {
+        setIsStreaming(false);
+      }
+    },
+    [endpoint]
+  );
+
+  return { content, isStreaming, error, startStream };
+}
+'''
+    return CodeSnippetData(
+        title="React SSE Stream Consumer Hook",
+        description="Type-safe React hook for consuming Server-Sent Events with ReadableStream decoders.",
+        active_language="typescript",
+        execution_command="npx tsc --noEmit",
+        files=[
             CodeFile(
                 filename="useSSEStream.ts",
                 language="typescript",
                 code=ts_code,
-                explanation="Custom React Hook for consuming Server-Sent Events (SSE) with stage tracking and token accumulation.",
-                output_simulation="Connected to SSE proxy at /api/chat/stream...\nStage: Thinking -> Searching -> Analysing -> Completed\nTokens buffered: 48 tokens in 1.4s.",
-                complexity="O(n) where n is stream token length",
-            ),
-            CodeFile(
-                filename="main.py",
-                language="python",
-                code=py_code,
-                explanation="FastAPI async generator emitting SSE standard text/event-stream chunks with JSON payloads.",
-                output_simulation="INFO: Uvicorn running on http://127.0.0.1:8000\nINFO: SSE Connection accepted (Status 200 OK)",
-                complexity="O(1) memory per client stream",
+                explanation="Stream consumer hook utilizing native Fetch API and TextDecoder for chunk-by-chunk accumulation.",
+                output_simulation="[TypeScript] Compilation check passed. 0 errors.",
+                complexity="O(n) where n is stream length",
             )
-        ]
-
-    data = CodeSnippetData(
-        title=f"Code Studio: {topic.title()}",
-        description=f"Multi-file production architecture and algorithm implementation for '{topic}'.",
-        active_language=language,
-        execution_command="python -m pytest tests/ -v" if "py" in language.lower() else "npm run test",
-        files=files,
+        ],
     )
-    return data.model_dump()
+
+
+def generate_code_snippet(
+    topic: str = "FastAPI SSE Streaming with React Client",
+    language: str = "TypeScript",
+) -> Dict[str, Any]:
+    """Generates tailored code snippets dynamically using Gemini, falling back to clean static templates."""
+    # 1. Attempt dynamic generation with Gemini
+    dynamic_solution = _generate_dynamic_code(topic, language)
+    if dynamic_solution:
+        logger.info(f"Synthesized dynamic code snippet for topic: '{topic}' ({len(dynamic_solution.files)} files)")
+        return dynamic_solution.model_dump()
+
+    # 2. Fall back to curated clean code
+    logger.info(f"Using fallback code template for topic: '{topic}'")
+    fallback_solution = _get_static_fallback_code(topic, language)
+    return fallback_solution.model_dump()

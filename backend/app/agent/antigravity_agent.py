@@ -393,11 +393,11 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     """Priority-ordered, regex-bounded heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
     p = prompt.lower().strip()
 
-    # 0. Explicit Code Studio Requests (write/generate scripts, code files, functions, APIs)
+    # 0. Explicit Code Studio Requests (write/generate scripts, code files, functions, APIs, HTML/CSS web artifacts)
     is_code_request = bool(
-        re.search(r"\b(write|generate|build|create)\s+(an?\s+)?(code|script|function|program|algorithm|api|fastapi|backend|frontend|server)\b", p) or
-        re.search(r"\b(code\s*studio|code\s*snippet|python\s*script|typescript\s*script|golang\s*script|rust\s*script)\b", p) or
-        re.search(r"\b(write\s+a\s+python|write\s+a\s+typescript|write\s+a\s+fastapi)\b", p)
+        re.search(r"\b(write|generate|build|create)\s+(an?\s+)?(code|script|function|program|algorithm|api|fastapi|backend|frontend|server|html|calculator|game|web\s*app|artifact)\b", p) or
+        re.search(r"\b(code\s*studio|code\s*snippet|python\s*script|typescript\s*script|golang\s*script|rust\s*script|html\s*css|html\s*and\s*js|html\s*page)\b", p) or
+        re.search(r"\b(write\s+a\s+python|write\s+a\s+typescript|write\s+a\s+fastapi|create\s+.*in\s+html)\b", p)
     )
 
     # 1. YouTube video search & playback (handles tutorials from youtube, video guides, etc.)
@@ -414,6 +414,8 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
         lang = "TypeScript"
         if "python" in p or "fastapi" in p:
             lang = "Python"
+        elif any(k in p for k in ["html", "css", "calculator", "game", "artifact", "canvas", "web app"]):
+            lang = "HTML"
         elif "go" in p or "golang" in p:
             lang = "Go"
         elif "rust" in p:
@@ -429,6 +431,8 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
         lang = "TypeScript"
         if "python" in p or "fastapi" in p:
             lang = "Python"
+        elif any(k in p for k in ["html", "css", "calculator", "game", "artifact", "canvas", "web app"]):
+            lang = "HTML"
         elif "go" in p or "golang" in p:
             lang = "Go"
         elif "rust" in p:

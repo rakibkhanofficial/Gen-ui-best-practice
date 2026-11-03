@@ -1,31 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   Code2,
+  Eye,
   Copy,
   Check,
   Download,
-  Terminal,
-  Play,
   FileCode,
+  WrapText,
+  RotateCw,
+  ExternalLink,
   Sparkles,
-  Layers,
-  Cpu,
-  CheckCircle2
 } from "lucide-react";
 
-interface CodeFile {
+export interface CodeFile {
   filename: string;
   language: string;
   code: string;
-  explanation: string;
+  explanation?: string;
   output_simulation?: string;
   complexity?: string;
 }
 
-interface CodeSnippetData {
+export interface CodeSnippetData {
   title?: string;
   description?: string;
   active_language?: string;
@@ -38,17 +37,106 @@ interface CodeStudioCardProps {
   status?: "inProgress" | "executing" | "complete";
 }
 
-// Lightweight zero-dependency IDE Syntax Highlighter
+/**
+ * Checks whether a given file contains renderable web content
+ * (HTML, SVG, canvas, or single-file web applications).
+ */
+function isFilePreviewable(file?: CodeFile): boolean {
+  if (!file || !file.code) return false;
+  const lang = (file.language || "").toLowerCase();
+  const name = (file.filename || "").toLowerCase();
+  const code = file.code.toLowerCase();
+
+  return (
+    lang === "html" ||
+    lang === "svg" ||
+    name.endsWith(".html") ||
+    name.endsWith(".svg") ||
+    code.includes("<!doctype html") ||
+    code.includes("<html") ||
+    code.includes("<svg") ||
+    (code.includes("<div") && (code.includes("<style>") || code.includes("<script>")))
+  );
+}
+
+/**
+ * Lightweight, high-contrast IDE Syntax Highlighter for Python, TypeScript,
+ * HTML, CSS, JavaScript, SQL, and Shell.
+ */
 function renderHighlightedLine(line: string, language: string) {
   if (!line) return <span>&nbsp;</span>;
 
+  const lang = (language || "").toLowerCase();
+
   // 1. Comments
-  if (line.trim().startsWith("//") || line.trim().startsWith("#") || line.trim().startsWith("/*") || line.trim().startsWith("*")) {
-    return <span className="text-emerald-500/90 dark:text-emerald-400/80 italic">{line}</span>;
+  const trimmed = line.trim();
+  if (
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("#") ||
+    trimmed.startsWith("/*") ||
+    trimmed.startsWith("*") ||
+    trimmed.startsWith("--") ||
+    trimmed.startsWith("<!--")
+  ) {
+    return <span className="text-slate-400 dark:text-zinc-500 italic">{line}</span>;
   }
 
-  // Tokenize regex for keywords, types, strings, numbers, punctuation
-  const tokenRegex = /(\/\/[^\n]*|#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:import|export|from|default|const|let|var|function|class|return|async|await|if|else|try|catch|def|package|type|interface|new|public|private|yield|for|while|in|of)\b|\b(?:string|number|boolean|void|Promise|Dict|List|Any|Optional|BaseModel|FastAPI|Request|Response|NextRequest|int|float|str|bool)\b|\b(?:true|false|null|None|undefined|\d+)\b|[{}()[\].,;:+\-*/%=<>!&|])/g;
+  // HTML / SVG Tag Highlighting
+  if (lang === "html" || lang === "svg" || lang === "xml") {
+    const htmlRegex = /(<!--[\s\S]*?-->|<\/?[a-zA-Z0-9\-]+|[a-zA-Z\-]+(?==)|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[<>/=])/g;
+    const parts = [];
+    let lastIdx = 0;
+    let match;
+
+    while ((match = htmlRegex.exec(line)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push({ text: line.substring(lastIdx, match.index), type: "plain" });
+      }
+      const token = match[0];
+      let type = "plain";
+      if (token.startsWith("<!--")) {
+        type = "comment";
+      } else if (token.startsWith("<")) {
+        type = "tag";
+      } else if (token.startsWith('"') || token.startsWith("'")) {
+        type = "string";
+      } else if (token === "=" || token === ">" || token === "/") {
+        type = "punctuation";
+      } else {
+        type = "attribute";
+      }
+      parts.push({ text: token, type });
+      lastIdx = htmlRegex.lastIndex;
+    }
+    if (lastIdx < line.length) {
+      parts.push({ text: line.substring(lastIdx), type: "plain" });
+    }
+
+    return (
+      <span>
+        {parts.map((p, i) => {
+          switch (p.type) {
+            case "tag":
+              return <span key={i} className="text-rose-400 font-semibold">{p.text}</span>;
+            case "attribute":
+              return <span key={i} className="text-amber-300">{p.text}</span>;
+            case "string":
+              return <span key={i} className="text-emerald-300">{p.text}</span>;
+            case "punctuation":
+              return <span key={i} className="text-slate-400">{p.text}</span>;
+            case "comment":
+              return <span key={i} className="text-slate-500 italic">{p.text}</span>;
+            default:
+              return <span key={i} className="text-slate-200">{p.text}</span>;
+          }
+        })}
+      </span>
+    );
+  }
+
+  // General Programming Languages (Python, TypeScript, JavaScript, SQL, Bash)
+  const tokenRegex =
+    /(\/\/[^\n]*|#[^\n]*|--[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|@[a-zA-Z_]\w*|\b(?:import|from|export|default|const|let|var|function|def|async|await|return|class|if|else|elif|for|while|try|except|finally|catch|raise|with|as|in|of|yield|lambda|pass|break|continue|new|type|interface|extends|implements|public|private|static|readonly|case|switch)\b|\b(?:True|False|None|true|false|null|undefined)\b|\b(?:str|int|float|bool|list|dict|set|tuple|Optional|List|Dict|Any|Union|BaseModel|FastAPI|Request|Response|StreamingResponse|Promise|HTMLElement|Record)\b|\b\d+(\.\d+)?\b|[{}()[\].,;:+\-*/%=<>!&|^~])/g;
 
   const parts = [];
   let lastIndex = 0;
@@ -65,17 +153,29 @@ function renderHighlightedLine(line: string, language: string) {
     const token = match[0];
     let type = "plain";
 
-    if (token.startsWith("//") || token.startsWith("#")) {
+    if (token.startsWith("//") || token.startsWith("#") || token.startsWith("--")) {
       type = "comment";
     } else if (token.startsWith('"') || token.startsWith("'") || token.startsWith("`")) {
       type = "string";
-    } else if (/^(import|export|from|default|const|let|var|function|class|return|async|await|if|else|try|catch|def|package|type|interface|new|public|private|yield|for|while|in|of)$/.test(token)) {
+    } else if (token.startsWith("@")) {
+      type = "decorator";
+    } else if (
+      /^(import|from|export|default|const|let|var|function|def|async|await|return|class|if|else|elif|for|while|try|except|finally|catch|raise|with|as|in|of|yield|lambda|pass|break|continue|new|type|interface|extends|implements|public|private|static|readonly|case|switch)$/.test(
+        token
+      )
+    ) {
       type = "keyword";
-    } else if (/^(string|number|boolean|void|Promise|Dict|List|Any|Optional|BaseModel|FastAPI|Request|Response|NextRequest|int|float|str|bool)$/.test(token)) {
+    } else if (
+      /^(str|int|float|bool|list|dict|set|tuple|Optional|List|Dict|Any|Union|BaseModel|FastAPI|Request|Response|StreamingResponse|Promise|HTMLElement|Record)$/.test(
+        token
+      )
+    ) {
       type = "type";
-    } else if (/^(true|false|null|None|undefined|\d+)$/.test(token)) {
+    } else if (/^(True|False|None|true|false|null|undefined)$/.test(token)) {
       type = "constant";
-    } else {
+    } else if (/^\d+(\.\d+)?$/.test(token)) {
+      type = "number";
+    } else if (/^[{}()[\].,;:+\-*/%=<>!&|^~]$/.test(token)) {
       type = "punctuation";
     }
 
@@ -92,19 +192,59 @@ function renderHighlightedLine(line: string, language: string) {
       {parts.map((p, i) => {
         switch (p.type) {
           case "comment":
-            return <span key={i} className="text-emerald-500/90 dark:text-emerald-400/80 italic">{p.text}</span>;
+            return (
+              <span key={i} className="text-slate-400 italic">
+                {p.text}
+              </span>
+            );
           case "string":
-            return <span key={i} className="text-amber-500 dark:text-amber-300">{p.text}</span>;
+            return (
+              <span key={i} className="text-emerald-300">
+                {p.text}
+              </span>
+            );
+          case "decorator":
+            return (
+              <span key={i} className="text-amber-300 font-medium">
+                {p.text}
+              </span>
+            );
           case "keyword":
-            return <span key={i} className="text-purple-600 dark:text-purple-400 font-bold">{p.text}</span>;
+            return (
+              <span key={i} className="text-purple-400 font-semibold">
+                {p.text}
+              </span>
+            );
           case "type":
-            return <span key={i} className="text-cyan-600 dark:text-cyan-400 font-semibold">{p.text}</span>;
+            return (
+              <span key={i} className="text-cyan-300 font-medium">
+                {p.text}
+              </span>
+            );
           case "constant":
-            return <span key={i} className="text-orange-600 dark:text-orange-400">{p.text}</span>;
+            return (
+              <span key={i} className="text-orange-300 font-medium">
+                {p.text}
+              </span>
+            );
+          case "number":
+            return (
+              <span key={i} className="text-amber-400">
+                {p.text}
+              </span>
+            );
           case "punctuation":
-            return <span key={i} className="text-slate-500 dark:text-slate-400">{p.text}</span>;
+            return (
+              <span key={i} className="text-slate-400">
+                {p.text}
+              </span>
+            );
           default:
-            return <span key={i} className="text-slate-800 dark:text-slate-200">{p.text}</span>;
+            return (
+              <span key={i} className="text-slate-100">
+                {p.text}
+              </span>
+            );
         }
       })}
     </span>
@@ -113,22 +253,74 @@ function renderHighlightedLine(line: string, language: string) {
 
 export function CodeStudioCard({ data, status = "complete" }: CodeStudioCardProps) {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<"code" | "console">("code");
   const [copied, setCopied] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [consoleOutput, setConsoleOutput] = useState<string | null>(null);
+  const [wrapLines, setWrapLines] = useState(false);
+  const [viewMode, setViewMode] = useState<"code" | "preview">("code");
+  const [previewKey, setPreviewKey] = useState(0);
 
   if (status === "inProgress" || !data?.files || data.files.length === 0) {
     return (
-      <div className="w-full max-w-3xl p-6 rounded-3xl bg-white dark:bg-[#1e1f20] animate-pulse border border-slate-200 dark:border-white/10 my-3">
-        <div className="h-6 w-48 bg-slate-200 dark:bg-slate-700 rounded-md mb-4" />
-        <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl mb-3" />
-        <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl" />
+      <div className="w-full max-w-3xl p-4 rounded-2xl bg-white dark:bg-[#1e1f20] animate-pulse border border-slate-200 dark:border-white/10 my-3">
+        <div className="h-9 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg mb-3" />
+        <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl" />
       </div>
     );
   }
 
   const currentFile = data.files[activeFileIndex] || data.files[0];
+  const lineCount = currentFile.code.split("\n").length;
+  const isPreviewable = isFilePreviewable(currentFile) || data.files.some(isFilePreviewable);
+
+  // Construct comprehensive sandboxed HTML for live preview
+  const previewHtml = useMemo(() => {
+    const files = data?.files || [];
+    // 1. If active file is an HTML document
+    if (
+      currentFile.code.includes("<html") ||
+      currentFile.code.includes("<!DOCTYPE html") ||
+      currentFile.code.includes("<!doctype html") ||
+      currentFile.filename.endsWith(".html")
+    ) {
+      let html = currentFile.code;
+      // Inject companion CSS if present in separate file
+      const cssFile = files.find((f) => f.filename.endsWith(".css") || f.language === "css");
+      if (cssFile && !html.includes(cssFile.code)) {
+        html = html.replace("</head>", `<style>\n${cssFile.code}\n</style>\n</head>`);
+      }
+      // Inject companion JS if present in separate file
+      const jsFile = files.find(
+        (f) => (f.filename.endsWith(".js") || f.language === "javascript") && f.filename !== currentFile.filename
+      );
+      if (jsFile && !html.includes(jsFile.code)) {
+        html = html.replace("</body>", `<script>\n${jsFile.code}\n</script>\n</body>`);
+      }
+      return html;
+    }
+
+    // 2. If active file is SVG
+    if (currentFile.filename.endsWith(".svg") || currentFile.code.trim().startsWith("<svg")) {
+      return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0d1117;">
+  ${currentFile.code}
+</body>
+</html>`;
+    }
+
+    // 3. Fallback for interactive HTML/JS snippets
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-6 bg-slate-900 text-slate-100 font-sans min-h-screen flex items-center justify-center">
+  ${currentFile.code}
+</body>
+</html>`;
+  }, [currentFile, data.files]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(currentFile.code);
@@ -146,150 +338,182 @@ export function CodeStudioCard({ data, status = "complete" }: CodeStudioCardProp
     URL.revokeObjectURL(url);
   };
 
-  const handleRunSimulation = () => {
-    setIsRunning(true);
-    setActiveTab("console");
-    setConsoleOutput(`$ ${data.execution_command || "npm run build && node dist/index.js"}\nCompiling worker process...`);
-    setTimeout(() => {
-      setConsoleOutput(
-        (prev) => `${prev}\n\n[stdout]\n${currentFile.output_simulation || "Process completed with exit code 0."}\n\n✓ Worker finished in 48ms.`
-      );
-      setIsRunning(false);
-    }, 600);
+  const handleReloadPreview = () => {
+    setPreviewKey((k) => k + 1);
+  };
+
+  const handleOpenInNewTab = () => {
+    const blob = new Blob([previewHtml], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, "_blank");
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="w-full max-w-3xl my-4 rounded-3xl bg-white dark:bg-[#1a1b1c] p-6 border border-slate-200/90 dark:border-white/10 shadow-xl shadow-blue-500/5 relative overflow-hidden text-slate-800 dark:text-slate-100"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="w-full max-w-3xl my-3 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-sm text-slate-800 dark:text-slate-100 overflow-hidden"
     >
-      {/* Background ambient glow */}
-      <div className="absolute top-0 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10 gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <Code2 className="w-5 h-5 text-blue-500" />
-              {data.title || "Interactive Code Studio"}
-            </h3>
-            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium">
-              <Sparkles className="w-3 h-3" /> IDE Studio
-            </span>
+      {/* Sleek Top Navigation Bar: File Tabs + Artifact Toggle + Controls */}
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50/80 dark:bg-white/[0.03] border-b border-slate-200 dark:border-white/10 gap-2">
+        {/* Left: File Tabs and Optional Code/Preview Toggle */}
+        <div className="flex items-center gap-2 overflow-x-auto min-w-0">
+          {/* File Selection Tabs */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {data.files.map((file, idx) => {
+              const isActive = activeFileIndex === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setActiveFileIndex(idx);
+                    if (isFilePreviewable(file)) {
+                      // Keep mode or auto-select preview if requested
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-medium rounded-lg transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                      : "bg-slate-200/70 dark:bg-white/5 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10"
+                  }`}
+                >
+                  <FileCode className="w-3.5 h-3.5 opacity-80" />
+                  <span>{file.filename}</span>
+                </button>
+              );
+            })}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{data.description}</p>
+
+          {/* Interactive Live Artifact Preview Toggle (Rendered when file is previewable) */}
+          {isPreviewable && (
+            <div className="flex items-center p-0.5 rounded-lg bg-slate-200/80 dark:bg-white/10 border border-slate-300/60 dark:border-white/5 text-xs shrink-0">
+              <button
+                onClick={() => setViewMode("code")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  viewMode === "code"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Code</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode("preview")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  viewMode === "preview"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Preview</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Complexity badge */}
-        {currentFile.complexity && (
-          <div className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-mono font-medium border border-slate-200 dark:border-white/10">
-            <Cpu className="w-3.5 h-3.5 text-blue-500" />
-            <span>Complexity: {currentFile.complexity}</span>
-          </div>
-        )}
-      </div>
+        {/* Right: Quick Action Controls */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {viewMode === "code" && (
+            <>
+              <span className="hidden sm:inline text-[11px] font-mono text-slate-400 dark:text-zinc-500 mr-1 select-none">
+                {lineCount} lines
+              </span>
 
-      {/* VS Code File Tabs Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pb-2 border-b border-slate-200/80 dark:border-white/10">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-          {data.files.map((file, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                setActiveFileIndex(idx);
-                setActiveTab("code");
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-medium rounded-xl transition-all cursor-pointer ${
-                activeFileIndex === idx
-                  ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs"
-                  : "bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border border-slate-200/70 dark:border-white/5"
-              }`}
-            >
-              <FileCode className="w-3.5 h-3.5 text-blue-500" />
-              <span>{file.filename}</span>
-            </button>
-          ))}
-        </div>
+              <button
+                onClick={() => setWrapLines(!wrapLines)}
+                className={`p-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 ${
+                  wrapLines
+                    ? "bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-300"
+                    : "border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/10"
+                }`}
+                title="Toggle word wrap"
+              >
+                <WrapText className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">Wrap</span>
+              </button>
+            </>
+          )}
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-1.5">
-          {/* Source vs Console Toggle */}
-          <div className="flex items-center bg-slate-100 dark:bg-white/10 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 text-[11px]">
-            <button
-              onClick={() => setActiveTab("code")}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                activeTab === "code"
-                  ? "bg-blue-600 text-white font-semibold shadow-xs"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-              }`}
-            >
-              Source
-            </button>
-            <button
-              onClick={() => setActiveTab("console")}
-              className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
-                activeTab === "console"
-                  ? "bg-blue-600 text-white font-semibold shadow-xs"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-              }`}
-            >
-              <Terminal className="w-3 h-3" /> Console
-            </button>
-          </div>
+          {viewMode === "preview" && (
+            <>
+              <button
+                onClick={handleReloadPreview}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 text-xs transition-colors cursor-pointer flex items-center gap-1"
+                title="Reload live preview"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">Reload</span>
+              </button>
 
-          <button
-            onClick={handleRunSimulation}
-            disabled={isRunning}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-          >
-            <Play className="w-3 h-3 fill-current" />
-            <span>{isRunning ? "Running..." : "Run"}</span>
-          </button>
+              <button
+                onClick={handleOpenInNewTab}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 text-xs transition-colors cursor-pointer flex items-center gap-1"
+                title="Open preview in new tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">Pop out</span>
+              </button>
+            </>
+          )}
 
           <button
             onClick={handleCopy}
-            className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-            title="Copy Code"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-200 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            title="Copy code"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
+                <span className="text-[11px]">Copy</span>
+              </>
+            )}
           </button>
 
           <button
             onClick={handleDownload}
-            className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-            title="Download File"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 text-xs transition-colors cursor-pointer"
+            title={`Download ${currentFile.filename}`}
           >
             <Download className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Main Code Editor Window with VS Code Colorful Highlighting */}
-      {activeTab === "code" ? (
-        <div className="my-3 rounded-2xl bg-slate-950 border border-slate-800 shadow-inner overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-slate-800 text-[11px] font-mono text-slate-400">
+      {/* Main View Area: Either Clean IDE Code Window or Live Interactive Preview Sandbox */}
+      {viewMode === "code" ? (
+        <div className="bg-[#0d1117] text-slate-100">
+          {/* Editor Chrome Titlebar */}
+          <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-slate-800 text-[11px] font-mono text-slate-400 select-none">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
               <span className="ml-2 text-slate-300 font-medium">{currentFile.filename}</span>
             </div>
-            <span className="text-[10px] uppercase font-mono tracking-wider opacity-70">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
               {currentFile.language}
             </span>
           </div>
 
-          <div className="max-h-[380px] overflow-y-auto p-4 font-mono text-xs leading-relaxed">
+          {/* Code Content with Line Numbers */}
+          <div className="max-h-[460px] overflow-y-auto overflow-x-auto p-4 font-mono text-[13px] leading-6">
             <div className="table w-full">
               {currentFile.code.split("\n").map((line, i) => (
-                <div key={i} className="table-row hover:bg-white/5 transition-colors">
-                  <span className="table-cell pr-4 text-slate-600 select-none text-right font-mono text-[11px] w-8">
+                <div key={i} className="table-row hover:bg-white/[0.04] transition-colors">
+                  <span className="table-cell pr-4 text-slate-500 select-none text-right font-mono text-xs w-10">
                     {i + 1}
                   </span>
-                  <span className="table-cell whitespace-pre">
+                  <span className={`table-cell ${wrapLines ? "whitespace-pre-wrap break-all" : "whitespace-pre"}`}>
                     {renderHighlightedLine(line, currentFile.language)}
                   </span>
                 </div>
@@ -298,28 +522,38 @@ export function CodeStudioCard({ data, status = "complete" }: CodeStudioCardProp
           </div>
         </div>
       ) : (
-        /* Console Output Simulator */
-        <div className="my-3 rounded-2xl bg-black border border-slate-800 p-4 font-mono text-xs text-emerald-400 leading-relaxed min-h-[220px]">
-          <div className="flex items-center gap-1.5 text-slate-500 text-[11px] pb-2 border-b border-slate-800 mb-3">
-            <Terminal className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Interactive Terminal Simulation</span>
+        /* Live Interactive Artifact Sandbox Mode */
+        <div className="w-full bg-white dark:bg-slate-950 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-mono text-[11px] text-slate-700 dark:text-zinc-300 font-medium">
+                Live Interactive Sandbox
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                RUNNING
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
+              {currentFile.filename}
+            </div>
           </div>
-          <pre className="whitespace-pre-wrap">
-            {consoleOutput || `$ ${data.execution_command || "npm run build && node dist/index.js"}\nReady to simulate execution.`}
-          </pre>
+
+          {/* Sandboxed Iframe */}
+          <div className="relative w-full h-[460px] bg-white">
+            <iframe
+              key={previewKey}
+              srcDoc={previewHtml}
+              sandbox="allow-scripts allow-modals allow-forms"
+              className="w-full h-full border-0 bg-white"
+              title="Interactive Artifact Sandbox"
+            />
+          </div>
         </div>
       )}
-
-      {/* Bottom Explanation Drawer */}
-      <div className="mt-3 p-3.5 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/5">
-        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
-          <Layers className="w-3.5 h-3.5 text-blue-500" />
-          <span>Implementation Architecture Note</span>
-        </div>
-        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-          {currentFile.explanation}
-        </p>
-      </div>
     </motion.div>
   );
 }
