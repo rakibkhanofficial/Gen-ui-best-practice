@@ -6,7 +6,6 @@ import {
 } from "@copilotkit/runtime/v2";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { handle } from "hono/vercel";
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
@@ -57,6 +56,7 @@ app.use(
 );
 app.route("/", copilotApp);
 
-export const GET = handle(app);
-export const POST = handle(app);
-export const OPTIONS = handle(app);
+// Standard Next.js Web Request handlers (no deprecated hono/vercel adapter needed)
+export const GET = (req: Request) => app.fetch(req);
+export const POST = (req: Request) => app.fetch(req);
+export const OPTIONS = (req: Request) => app.fetch(req);
