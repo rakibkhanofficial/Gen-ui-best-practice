@@ -600,10 +600,15 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(
-        textareaRef.current.scrollHeight,
-        180
-      )}px`;
+      const scrollHeight = textareaRef.current.scrollHeight;
+      if (!input.trim()) {
+        textareaRef.current.style.height = "24px";
+        textareaRef.current.style.overflowY = "hidden";
+      } else {
+        const nextHeight = Math.min(Math.max(scrollHeight, 24), 140);
+        textareaRef.current.style.height = `${nextHeight}px`;
+        textareaRef.current.style.overflowY = scrollHeight > 140 ? "auto" : "hidden";
+      }
     }
   }, [input]);
 
@@ -1357,15 +1362,11 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                   />
                 </div>
 
-                {/* Center: Perfectly aligned single-line input */}
+                {/* Center: Clean vertically-aligned auto-resizing input without internal scrollbar */}
                 <textarea
                   ref={textareaRef}
                   value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    e.target.style.height = "auto";
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                  }}
+                  onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -1378,8 +1379,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                       ? "Listening... speak now"
                       : "Ask anything or drop files..."
                   }
-                  className="flex-1 min-w-0 resize-none bg-transparent py-1 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none leading-normal max-h-32"
-                  style={{ height: "24px" }}
+                  className="flex-1 min-w-0 resize-none bg-transparent py-0 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none leading-6 overflow-hidden max-h-36 self-center"
                 />
 
                 {/* Right: Voice Input + Send Button */}

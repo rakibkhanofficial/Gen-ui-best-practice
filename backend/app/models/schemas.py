@@ -98,6 +98,8 @@ class PlanningBoardData(BaseModel):
     columns: List[BoardColumn]
     initial_mode: Optional[str] = "board"
     mcp_app_url: Optional[str] = "https://mcp.excalidraw.com"
+    mcp_server_id: Optional[str] = "example_mcp_app"
+    excalidraw_elements: Optional[List[Dict[str, Any]]] = None
 
 
 # --- 4. Product Catalog & Comparison Schemas ---

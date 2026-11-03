@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Kanban,
@@ -11,10 +11,16 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
-  Layers,
-  CheckCircle2,
   ListFilter,
-  Palette
+  Download,
+  Copy,
+  Check,
+  ExternalLink,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Move,
+  Share2
 } from "lucide-react";
 import confetti from "canvas-confetti";
 
@@ -44,6 +50,8 @@ export interface PlanningBoardData {
   columns?: BoardColumn[];
   initial_mode?: "board" | "canvas";
   mcp_app_url?: string;
+  mcp_server_id?: string;
+  excalidraw_elements?: any[];
 }
 
 export interface PlanningBoardProps {
@@ -58,6 +66,7 @@ const ACCENT_STYLES: Record<
     bgBadge: string;
     textBadge: string;
     dotBg: string;
+    cardBg: string;
   }
 > = {
   yellow: {
@@ -65,36 +74,42 @@ const ACCENT_STYLES: Record<
     bgBadge: "bg-amber-100/80 dark:bg-amber-950/60",
     textBadge: "text-amber-800 dark:text-amber-300",
     dotBg: "bg-amber-400",
+    cardBg: "bg-amber-50/70 dark:bg-amber-950/20",
   },
   blue: {
     borderLeft: "border-l-sky-500 dark:border-l-sky-400",
     bgBadge: "bg-sky-100/80 dark:bg-sky-950/60",
     textBadge: "text-sky-800 dark:text-sky-300",
     dotBg: "bg-sky-500",
+    cardBg: "bg-sky-50/70 dark:bg-sky-950/20",
   },
   green: {
     borderLeft: "border-l-emerald-500 dark:border-l-emerald-400",
     bgBadge: "bg-emerald-100/80 dark:bg-emerald-950/60",
     textBadge: "text-emerald-800 dark:text-emerald-300",
     dotBg: "bg-emerald-500",
+    cardBg: "bg-emerald-50/70 dark:bg-emerald-950/20",
   },
   pink: {
     borderLeft: "border-l-rose-400 dark:border-l-rose-500",
     bgBadge: "bg-rose-100/80 dark:bg-rose-950/60",
     textBadge: "text-rose-800 dark:text-rose-300",
     dotBg: "bg-rose-400",
+    cardBg: "bg-rose-50/70 dark:bg-rose-950/20",
   },
   purple: {
     borderLeft: "border-l-purple-500 dark:border-l-purple-400",
     bgBadge: "bg-purple-100/80 dark:bg-purple-950/60",
     textBadge: "text-purple-800 dark:text-purple-300",
     dotBg: "bg-purple-500",
+    cardBg: "bg-purple-50/70 dark:bg-purple-950/20",
   },
   orange: {
     borderLeft: "border-l-orange-500 dark:border-l-orange-400",
     bgBadge: "bg-orange-100/80 dark:bg-orange-950/60",
     textBadge: "text-orange-800 dark:text-orange-300",
     dotBg: "bg-orange-500",
+    cardBg: "bg-orange-50/70 dark:bg-orange-950/20",
   },
 };
 
@@ -106,6 +121,9 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
   const [selectedColor, setSelectedColor] = useState<StickyNote["color"]>("yellow");
   const [targetCol, setTargetCol] = useState<string>("");
   const [canvasMode, setCanvasMode] = useState<"board" | "canvas">("board");
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [copiedMcp, setCopiedMcp] = useState(false);
+  const canvasScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (data?.columns && data.columns.length > 0) {
@@ -120,6 +138,8 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
   }, [data]);
 
   const totalNotes = columns.reduce((acc, col) => acc + (col.notes?.length || 0), 0);
+  const mcpServerUrl = data?.mcp_app_url || "https://mcp.excalidraw.com";
+  const mcpServerId = data?.mcp_server_id || "example_mcp_app";
 
   if (status === "inProgress" || !data?.title) {
     return (
@@ -261,6 +281,50 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
     );
   };
 
+  // Export Excalidraw Scene JSON Format
+  const handleExportExcalidraw = () => {
+    const excalidrawScene = {
+      type: "excalidraw",
+      version: 2,
+      source: mcpServerUrl,
+      elements: data?.excalidraw_elements || [],
+      appState: {
+        viewBackgroundColor: "#ffffff",
+        gridSize: 20,
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(excalidrawScene, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(data?.title || "sprint-canvas").toLowerCase().replace(/[^a-z0-9]/g, "-")}.excalidraw`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Copy Model Context Protocol payload
+  const handleCopyMcpPayload = () => {
+    const mcpPayload = {
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        name: "create_view",
+        serverId: mcpServerId,
+        arguments: {
+          title: data?.title || "Sprint Planning Board",
+          elements: data?.excalidraw_elements || [],
+        },
+      },
+    };
+
+    navigator.clipboard.writeText(JSON.stringify(mcpPayload, null, 2));
+    setCopiedMcp(true);
+    setTimeout(() => setCopiedMcp(false), 2000);
+  };
+
   // Filter columns if user selected a single lane view
   const visibleColumns =
     activeLaneFilter === "all"
@@ -268,7 +332,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
       : columns.filter((c) => c.id === activeLaneFilter);
 
   return (
-    <div className="w-full my-3 rounded-2xl bg-white dark:bg-[#1a1b1c] border border-slate-200/90 dark:border-white/10 shadow-xs relative overflow-hidden flex flex-col h-[460px] sm:h-[480px] text-slate-800 dark:text-slate-100 font-sans">
+    <div className="w-full my-3 rounded-2xl bg-white dark:bg-[#1a1b1c] border border-slate-200/90 dark:border-white/10 shadow-xs relative overflow-hidden flex flex-col h-[480px] text-slate-800 dark:text-slate-100 font-sans">
       {/* Miro / FigJam Dot Grid Pattern Canvas */}
       <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-45 pointer-events-none" />
 
@@ -292,7 +356,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
 
         {/* View Mode & AI Tools */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Mode Switcher */}
+          {/* Mode Switcher: Kanban Lanes vs Miro / Excalidraw Canvas */}
           <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-white/10 text-[11px]">
             <button
               onClick={() => setCanvasMode("board")}
@@ -302,7 +366,7 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              Lanes
+              Kanban
             </button>
             <button
               onClick={() => setCanvasMode("canvas")}
@@ -311,14 +375,14 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
                   ? "bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
-              title="Open Excalidraw collaborative MCP canvas"
+              title="Open collaborative Miro / Excalidraw MCP canvas view"
             >
               <Sparkles className="w-3 h-3 text-amber-500" />
-              <span className="hidden sm:inline">Excalidraw</span>
+              <span>Miro Canvas</span>
             </button>
           </div>
 
-          {canvasMode === "board" && (
+          {canvasMode === "board" ? (
             <>
               {/* AI Auto-Sort */}
               <button
@@ -343,12 +407,41 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
                 <span>Note</span>
               </button>
             </>
+          ) : (
+            /* Canvas View Controls: Zoom & MCP Actions */
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setZoomLevel((z) => Math.max(60, z - 15))}
+                className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400"
+                title="Zoom out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[10px] font-mono px-1 font-semibold text-slate-500 dark:text-zinc-400">
+                {zoomLevel}%
+              </span>
+              <button
+                onClick={() => setZoomLevel((z) => Math.min(140, z + 15))}
+                className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400"
+                title="Zoom in"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setZoomLevel(100)}
+                className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400"
+                title="Reset zoom"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* 2. Interactive Lane Filter Chips (Fast Navigation) */}
-      {canvasMode === "board" && (
+      {/* 2. Sub-Toolbar */}
+      {canvasMode === "board" ? (
+        /* Lane Filter Chips */
         <div className="relative z-10 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 bg-slate-50/70 dark:bg-white/5 text-[11px]">
           <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-zinc-500 mr-1 flex items-center gap-1">
             <ListFilter className="w-3 h-3" /> Filter:
@@ -382,6 +475,50 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
               <span className="opacity-60 text-[10px]">({col.notes.length})</span>
             </button>
           ))}
+        </div>
+      ) : (
+        /* MCP Server & Live Sync Rail */
+        <div className="relative z-10 px-4 py-1.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between overflow-x-auto no-scrollbar shrink-0 bg-slate-50/70 dark:bg-white/5 text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-slate-600 dark:text-zinc-300 font-mono text-[10px]">
+              MCP App: {mcpServerUrl} <span className="opacity-60">({mcpServerId})</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Copy MCP Payload */}
+            <button
+              onClick={handleCopyMcpPayload}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-zinc-200 text-[10px] font-medium transition-colors cursor-pointer"
+              title="Copy Model Context Protocol scene payload"
+            >
+              {copiedMcp ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedMcp ? "Copied" : "MCP JSON"}</span>
+            </button>
+
+            {/* Export .excalidraw */}
+            <button
+              onClick={handleExportExcalidraw}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-zinc-200 text-[10px] font-medium transition-colors cursor-pointer"
+              title="Download native .excalidraw scene file"
+            >
+              <Download className="w-3 h-3" />
+              <span>.excalidraw</span>
+            </button>
+
+            {/* Open Excalidraw Web */}
+            <a
+              href="https://excalidraw.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-medium transition-colors cursor-pointer"
+              title="Launch full web editor"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>Excalidraw Web</span>
+            </a>
+          </div>
         </div>
       )}
 
@@ -460,15 +597,152 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
         )}
       </AnimatePresence>
 
-      {/* 4. Canvas View vs Swimlanes View */}
+      {/* 4. Canvas View vs Kanban Lanes View */}
       {canvasMode === "canvas" ? (
-        <div className="relative z-10 flex-1 w-full h-full bg-slate-50 dark:bg-[#121212] overflow-hidden">
-          <iframe
-            src="https://excalidraw.com"
-            className="w-full h-full border-0"
-            title="Excalidraw Live Collaborative Canvas MCP App"
-            allow="clipboard-read; clipboard-write"
-          />
+        /* Interactive 2D Spatial Whiteboard Canvas (Miro / FigJam) */
+        <div
+          ref={canvasScrollRef}
+          className="relative z-10 flex-1 w-full h-full overflow-auto p-6 select-none bg-slate-50/60 dark:bg-[#151617]"
+        >
+          <div
+            style={{
+              transform: `scale(${zoomLevel / 100})`,
+              transformOrigin: "top left",
+              width: "1160px",
+              minHeight: "440px",
+            }}
+            className="relative transition-transform duration-150"
+          >
+            {/* Swimlanes 2D Spatial Canvas */}
+            <div className="grid grid-cols-4 gap-6">
+              {columns.map((col, colIdx) => (
+                <div
+                  key={col.id}
+                  className="rounded-2xl border-2 border-dashed border-slate-300/80 dark:border-white/10 p-3.5 bg-white/70 dark:bg-[#1e1f20]/70 backdrop-blur-xs min-h-[380px] flex flex-col"
+                >
+                  {/* Visual Lane Header */}
+                  <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200/80 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: col.color_accent }}
+                      />
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        {col.title}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-zinc-300">
+                      {col.notes.length}
+                    </span>
+                  </div>
+
+                  {/* 2D Sticky Note Nodes */}
+                  <div className="space-y-3 flex-1">
+                    {col.notes.map((note) => {
+                      const style = ACCENT_STYLES[note.color] || ACCENT_STYLES.yellow;
+
+                      return (
+                        <div
+                          key={note.id}
+                          className={`p-3 rounded-xl border border-slate-200/90 dark:border-white/10 shadow-sm ${style.cardBg} border-l-4 ${style.borderLeft} relative group transition-transform hover:-translate-y-0.5`}
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <h5 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                              {note.title}
+                            </h5>
+                            <button
+                              onClick={() => handleDeleteNote(col.id, note.id)}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                              title="Delete note"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          <p className="text-[11px] text-slate-600 dark:text-zinc-300 mt-1 leading-relaxed">
+                            {note.content}
+                          </p>
+
+                          <div className="mt-2.5 pt-2 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px]">
+                            <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1 font-medium">
+                              <User className="w-2.5 h-2.5" />
+                              {note.assignee || "Team"}
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              {colIdx < columns.length - 1 && (
+                                <button
+                                  onClick={() => handleMoveNote(col.id, note.id, "next")}
+                                  className="p-1 rounded-md bg-white/80 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors"
+                                  title="Advance to next stage"
+                                >
+                                  <ArrowRight className="w-3 h-3" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleVote(col.id, note.id)}
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-black/20 hover:scale-105 transition-transform font-semibold text-slate-700 dark:text-zinc-200 cursor-pointer shadow-2xs"
+                              >
+                                <ThumbsUp className="w-2.5 h-2.5" />
+                                <span>{note.votes}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* SVG Dynamic Curved Dependency Connector Lines across stages */}
+            <svg
+              className="absolute inset-0 pointer-events-none w-full h-full"
+              style={{ overflow: "visible" }}
+            >
+              <defs>
+                <marker
+                  id="arrow-canvas"
+                  viewBox="0 0 10 10"
+                  refX="6"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                </marker>
+              </defs>
+              {/* Connector line between lane 1 and lane 2 */}
+              <path
+                d="M 285 140 C 310 140, 310 140, 325 140"
+                fill="none"
+                stroke="#94a3b8"
+                strokeWidth="1.5"
+                strokeDasharray="4 3"
+                markerEnd="url(#arrow-canvas)"
+              />
+              {/* Connector line between lane 2 and lane 3 */}
+              <path
+                d="M 575 140 C 600 140, 600 140, 615 140"
+                fill="none"
+                stroke="#94a3b8"
+                strokeWidth="1.5"
+                strokeDasharray="4 3"
+                markerEnd="url(#arrow-canvas)"
+              />
+              {/* Connector line between lane 3 and lane 4 */}
+              <path
+                d="M 865 140 C 890 140, 890 140, 905 140"
+                fill="none"
+                stroke="#94a3b8"
+                strokeWidth="1.5"
+                strokeDasharray="4 3"
+                markerEnd="url(#arrow-canvas)"
+              />
+            </svg>
+          </div>
         </div>
       ) : (
         /* Swimlanes Container: Horizontal scroll with fixed contained height */
@@ -624,7 +898,11 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
       <div className="relative z-10 px-4 py-1.5 border-t border-slate-200/70 dark:border-white/5 bg-slate-50/80 dark:bg-[#1a1b1c] shrink-0 flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500">
         <span className="flex items-center gap-1 truncate">
           <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
-          <span>Interactive Generative UI: Tap arrows (&larr; &rarr;) to move tasks across sprint stages</span>
+          <span>
+            {canvasMode === "canvas"
+              ? "Miro & Excalidraw Canvas • 2D Spatial Layout with Live SVG Dependency Arrows"
+              : "Interactive Generative UI: Tap arrows (← →) to move tasks across sprint stages"}
+          </span>
         </span>
         <button
           onClick={handleAddSpike}

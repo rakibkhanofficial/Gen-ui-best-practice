@@ -3,6 +3,103 @@ from typing import Dict, Any, List
 from app.models.schemas import PlanningBoardData, BoardColumn, StickyNote
 
 
+def build_excalidraw_scene(columns: List[BoardColumn]) -> List[Dict[str, Any]]:
+    """Builds valid Excalidraw v2 / Miro MCP scene elements for the board."""
+    elements: List[Dict[str, Any]] = []
+    color_map = {
+        "yellow": {"bg": "#fef08a", "stroke": "#f59e0b"},
+        "blue": {"bg": "#bae6fd", "stroke": "#0284c7"},
+        "green": {"bg": "#bbf7d0", "stroke": "#16a34a"},
+        "pink": {"bg": "#fecdd3", "stroke": "#e11d48"},
+        "purple": {"bg": "#e9d5ff", "stroke": "#9333ea"},
+        "orange": {"bg": "#fed7aa", "stroke": "#ea580c"},
+    }
+
+    prev_note_pos = None
+
+    for col_idx, col in enumerate(columns):
+        col_x = col_idx * 270 + 40
+        # Lane boundary container
+        elements.append({
+            "id": f"lane-{col.id}",
+            "type": "rectangle",
+            "x": col_x,
+            "y": 40,
+            "width": 240,
+            "height": 420,
+            "backgroundColor": "#f8fafc",
+            "strokeColor": col.color_accent,
+            "strokeStyle": "dashed",
+            "strokeWidth": 1.5,
+            "roughness": 1,
+            "roundness": {"type": 3},
+            "name": col.title,
+        })
+        # Column title text
+        elements.append({
+            "id": f"title-{col.id}",
+            "type": "text",
+            "x": col_x + 16,
+            "y": 55,
+            "text": col.title.upper(),
+            "fontSize": 13,
+            "fontFamily": 1,
+            "textAlign": "left",
+            "strokeColor": "#334155",
+        })
+
+        for note_idx, note in enumerate(col.notes):
+            note_y = 95 + note_idx * 145
+            c = color_map.get(note.color, color_map["yellow"])
+            note_elem_id = f"note-{note.id}"
+
+            # Sticky Note Card
+            elements.append({
+                "id": note_elem_id,
+                "type": "rectangle",
+                "x": col_x + 14,
+                "y": note_y,
+                "width": 212,
+                "height": 120,
+                "backgroundColor": c["bg"],
+                "strokeColor": c["stroke"],
+                "fillStyle": "solid",
+                "strokeWidth": 1.5,
+                "roughness": 1,
+                "roundness": {"type": 3},
+                "name": note.title,
+            })
+            # Note text
+            elements.append({
+                "id": f"txt-{note.id}",
+                "type": "text",
+                "x": col_x + 24,
+                "y": note_y + 12,
+                "text": f"{note.title}\n\n{note.content[:50]}...\nAssignee: {note.assignee or 'Team'}\nVotes: {note.votes}",
+                "fontSize": 11,
+                "fontFamily": 1,
+                "strokeColor": "#0f172a",
+            })
+
+            # Connector arrows between stages
+            current_pos = (col_x + 226, note_y + 60)
+            if prev_note_pos and col_idx > 0 and note_idx == 0:
+                elements.append({
+                    "id": f"arrow-{note.id}",
+                    "type": "arrow",
+                    "x": prev_note_pos[0],
+                    "y": prev_note_pos[1],
+                    "points": [[0, 0], [col_x + 14 - prev_note_pos[0], note_y + 60 - prev_note_pos[1]]],
+                    "strokeColor": "#64748b",
+                    "strokeWidth": 1.5,
+                    "roughness": 1,
+                    "endArrowhead": "arrow",
+                })
+            prev_note_pos = current_pos
+
+    return elements
+
+
 def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -> Dict[str, Any]:
     """Generates an interactive Miro & Excalidraw style visual planning board tailored dynamically to the user's topic."""
     t_lower = topic.lower()
@@ -174,6 +271,8 @@ def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -
 
     initial_mode = "canvas" if any(k in t_lower for k in ["excalidraw", "diagram", "canvas", "flowchart", "wireframe", "schema", "draw"]) else "board"
 
+    mcp_elements = build_excalidraw_scene(cols)
+
     board = PlanningBoardData(
         board_id=f"board-{abs(hash(topic)) % 10000}",
         title=f"Sprint Canvas: {topic_display}",
@@ -182,5 +281,7 @@ def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -
         columns=cols,
         initial_mode=initial_mode,
         mcp_app_url="https://mcp.excalidraw.com",
+        mcp_server_id="example_mcp_app",
+        excalidraw_elements=mcp_elements,
     )
     return board.model_dump()
