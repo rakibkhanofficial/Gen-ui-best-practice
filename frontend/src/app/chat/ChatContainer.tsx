@@ -131,6 +131,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const baseInputRef = useRef<string>("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -495,19 +496,34 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         const recog = new SpeechRecognition();
         recog.continuous = true;
         recog.interimResults = true;
-        recog.lang = "en-US";
+        recog.lang = navigator.language || "en-US";
 
         recog.onresult = (event: any) => {
-          let transcript = "";
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
+          let finalTranscript = "";
+          let interimTranscript = "";
+
+          for (let i = 0; i < event.results.length; ++i) {
+            const result = event.results[i];
+            if (result.isFinal) {
+              finalTranscript += result[0].transcript;
+            } else {
+              interimTranscript += result[0].transcript;
+            }
           }
-          if (transcript.trim()) {
-            setInput((prev) => (prev ? `${prev} ${transcript.trim()}` : transcript.trim()));
+
+          const spoken = (finalTranscript + (interimTranscript ? " " + interimTranscript : "")).trim();
+          if (spoken) {
+            const base = baseInputRef.current ? baseInputRef.current.trim() : "";
+            setInput(base ? `${base} ${spoken}` : spoken);
           }
         };
 
-        recog.onerror = () => setIsListening(false);
+        recog.onerror = (e: any) => {
+          if (e.error !== "no-speech" && e.error !== "aborted") {
+            console.warn("Speech recognition error:", e.error);
+          }
+          setIsListening(false);
+        };
         recog.onend = () => setIsListening(false);
 
         recognitionRef.current = recog;
@@ -525,6 +541,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         setIsListening(false);
       } else {
         try {
+          baseInputRef.current = input;
           recognitionRef.current.start();
           setIsListening(true);
         } catch {
@@ -545,6 +562,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       }
 
       try {
+        baseInputRef.current = input;
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioChunksRef.current = [];
         const recorder = new MediaRecorder(stream);
@@ -576,7 +594,8 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
               if (res.ok) {
                 const data = await res.json();
                 if (data.text?.trim()) {
-                  setInput((prev) => (prev ? `${prev} ${data.text.trim()}` : data.text.trim()));
+                  const base = baseInputRef.current ? baseInputRef.current.trim() : "";
+                  setInput(base ? `${base} ${data.text.trim()}` : data.text.trim());
                   setSyncStatus("Voice transcribed via CopilotKit Gemini Voice Service");
                   recordLearnedSkill("CopilotKit Gemini Voice Input");
                 }
