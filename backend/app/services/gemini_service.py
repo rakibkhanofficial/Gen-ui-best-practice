@@ -8,7 +8,11 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.agent.antigravity_agent import TOOL_REGISTRY, route_intent_heuristically
+from app.agent.antigravity_agent import (
+    TOOL_REGISTRY,
+    route_intent_heuristically,
+    route_intent_with_llm,
+)
 from app.services.excel_service import parse_sales_excel
 from app.agent.tools.document_tool import analyze_document, analyze_image
 
@@ -525,7 +529,15 @@ async def stream_agent_reasoning(
                 return
 
     # Check if a tool matches the user prompt
+    # 1. First run priority-ordered heuristic match for direct, unambiguous intents
     matched_intent = route_intent_heuristically(prompt)
+
+    # 2. If heuristic match is None or for conversational nuances, evaluate with Gemini 3.8 Flash
+    if not matched_intent and client:
+        try:
+            matched_intent = route_intent_with_llm(prompt, client)
+        except Exception as err:
+            logger.warning(f"Gemini LLM tool routing error: {err}")
 
     if matched_intent:
         tool_name = matched_intent["tool"]

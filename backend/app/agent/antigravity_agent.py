@@ -2,7 +2,9 @@ import os
 import re
 import json
 import logging
-from typing import Dict, Any, List, Optional, AsyncGenerator
+from typing import Dict, Any, List, Optional, AsyncGenerator, Literal
+from pydantic import BaseModel
+from google.genai import types
 
 from app.config import settings
 from app.agent.tools.weather_tool import get_weather_data
@@ -256,83 +258,203 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
     ]
 
 
+class ToolCallDecision(BaseModel):
+    tool: Literal[
+        "get_weather_data",
+        "get_sales_analytics",
+        "generate_planning_board",
+        "search_product_catalog",
+        "calculate_route_distance",
+        "request_sensitive_action",
+        "generate_code_snippet",
+        "search_jobs",
+        "search_flights",
+        "convert_currency",
+        "search_youtube_videos",
+        "fetch_website_info",
+        "schedule_meeting",
+        "none"
+    ]
+    query: Optional[str] = None
+    topic: Optional[str] = None
+    city: Optional[str] = None
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    reason: Optional[str] = None
+    from_currency: Optional[str] = None
+    to_currency: Optional[str] = None
+    amount: Optional[float] = None
+    quarter: Optional[str] = None
+    language: Optional[str] = None
+    duration_minutes: Optional[int] = None
+
+
+def route_intent_with_llm(prompt: str, client: Any) -> Optional[Dict[str, Any]]:
+    """Uses Gemini to intelligently determine the interactive GenUI tool and arguments."""
+    if not client:
+        return None
+
+    try:
+        decision_prompt = f"""You are the Generative UI Tool Decision Engine.
+Available interactive tools:
+- search_youtube_videos(query): For finding or showing YouTube videos, tutorials, video lectures, clips, channels, watch recommendations.
+- generate_code_snippet(topic, language): For writing, generating, implementing raw code files, scripts, algorithms, code studio.
+- generate_planning_board(topic): For visual architecture diagrams, sprint planning, Kanban, Miro/Excalidraw canvas roadmaps.
+- search_flights(origin, destination): For flight search, fares, airlines, travel tickets between cities.
+- get_weather_data(city): For current weather forecasts, temperatures, meteorological reports.
+- get_sales_analytics(quarter): For enterprise sales, ARR, revenue metrics, dashboards.
+- search_jobs(query): For tech jobs, hiring, vacancies on BDJobs/LinkedIn.
+- convert_currency(from_currency, to_currency, amount): For currency exchange and forex.
+- calculate_route_distance(origin, destination): For driving distances, travel routes, directions, maps.
+- search_product_catalog(query): For comparing hardware, laptops, MacBooks, gadgets, specs.
+- request_sensitive_action(reason): For human-in-the-loop approvals (refunds, prod deploys).
+- schedule_meeting(reason, duration_minutes): For booking time slots, calendar availability, Google Meet scheduling.
+- fetch_website_info(query): For recommending authoritative websites, developer portals, URLs.
+
+User query: "{prompt}"
+Decide the most appropriate tool to display interactive GenUI component for the user query. If no tool is needed, return tool 'none'."""
+
+        # Try ultra-fast gemini-3.5-flash-lite, with fallbacks
+        response = None
+        for candidate_model in ["gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.8-flash"]:
+            try:
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=decision_prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=ToolCallDecision,
+                        temperature=0.1
+                    )
+                )
+                if response and response.text:
+                    break
+            except Exception as model_err:
+                logger.debug(f"Model {candidate_model} failed in route_intent_with_llm: {model_err}")
+                continue
+
+        if not response or not response.text:
+            return None
+
+        data = json.loads(response.text)
+        tool = data.get("tool")
+        if not tool or tool == "none":
+            return None
+
+        args: Dict[str, Any] = {}
+        if tool == "search_youtube_videos":
+            args["query"] = data.get("query") or data.get("topic") or prompt
+        elif tool == "generate_planning_board":
+            args["topic"] = data.get("topic") or data.get("query") or prompt
+        elif tool == "generate_code_snippet":
+            args["topic"] = data.get("topic") or data.get("query") or prompt
+            args["language"] = data.get("language") or ("Python" if "python" in prompt.lower() else "TypeScript")
+        elif tool == "get_weather_data":
+            args["city"] = data.get("city") or "Tokyo"
+        elif tool == "search_flights":
+            args["origin"] = data.get("origin") or "Dhaka"
+            args["destination"] = data.get("destination") or "Tokyo"
+        elif tool == "convert_currency":
+            args["from_currency"] = data.get("from_currency") or "USD"
+            args["to_currency"] = data.get("to_currency") or "BDT"
+            args["amount"] = data.get("amount") or 100.0
+        elif tool == "search_jobs":
+            args["query"] = data.get("query") or prompt
+            args["location"] = "Dhaka, Bangladesh"
+            args["platform"] = "All"
+        elif tool == "schedule_meeting":
+            args["reason"] = data.get("reason") or prompt
+            args["duration_minutes"] = data.get("duration_minutes") or 30
+        elif tool == "fetch_website_info":
+            args["query"] = data.get("query") or prompt
+        elif tool == "get_sales_analytics":
+            args["quarter"] = data.get("quarter") or "Q3"
+            args["year"] = 2026
+        elif tool == "search_product_catalog":
+            args["query"] = data.get("query") or prompt
+        elif tool == "calculate_route_distance":
+            args["origin"] = data.get("origin") or "San Francisco, CA"
+            args["destination"] = data.get("destination") or "Lake Tahoe, CA"
+        elif tool == "request_sensitive_action":
+            args["action_type"] = "customer_refund"
+            args["target_id"] = "ORD-8921"
+            args["amount"] = 1250.00
+            args["reason"] = data.get("reason") or prompt
+
+        logger.info(f"Gemini LLM Intent Decision: tool='{tool}', args={args}")
+        return {"tool": tool, "args": args}
+
+    except Exception as e:
+        logger.warning(f"Error in route_intent_with_llm: {e}")
+        return None
+
+
 def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
-    """Heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
-    p = prompt.lower()
+    """Priority-ordered, regex-bounded heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
+    p = prompt.lower().strip()
 
-    if any(k in p for k in ["meeting", "schedule", "calendar", "book time", "appointment", "sync up", "catch up", "time slot", "call", "meet"]):
-        duration = 30
-        if "15" in p or "quick" in p:
-            duration = 15
-        elif "45" in p:
-            duration = 45
-        elif "60" in p or "1 hour" in p or "one hour" in p:
-            duration = 60
-        return {"tool": "schedule_meeting", "args": {"reason": prompt, "duration_minutes": duration}}
+    # 0. Explicit Code Studio Requests (write/generate scripts, code files, functions, APIs)
+    is_code_request = bool(
+        re.search(r"\b(write|generate|build|create)\s+(an?\s+)?(code|script|function|program|algorithm|api|fastapi|backend|frontend|server)\b", p) or
+        re.search(r"\b(code\s*studio|code\s*snippet|python\s*script|typescript\s*script|golang\s*script|rust\s*script)\b", p) or
+        re.search(r"\b(write\s+a\s+python|write\s+a\s+typescript|write\s+a\s+fastapi)\b", p)
+    )
 
-    if any(k in p for k in ["code", "typescript", "python script", "how to write", "snippet", "implementation", "algorithm", "coder"]):
+    # 1. YouTube video search & playback (handles tutorials from youtube, video guides, etc.)
+    is_video_request = bool(
+        re.search(r"\b(youtube|\byt\b|videos?|vids?)\b", p) or
+        (re.search(r"\b(watch|stream)\b", p) and re.search(r"\b(tutorials?|courses?|lectures?|guides?|walkthroughs?|demos?)\b", p)) or
+        (re.search(r"\b(tutorials?|guides?)\b", p) and re.search(r"\b(youtube|\byt\b)\b", p))
+    )
+
+    # Disambiguation:
+    # "show tutorials on gen ui implementation from youtube" -> video
+    # "write a python script to download youtube videos" -> code
+    if is_code_request and not re.search(r"\b(from\s+youtube|on\s+youtube|show\s+.*video|watch)\b", p):
         lang = "TypeScript"
-        if "python" in p:
+        if "python" in p or "fastapi" in p:
             lang = "Python"
         elif "go" in p or "golang" in p:
             lang = "Go"
+        elif "rust" in p:
+            lang = "Rust"
         return {"tool": "generate_code_snippet", "args": {"topic": prompt, "language": lang}}
 
-    if any(k in p for k in ["job", "jobs", "bdjob", "bdjobs", "linkedin", "hiring", "career", "vacancy", "internship", "developer job"]):
-        platform = "All"
-        if "bdjob" in p:
-            platform = "BDJobs"
-        elif "linkedin" in p:
-            platform = "LinkedIn"
-        return {"tool": "search_jobs", "args": {"query": prompt, "location": "Dhaka, Bangladesh", "platform": platform}}
+    if is_video_request:
+        cleaned_query = re.sub(r"^(show\s+(me\s+)?(the\s+)?|find\s+(me\s+)?(the\s+)?|search\s+(for\s+)?|watch\s+)", "", p, flags=re.IGNORECASE)
+        cleaned_query = re.sub(r"\s+(from\s+youtube|on\s+youtube|youtube\s+videos?|videos?)$", "", cleaned_query, flags=re.IGNORECASE).strip()
+        return {"tool": "search_youtube_videos", "args": {"query": cleaned_query or prompt}}
 
-    if any(k in p for k in ["weather", "temperature", "forecast", "rain", "sunny", "climate"]):
-        city = "San Francisco"
-        # Match "weather in <city>" or "weather for <city>" or "forecast in <city>"
-        city_match = re.search(r"\b(?:weather|forecast|temperature|climate)\s+(?:in|for|at|of)\s+([a-zA-Z\s]+)", p)
-        if city_match:
-            candidate = city_match.group(1).strip().rstrip("?.,!")
-            candidate = re.sub(r"\b(today|tomorrow|now|please|forecast|temperature)\b", "", candidate, flags=re.IGNORECASE).strip()
-            if candidate:
-                city = candidate.title()
-        else:
-            for c in ["tokyo", "delhi", "dhaka", "london", "new york", "paris", "dubai", "singapore", "chicago", "seattle", "sydney", "bangkok", "kolkata", "mumbai"]:
-                if c in p:
-                    city = c.title()
-                    break
-        return {"tool": "get_weather_data", "args": {"city": city}}
+    if is_code_request:
+        lang = "TypeScript"
+        if "python" in p or "fastapi" in p:
+            lang = "Python"
+        elif "go" in p or "golang" in p:
+            lang = "Go"
+        elif "rust" in p:
+            lang = "Rust"
+        return {"tool": "generate_code_snippet", "args": {"topic": prompt, "language": lang}}
 
-    if any(k in p for k in ["sales", "revenue", "analytics", "arr", "deal", "kpi", "zen journey", "financial", "growth"]):
-        quarter = "Q3"
-        for q in ["q1", "q2", "q3", "q4"]:
-            if q in p:
-                quarter = q.upper()
-                break
-        return {"tool": "get_sales_analytics", "args": {"quarter": quarter, "year": 2026}}
+    # 2. Website link previews & developer documentation portals
+    if (
+        re.search(r"\b(websites?|web\s*links?|portals?|docs?|documentation|official\s*sites?)\b", p) or
+        re.search(r"\b(recommend|suggest|show|find)\b.*\b(sites?|links?|resources?|urls?)\b", p)
+    ):
+        cleaned_query = re.sub(r"^(recommend\s+(some\s+)?(good\s+)?sites?\s+(for\s+)?|suggest\s+sites?\s+(for\s+)?|find\s+websites?\s+(for\s+)?|show\s+links?\s+(for\s+)?)", "", p, flags=re.IGNORECASE).strip()
+        return {"tool": "fetch_website_info", "args": {"query": cleaned_query or prompt}}
 
-    if any(k in p for k in ["plan", "planning", "miro", "roadmap", "sticky", "board", "kanban", "sprint", "excalidraw", "diagram", "canvas", "architecture", "flowchart", "wireframe", "system design"]):
+    # 3. Interactive Excalidraw visual architecture, sprint planning, and diagrams
+    if (
+        re.search(r"\b(excalidraw|architecture\s*diagram|system\s*design|sprint\s*plan|kanban|sticky\s*notes?|whiteboard|flowcharts?|wireframes?|planning\s*board|roadmap\s*board)\b", p) or
+        re.search(r"\b(draw|plan|visualize)\b.*\b(architecture|infrastructure|workflow|pipeline|sprint|roadmap|canvas)\b", p)
+    ):
         return {"tool": "generate_planning_board", "args": {"topic": prompt}}
 
-    if any(k in p for k in ["product", "laptop", "macbook", "spec", "specs", "compare", "price", "hardware", "workstation"]):
-        return {"tool": "search_product_catalog", "args": {"query": prompt}}
-
-    if any(k in p for k in ["distance", "route", "map", "direction", "miles", "km", "drive to", "travel"]):
-        origin = "San Francisco, CA"
-        destination = "Lake Tahoe, CA"
-        if "to" in p:
-            parts = p.split("to")
-            if len(parts) > 1:
-                destination = parts[1].strip().title()
-        return {"tool": "calculate_route_distance", "args": {"origin": origin, "destination": destination}}
-
-    if any(k in p for k in ["refund", "deploy", "approve", "delete", "sensitive", "danger", "human in the loop", "hitl"]):
-        amount = 1250.00
-        order_id = "ORD-8921"
-        return {"tool": "request_sensitive_action", "args": {"action_type": "customer_refund", "target_id": order_id, "amount": amount, "reason": "Customer billing adjustment"}}
-
-    # Flight search and details
-    if any(k in p for k in ["flight", "flights", "fly to", "airline", "booking", "plane ticket", "airfare", "aviation"]):
-        # Clean up stop words and trailing descriptive phrases
+    # 4. Flight search and route planning
+    if (
+        re.search(r"\b(flights?|fly\s+to|fly\s+from|plane\s*tickets?|airfares?|airlines?|aviation)\b", p) or
+        re.search(r"\btickets?\s+from\s+[a-zA-Z\s]+\s+to\s+[a-zA-Z\s]+", p)
+    ):
         cleaned = re.sub(
             r"\b(with\s+(airlines?|pricing|prices?|schedules?|options?|costs?)|and\s+(pricing|prices?|airlines?)|for\s+(next\s+week|tomorrow|\d+\s+people)|round\s*trip|one\s*way|tickets?|cheap(est)?|please|details?)\b.*",
             "",
@@ -340,10 +462,9 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
             flags=re.IGNORECASE
         ).strip()
 
-        origin = "Delhi"
+        origin = "Dhaka"
         destination = "Tokyo"
 
-        # Match 'from <origin> to <destination>'
         from_to_match = re.search(r"\bfrom\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)", cleaned, re.IGNORECASE)
         if from_to_match:
             cand_orig = from_to_match.group(1).strip()
@@ -368,43 +489,68 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
 
         return {"tool": "search_flights", "args": {"origin": origin, "destination": destination}}
 
-    # Currency conversion & exchange rates
-    if any(k in p for k in ["currency", "convert", "exchange rate", "forex", "usd", "bdt", "eur", "gbp", "jpy", "dollar", "taka", "rupee", "yen", "pound"]):
+    # 5. Weather forecasts & climate metrics
+    if (
+        re.search(r"\b(weather|temperature|forecast|sunny|rain(ing|y)?|climate)\b", p) or
+        re.search(r"\b(how\s+is\s+the\s+weather|is\s+it\s+hot|is\s+it\s+cold)\b", p)
+    ):
+        city = "Tokyo"
+        city_match = re.search(r"\b(?:weather|forecast|temperature|climate)\s+(?:in|for|at|of)\s+([a-zA-Z\s]+)", p)
+        if city_match:
+            candidate = city_match.group(1).strip().rstrip("?.,!")
+            candidate = re.sub(r"\b(today|tomorrow|now|please|forecast|temperature)\b", "", candidate, flags=re.IGNORECASE).strip()
+            if candidate:
+                city = candidate.title()
+        else:
+            for c in ["tokyo", "delhi", "dhaka", "london", "new york", "paris", "dubai", "singapore", "chicago", "seattle", "sydney", "bangkok", "kolkata", "mumbai", "san francisco", "berlin"]:
+                if re.search(r"\b" + re.escape(c) + r"\b", p):
+                    city = c.title()
+                    break
+        return {"tool": "get_weather_data", "args": {"city": city}}
+
+    # 6. Meeting Time Picker & Calendar Scheduling
+    if (
+        re.search(r"\b(schedule|book)\b.*\b(meeting|call|sync|appointment|slot|time)\b", p) or
+        re.search(r"\b(calendar\s*slot|meeting\s*picker|book\s*time|sync\s*up\s*call|1:1\s*sync)\b", p)
+    ):
+        duration = 30
+        if "15" in p or "quick" in p:
+            duration = 15
+        elif "45" in p:
+            duration = 45
+        elif "60" in p or "1 hour" in p or "one hour" in p:
+            duration = 60
+        return {"tool": "schedule_meeting", "args": {"reason": prompt, "duration_minutes": duration}}
+
+    # 7. Currency conversion & exchange rates
+    curr_regex = r"(usd|dollars?|bdt|taka|eur|euros?|gbp|pounds?|jpy|yen|inr|rupees?|cad|aud|sgd|aed)"
+    if (
+        re.search(r"\b(exchange\s*rates?|forex|currency\s*converter|convert\s+currency)\b", p) or
+        re.search(rf"\b{curr_regex}\s+(to|in|into)\s+{curr_regex}\b", p) or
+        re.search(rf"\bconvert\s+(\$|৳|€|£|¥|₹)?\s*[\d,]+(\.\d+)?\s*{curr_regex}?\s+(to|in|into)\b", p)
+    ):
         fc, tc, amt = "USD", "BDT", 100.0
-        # Check for currency symbols or names
         currency_map = {
-            "usd": "USD", "dollar": "USD", "$": "USD",
+            "usd": "USD", "dollar": "USD", "dollars": "USD", "$": "USD",
             "bdt": "BDT", "taka": "BDT", "৳": "BDT",
-            "eur": "EUR", "euro": "EUR", "€": "EUR",
-            "gbp": "GBP", "pound": "GBP", "£": "GBP",
+            "eur": "EUR", "euro": "EUR", "euros": "EUR", "€": "EUR",
+            "gbp": "GBP", "pound": "GBP", "pounds": "GBP", "£": "GBP",
             "jpy": "JPY", "yen": "JPY", "¥": "JPY",
-            "inr": "INR", "rupee": "INR", "₹": "INR",
+            "inr": "INR", "rupee": "INR", "rupees": "INR", "₹": "INR",
             "cad": "CAD", "aud": "AUD", "sgd": "SGD", "aed": "AED",
-            "cny": "CNY", "krw": "KRW", "myr": "MYR", "thb": "THB", "try": "TRY"
         }
-        to_splits = re.split(r"\bto\b", p, flags=re.IGNORECASE)
-        if len(to_splits) > 1:
-            # First half has source currency
+        to_splits = re.split(r"\b(to|in|into)\b", p, flags=re.IGNORECASE)
+        if len(to_splits) > 2:
+            left_part = to_splits[0]
+            right_part = to_splits[2]
             for word, code in currency_map.items():
-                if re.search(r"\b" + re.escape(word) + r"\b", to_splits[0], flags=re.IGNORECASE):
+                if re.search(r"\b" + re.escape(word) + r"\b", left_part, flags=re.IGNORECASE):
                     fc = code
                     break
-            # Second half has target currency
             for word, code in currency_map.items():
-                if re.search(r"\b" + re.escape(word) + r"\b", to_splits[1], flags=re.IGNORECASE):
+                if re.search(r"\b" + re.escape(word) + r"\b", right_part, flags=re.IGNORECASE):
                     tc = code
                     break
-        else:
-            found_codes = []
-            for word, code in currency_map.items():
-                if re.search(r"\b" + re.escape(word) + r"\b", p, flags=re.IGNORECASE):
-                    if code not in found_codes:
-                        found_codes.append(code)
-            if len(found_codes) >= 2:
-                fc, tc = found_codes[0], found_codes[1]
-            elif len(found_codes) == 1:
-                tc = found_codes[0]
-
         nums = re.findall(r"[\d,]+\.?\d*", p)
         if nums:
             try:
@@ -413,13 +559,48 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
                 amt = 100.0
         return {"tool": "convert_currency", "args": {"from_currency": fc, "to_currency": tc, "amount": amt}}
 
-    # YouTube video suggestions & playback preview
-    if any(k in p for k in ["youtube", "video", "watch", "tutorial video", "yt"]):
-        return {"tool": "search_youtube_videos", "args": {"query": prompt}}
+    # 8. Tech job search & recruitment
+    if (
+        re.search(r"\b(tech\s*jobs?|developer\s*jobs?|software\s*engineer\s*jobs?|bdjobs?|linkedin\s*jobs?|job\s*openings?|job\s*vacanc(y|ies)|hiring\s+for|open\s*positions?|engineer\s*vacanc(y|ies))\b", p) or
+        (re.search(r"\b(find|search|show|any)\b", p) and re.search(r"\b(jobs?|vacancies|positions)\b", p) and not re.search(r"\b(cron|background|batch)\s*job\b", p))
+    ):
+        platform = "All"
+        if "bdjob" in p:
+            platform = "BDJobs"
+        elif "linkedin" in p:
+            platform = "LinkedIn"
+        return {"tool": "search_jobs", "args": {"query": prompt, "location": "Dhaka, Bangladesh", "platform": platform}}
 
-    # Website link previews & metadata
-    if any(k in p for k in ["website", "recommend site", "suggest site", "best site", "url", "web link", "resource", "favicon", "links"]):
-        return {"tool": "fetch_website_info", "args": {"query": prompt}}
+    # 9. Enterprise Sales Analytics & Ledger
+    if re.search(r"\b(sales\s*analytics|revenue|arr\b|mrr\b|sales\s*dashboard|quarterly\s*sales|sales\s*ledger|kpi\s*report|annual\s*revenue)\b", p):
+        quarter = "Q3"
+        for q in ["q1", "q2", "q3", "q4"]:
+            if q in p:
+                quarter = q.upper()
+                break
+        return {"tool": "get_sales_analytics", "args": {"quarter": quarter, "year": 2026}}
+
+    # 10. Hardware product catalog comparison
+    if (
+        re.search(r"\b(macbook|thinkpad|dell\s*xps|laptop\s*specs|compare\s*laptops?|hardware\s*specs|product\s*catalog|macbook\s*vs)\b", p) or
+        (re.search(r"\bcompare\b", p) and re.search(r"\b(m3|m4|laptop|specs|macbook|thinkpad)\b", p))
+    ):
+        return {"tool": "search_product_catalog", "args": {"query": prompt}}
+
+    # 11. Geographic transit routing & distances
+    if re.search(r"\b(distance\s+from|driving\s+route|driving\s+distance|directions\s+to|drive\s+from|how\s+far\s+is\s+.*from)\b", p):
+        origin = "San Francisco, CA"
+        destination = "Lake Tahoe, CA"
+        if "to" in p:
+            parts = p.split("to")
+            if len(parts) > 1:
+                destination = parts[1].strip().title()
+        return {"tool": "calculate_route_distance", "args": {"origin": origin, "destination": destination}}
+
+    # 12. Human-in-the-Loop Sensitive Action Gatekeeper
+    if re.search(r"\b(refund\s*order|refund\s*customer|deploy\s*(to\s*)?prod(uction)?|database\s*migration\s*approval|sensitive\s*action|human\s*in\s*the\s*loop|hitl\b)\b", p):
+        return {"tool": "request_sensitive_action", "args": {"action_type": "customer_refund", "target_id": "ORD-8921", "amount": 1250.00, "reason": "Customer billing adjustment"}}
 
     return None
+
 

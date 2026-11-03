@@ -40,6 +40,132 @@ interface YouTubeVideoCardProps {
   data?: YouTubeSearchData;
 }
 
+/**
+ * Robust Video Thumbnail component with multi-level fallback,
+ * skeleton loading, and polished badge overlays.
+ */
+function VideoThumbnail({
+  video,
+  onClick,
+}: {
+  video: YouTubeVideo;
+  onClick: () => void;
+}) {
+  // Use canonical YouTube HD thumbnail, or provided URL
+  const initialThumb =
+    video.thumbnail_url || `https://i.ytimg.com/vi/${video.video_id}/maxresdefault.jpg`;
+
+  const [imgSrc, setImgSrc] = useState<string>(initialThumb);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const thumb =
+      video.thumbnail_url || `https://i.ytimg.com/vi/${video.video_id}/maxresdefault.jpg`;
+    setImgSrc(thumb);
+    setIsLoaded(false);
+    setHasError(false);
+  }, [video.video_id, video.thumbnail_url]);
+
+  const handleImageError = () => {
+    if (imgSrc.includes("maxresdefault")) {
+      // Fallback 1: High Quality (480x360 - guaranteed to exist)
+      setImgSrc(`https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`);
+    } else if (imgSrc.includes("hqdefault")) {
+      // Fallback 2: Medium Quality (320x180)
+      setImgSrc(`https://i.ytimg.com/vi/${video.video_id}/mqdefault.jpg`);
+    } else if (imgSrc.includes("mqdefault")) {
+      // Fallback 3: Legacy Google CDN
+      setImgSrc(`https://img.youtube.com/vi/${video.video_id}/0.jpg`);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className="relative aspect-video w-full overflow-hidden bg-slate-900 cursor-pointer group rounded-t-xl"
+    >
+      {/* Loading Skeleton Shimmer */}
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
+          <Tv className="w-8 h-8 text-slate-700 animate-pulse" />
+        </div>
+      )}
+
+      {/* Actual Thumbnail Image */}
+      {!hasError ? (
+        <img
+          src={imgSrc}
+          alt={video.title}
+          onLoad={() => setIsLoaded(true)}
+          onError={handleImageError}
+          className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ease-out ${
+            isLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4 text-center">
+          <Tv className="w-8 h-8 text-red-500 mb-2" />
+          <span className="text-[11px] font-medium text-slate-300 line-clamp-1">{video.channel_name}</span>
+        </div>
+      )}
+
+      {/* HD Badge top-right */}
+      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-[9px] font-bold tracking-wider text-red-400 border border-white/10 uppercase shadow-xs">
+        HD
+      </div>
+
+      {/* Duration Badge bottom-right */}
+      <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/85 backdrop-blur-xs text-white text-[10px] font-mono font-medium flex items-center gap-1 shadow-sm">
+        <Clock className="w-2.5 h-2.5 text-zinc-300" />
+        <span>{video.duration}</span>
+      </div>
+
+      {/* Centered Play Button Overlay */}
+      <div className="absolute inset-0 bg-black/25 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-red-600/95 group-hover:bg-red-600 group-hover:scale-110 active:scale-95 transition-all text-white flex items-center justify-center shadow-xl shadow-red-600/30">
+          <Play className="w-5 h-5 fill-white ml-0.5" />
+        </div>
+      </div>
+
+      {/* YouTube red progress line on hover */}
+      <div className="absolute bottom-0 left-0 w-0 group-hover:w-full h-0.5 bg-red-600 transition-all duration-300 ease-out" />
+    </div>
+  );
+}
+
+/**
+ * Resilient Channel Avatar component with initial badge fallback.
+ */
+function ChannelAvatar({ avatar, name }: { avatar: string; name: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [avatar]);
+
+  if (hasError || !avatar) {
+    const initial = name.trim().charAt(0).toUpperCase() || "Y";
+    return (
+      <div className="w-5 h-5 rounded-full bg-red-600/20 border border-red-500/30 text-red-500 text-[10px] font-bold flex items-center justify-center shrink-0">
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={avatar}
+      alt={name}
+      onError={() => setHasError(true)}
+      className="w-5 h-5 rounded-full object-cover shrink-0"
+    />
+  );
+}
+
 export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -127,30 +253,11 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                     : "border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50/60 dark:bg-[#282a2c]/60"
                 }`}
               >
-                {/* Thumbnail with overlay play button */}
-                <div
+                {/* Resilient Video Thumbnail with multi-tier fallback */}
+                <VideoThumbnail
+                  video={vid}
                   onClick={() => setActiveVideoId(vid.video_id)}
-                  className="relative aspect-video w-full overflow-hidden bg-slate-900 cursor-pointer group"
-                >
-                  <img
-                    src={vid.thumbnail_url}
-                    alt={vid.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-
-                  {/* Duration Badge */}
-                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-xs text-white text-[10px] font-mono font-medium flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5" />
-                    <span>{vid.duration}</span>
-                  </div>
-
-                  {/* Centered Play Button Overlay */}
-                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-red-600/95 group-hover:bg-red-600 group-hover:scale-110 transition-all text-white flex items-center justify-center shadow-lg">
-                      <Play className="w-5 h-5 fill-white ml-0.5" />
-                    </div>
-                  </div>
-                </div>
+                />
 
                 {/* Video Info */}
                 <div className="p-3.5 flex-1 flex flex-col justify-between">
@@ -163,13 +270,9 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                     </h4>
 
                     <div className="flex items-center gap-2 mt-2">
-                      <img
-                        src={vid.channel_avatar}
-                        alt={vid.channel_name}
-                        className="w-5 h-5 rounded-full object-cover shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
+                      <ChannelAvatar
+                        avatar={vid.channel_avatar}
+                        name={vid.channel_name}
                       />
                       <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate">
                         {vid.channel_name}
@@ -190,13 +293,25 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                       <span>{vid.published}</span>
                     </div>
 
-                    <button
-                      onClick={() => setActiveVideoId(vid.video_id)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-[11px] transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Play className="w-3 h-3 fill-white" />
-                      <span>Play Video</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`https://www.youtube.com/watch?v=${vid.video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center p-1.5 rounded-lg bg-slate-200/80 dark:bg-white/10 hover:bg-red-600 hover:text-white text-slate-500 dark:text-zinc-400 text-[11px] transition-colors"
+                        title="Watch directly on YouTube"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+
+                      <button
+                        onClick={() => setActiveVideoId(vid.video_id)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-[11px] transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Play className="w-3 h-3 fill-white" />
+                        <span>Play Video</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -236,13 +351,9 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                       </div>
 
                       <div className="flex items-center gap-2 min-w-0">
-                        <img
-                          src={activeVideo.channel_avatar}
-                          alt={activeVideo.channel_name}
-                          className="w-5 h-5 rounded-full object-cover shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = "none";
-                          }}
+                        <ChannelAvatar
+                          avatar={activeVideo.channel_avatar}
+                          name={activeVideo.channel_name}
                         />
                         <span className="text-xs font-medium text-slate-300 truncate">
                           {activeVideo.channel_name}
@@ -275,10 +386,9 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                   {/* 16:9 YouTube Embedded Iframe */}
                   <div className="relative w-full aspect-video bg-black shadow-inner">
                     <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${activeVideo.video_id}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
+                      src={`https://www.youtube.com/embed/${activeVideo.video_id}?autoplay=1&rel=0`}
                       title={activeVideo.title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      referrerPolicy="strict-origin-when-cross-origin"
                       allowFullScreen
                       className="w-full h-full border-0"
                     />
