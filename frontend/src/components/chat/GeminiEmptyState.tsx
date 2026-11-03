@@ -5,11 +5,15 @@ import { motion } from "framer-motion";
 import {
   Sparkles,
   Plus,
-  Mic,
-  ChevronDown,
-  ArrowRight,
-  ExternalLink,
-  Check
+  ArrowUp,
+  Plane,
+  BarChart3,
+  Kanban,
+  Briefcase,
+  Code2,
+  Sun,
+  Coins,
+  ShieldAlert
 } from "lucide-react";
 
 interface GeminiEmptyStateProps {
@@ -24,108 +28,91 @@ export function GeminiEmptyState({
   onOpenUpload,
 }: GeminiEmptyStateProps) {
   const [promptInput, setPromptInput] = useState("");
-  const [selectedMode, setSelectedMode] = useState("Default mode");
-  const [modeOpen, setModeOpen] = useState(false);
 
-  // Suggestions matching the screenshot + GenUI tool capabilities
   const suggestions = [
     {
-      emoji: "🎮",
-      label: "Create a game",
-      prompt: "Create an interactive browser game with HTML5 Canvas and dynamic score physics",
-    },
-    {
-      emoji: "⚡",
-      label: "Three.js 3D scenes",
-      prompt: "Build an interactive 3D biomolecular structure viewer with Mol* and Three.js",
-    },
-    {
-      emoji: "🧬",
-      label: "Add Bioscience Skills",
-      prompt: "Analyze genetic variant effects and predict AlphaFold protein structures",
-    },
-    {
-      emoji: "🤖",
-      label: "Build an Android app",
-      prompt: "Plan an Android Jetpack Compose app architecture with Kotlin coroutines",
-    },
-    {
-      emoji: "✈️",
-      label: "Find flights to Tokyo",
+      icon: Plane,
+      label: "Flights to Tokyo",
       prompt: "Find flights from Dhaka to Tokyo with airlines and pricing",
     },
     {
-      emoji: "📊",
-      label: "Sales dashboard",
+      icon: BarChart3,
+      label: "Q3 Sales Breakdown",
       prompt: "Show enterprise revenue breakdown for Q3 2026 with interactive charts",
     },
     {
-      emoji: "💼",
-      label: "BDJobs & LinkedIn jobs",
-      prompt: "Find Senior Full Stack Engineer jobs on BDJobs and LinkedIn",
-    },
-    {
-      emoji: "📋",
-      label: "Miro sprint plan",
+      icon: Kanban,
+      label: "Miro Sprint Board",
       prompt: "Generate a Miro-style sprint planning board for our GenUI release",
     },
     {
-      emoji: "💻",
-      label: "IDE Code Studio",
+      icon: Briefcase,
+      label: "BDJobs & LinkedIn",
+      prompt: "Find Senior Full Stack Engineer jobs on BDJobs and LinkedIn",
+    },
+    {
+      icon: Code2,
+      label: "FastAPI SSE Code Studio",
       prompt: "Write a high-performance Python script for async SSE streaming with FastAPI",
     },
-  ];
-
-  const modes = [
-    "Default mode",
-    "Agentic GenUI",
-    "Code Studio",
-    "Data Analyst",
+    {
+      icon: Sun,
+      label: "Tokyo Weather & Gear",
+      prompt: "What is the weather in Tokyo today?",
+    },
+    {
+      icon: Coins,
+      label: "Currency Converter",
+      prompt: "Convert 500 USD to BDT with exchange rate breakdown",
+    },
+    {
+      icon: ShieldAlert,
+      label: "HITL Refund Gatekeeper",
+      prompt: "Request a refund authorization for customer order #99281",
+    },
   ];
 
   const handleSend = () => {
     if (promptInput.trim()) {
       onSelectPrompt(promptInput.trim());
-    } else {
-      // Lucky pick from suggestions
-      const lucky = suggestions[Math.floor(Math.random() * suggestions.length)];
-      onSelectPrompt(lucky.prompt);
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 sm:py-16 flex flex-col items-center justify-center min-h-[75vh]">
-      {/* 1. Top Announcement Pill (Matching screenshot: [4] Introducing Gemini 4 Argon) */}
+    <div className="w-full max-w-3xl mx-auto px-4 py-12 sm:py-20 flex flex-col items-center justify-center min-h-[75vh] select-none font-sans">
+      {/* 1. Subtle Engine Badge */}
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
+        initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 text-xs text-slate-700 dark:text-zinc-300 font-medium mb-6 shadow-xs"
+        transition={{ duration: 0.25 }}
+        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs text-slate-600 dark:text-zinc-400 font-medium mb-5 shadow-2xs"
       >
-        <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
-          4
-        </span>
-        <span>Introducing Gemini 4 Argon & Google Antigravity SDK</span>
+        <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+        <span>Gemini 3.8 Flash &bull; Google Antigravity SDK</span>
       </motion.div>
 
-      {/* 2. Hero Headline (Matching screenshot: Build your ideas with Gemini) */}
-      <motion.h1
+      {/* 2. Headline & Subtitle */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.05 }}
+        className="text-center mb-8 max-w-xl"
+      >
+        <h1 className="text-3xl sm:text-4xl font-normal text-slate-900 dark:text-white tracking-tight leading-tight">
+          What would you like to explore?
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed">
+          Ask questions, generate dynamic UI components, analyze spreadsheets, or plan architecture.
+        </p>
+      </motion.div>
+
+      {/* 3. Central Signature Prompt Box */}
+      <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.05 }}
-        className="text-3xl sm:text-4xl md:text-5xl font-normal text-slate-800 dark:text-white tracking-tight text-center mb-8 font-sans"
+        transition={{ duration: 0.35, delay: 0.1 }}
+        className="w-full bg-white dark:bg-[#1e1f20] rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-lg shadow-blue-500/5 p-4 relative transition-all focus-within:border-blue-500/70 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20"
       >
-        Build your ideas with Gemini
-      </motion.h1>
-
-      {/* 3. Center Signature Google AI Studio Prompt Box (Matching screenshot) */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="w-full max-w-2xl bg-white dark:bg-[#1e1f20] rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-lg shadow-blue-500/5 p-4 sm:p-5 relative transition-all focus-within:border-blue-500/80 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20"
-      >
-        {/* Multiline Textarea */}
         <textarea
           value={promptInput}
           onChange={(e) => setPromptInput(e.target.value)}
@@ -136,13 +123,12 @@ export function GeminiEmptyState({
             }
           }}
           rows={3}
-          placeholder="Describe an app and let Gemini do the rest"
+          placeholder="Ask about flights, weather, tech jobs, spreadsheets, or code..."
           className="w-full bg-transparent border-0 outline-none resize-none text-[15px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-sans"
         />
 
-        {/* Bottom row inside prompt box matching screenshot */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5 mt-2">
-          {/* Left: (+) Plus attachment button */}
+          {/* File Attachment Button */}
           <button
             type="button"
             onClick={onOpenUpload}
@@ -152,100 +138,43 @@ export function GeminiEmptyState({
             <Plus className="w-4 h-4" />
           </button>
 
-          {/* Right: Mode dropdown + Mic + Action button */}
-          <div className="flex items-center gap-2">
-            {/* Mode dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setModeOpen(!modeOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100/80 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-xs font-medium text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
-              >
-                <span>{selectedMode}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </button>
-
-              {modeOpen && (
-                <div
-                  onClick={() => setModeOpen(false)}
-                  className="absolute bottom-full right-0 mb-1.5 w-44 p-1 bg-white dark:bg-[#1a1b1c] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl z-50 text-xs"
-                >
-                  {modes.map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setSelectedMode(m)}
-                      className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${
-                        selectedMode === m
-                          ? "bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-white font-medium"
-                          : "text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <span>{m}</span>
-                      {selectedMode === m && <Check className="w-3.5 h-3.5" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Mic button */}
-            <button
-              type="button"
-              className="p-2 rounded-full text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-              title="Voice input"
-            >
-              <Mic className="w-4 h-4" />
-            </button>
-
-            {/* Action button: I'm feeling lucky or Generate */}
-            <button
-              type="button"
-              onClick={handleSend}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-zinc-200 text-xs font-medium transition-all shadow-xs cursor-pointer group"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20 group-hover:rotate-12 transition-transform" />
-              <span>{promptInput.trim() ? "Generate" : "I'm feeling lucky"}</span>
-            </button>
-          </div>
+          {/* Send Button */}
+          <button
+            type="button"
+            disabled={!promptInput.trim()}
+            onClick={handleSend}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all shadow-xs cursor-pointer ${
+              promptInput.trim()
+                ? "bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 cursor-pointer"
+                : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-zinc-600 cursor-not-allowed"
+            }`}
+          >
+            <span>Send</span>
+            <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" />
+          </button>
         </div>
       </motion.div>
 
-      {/* 4. Quick Suggestion Pills (Matching screenshot) */}
+      {/* 4. Quick Suggestion Chips */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-        className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-3xl"
+        transition={{ duration: 0.35, delay: 0.15 }}
+        className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-2xl"
       >
-        {suggestions.map((item, idx) => (
-          <button
-            key={idx}
-            onClick={() => onSelectPrompt(item.prompt)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-medium text-slate-700 dark:text-zinc-300 transition-all shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
-          >
-            <span>{item.emoji}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </motion.div>
-
-      {/* 5. Bottom Showcase Card (Matching screenshot: Explore apps built with Gemini 4 Argon) */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="w-full max-w-2xl mt-12 p-4 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center justify-between"
-      >
-        <span className="text-sm font-medium text-slate-800 dark:text-zinc-200 font-sans">
-          Explore apps built with Gemini 4 Argon
-        </span>
-        <button
-          onClick={() => onSelectPrompt("Showcase the Generative UI components and tools built with Gemini 3.8 Flash")}
-          className="flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-        >
-          <span>Browse the app gallery</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        {suggestions.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={idx}
+              onClick={() => onSelectPrompt(item.prompt)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-medium text-slate-700 dark:text-zinc-300 transition-all shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
+            >
+              <Icon className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </motion.div>
     </div>
   );

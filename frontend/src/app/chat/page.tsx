@@ -12,15 +12,12 @@ import {
   X,
   Copy,
   Check,
-  RotateCw,
   ThumbsUp,
   ThumbsDown,
-  Bot,
-  User as UserIcon,
 } from "lucide-react";
 
 import { getGuestUser, clearGuestSession, UserSession } from "@/lib/auth";
-import { ChatSidebar, ConversationThread } from "@/components/layout/ChatSidebar";
+import { ChatSidebar, ChatSession } from "@/components/layout/ChatSidebar";
 import { ChatHeader } from "@/components/layout/ChatHeader";
 import { GeminiEmptyState } from "@/components/chat/GeminiEmptyState";
 import { StreamingMessage } from "@/components/chat/StreamingMessage";
@@ -42,7 +39,8 @@ import { YouTubeVideoCard } from "@/components/gen-ui/YouTubeVideoCard";
 import { WebsiteLinkCard } from "@/components/gen-ui/WebsiteLinkCard";
 
 export interface MessageItem {
-  id: string;
+  id: string; // The conversation turn id (e.g. conv_user_..., conv_asst_...)
+  sessionId?: string; // The chat session id
   role: "user" | "assistant";
   content: string;
   stage?: AgentStage;
@@ -59,15 +57,15 @@ export interface MessageItem {
   timestamp: string;
 }
 
-const STORAGE_THREADS_KEY = "gemini_chat_threads_v2";
-const STORAGE_THREAD_PREFIX = "gemini_thread_v2_";
+const STORAGE_SESSIONS_KEY = "genui_chat_sessions_v3";
+const STORAGE_SESSION_MSGS_PREFIX = "genui_session_msgs_v3_";
 
 export default function ChatPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [threads, setThreads] = useState<ConversationThread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -101,21 +99,14 @@ export default function ChatPage() {
     }
     setUser(session);
 
-    // Load conversation threads from localStorage
+    // Load chat sessions from localStorage
     try {
-      const stored = localStorage.getItem(STORAGE_THREADS_KEY);
+      const stored = localStorage.getItem(STORAGE_SESSIONS_KEY);
       if (stored) {
-        const parsed: ConversationThread[] = JSON.parse(stored);
-        setThreads(parsed);
-        if (parsed.length > 0) {
-          selectThread(parsed[0].id);
-          return;
-        }
+        const parsed: ChatSession[] = JSON.parse(stored);
+        setSessions(parsed);
       }
     } catch {}
-
-    // If no threads exist, create an initial default thread
-    createNewThread();
   }, [router]);
 
   // Adjust textarea height dynamically
@@ -129,28 +120,28 @@ export default function ChatPage() {
     }
   }, [input]);
 
-  // Save current thread messages to localStorage
-  const saveThreadMessages = (threadId: string, msgs: MessageItem[]) => {
+  // Save session messages to localStorage
+  const saveSessionMessages = (sessionId: string, msgs: MessageItem[]) => {
     try {
       localStorage.setItem(
-        `${STORAGE_THREAD_PREFIX}${threadId}`,
+        `${STORAGE_SESSION_MSGS_PREFIX}${sessionId}`,
         JSON.stringify(msgs)
       );
     } catch {}
   };
 
-  // Save threads list to localStorage
-  const saveThreadsList = (list: ConversationThread[]) => {
+  // Save sessions list to localStorage
+  const saveSessionsList = (list: ChatSession[]) => {
     try {
-      localStorage.setItem(STORAGE_THREADS_KEY, JSON.stringify(list));
+      localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(list));
     } catch {}
   };
 
-  // Select an existing thread
-  const selectThread = (id: string) => {
-    setActiveThreadId(id);
+  // Select an existing session and load its turns
+  const selectSession = (sessionId: string) => {
+    setActiveSessionId(sessionId);
     try {
-      const stored = localStorage.getItem(`${STORAGE_THREAD_PREFIX}${id}`);
+      const stored = localStorage.getItem(`${STORAGE_SESSION_MSGS_PREFIX}${sessionId}`);
       if (stored) {
         setMessages(JSON.parse(stored));
       } else {
@@ -161,49 +152,35 @@ export default function ChatPage() {
     }
   };
 
-  // Create a brand new thread
-  const createNewThread = () => {
-    const newId = `thread_${Date.now()}`;
-    const newThread: ConversationThread = {
-      id: newId,
-      title: "New Chat",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    const updatedList = [newThread, ...threads];
-    setThreads(updatedList);
-    saveThreadsList(updatedList);
-    setActiveThreadId(newId);
+  // Start a fresh, clean chat session
+  const handleNewChat = () => {
+    setActiveSessionId(null);
     setMessages([]);
-    saveThreadMessages(newId, []);
+    setInput("");
+    setCurrentAttachment(null);
   };
 
-  // Delete a thread
-  const deleteThread = (id: string) => {
-    const filtered = threads.filter((t) => t.id !== id);
-    setThreads(filtered);
-    saveThreadsList(filtered);
+  // Delete a session and clean up its stored turns
+  const deleteSession = (sessionId: string) => {
+    const filtered = sessions.filter((s) => s.id !== sessionId);
+    setSessions(filtered);
+    saveSessionsList(filtered);
     try {
-      localStorage.removeItem(`${STORAGE_THREAD_PREFIX}${id}`);
+      localStorage.removeItem(`${STORAGE_SESSION_MSGS_PREFIX}${sessionId}`);
     } catch {}
 
-    if (activeThreadId === id) {
-      if (filtered.length > 0) {
-        selectThread(filtered[0].id);
-      } else {
-        createNewThread();
-      }
+    if (activeSessionId === sessionId) {
+      handleNewChat();
     }
   };
 
-  // Rename a thread
-  const renameThread = (id: string, newTitle: string) => {
-    const updated = threads.map((t) =>
-      t.id === id ? { ...t, title: newTitle, updatedAt: Date.now() } : t
+  // Rename a session
+  const renameSession = (sessionId: string, newTitle: string) => {
+    const updated = sessions.map((s) =>
+      s.id === sessionId ? { ...s, title: newTitle, updatedAt: Date.now() } : s
     );
-    setThreads(updated);
-    saveThreadsList(updated);
+    setSessions(updated);
+    saveSessionsList(updated);
   };
 
   // Handle user logout
@@ -228,31 +205,54 @@ export default function ChatPage() {
     setIsStreaming(false);
   };
 
-  // Stream chat message to backend
+  // Stream chat message to backend (Creates a new session if needed, attaches turn id)
   const handleSendMessage = async (textToSend?: string) => {
     const messageContent = (textToSend || input).trim();
     if (!messageContent && !currentAttachment) return;
     if (isStreaming) return;
 
-    const currentThreadId = activeThreadId || `thread_${Date.now()}`;
-    if (!activeThreadId) {
-      setActiveThreadId(currentThreadId);
-    }
+    // 1. Session ID Management: If on new chat, create a brand new session; otherwise, continue existing session
+    let currentSessionId = activeSessionId;
+    if (!currentSessionId) {
+      currentSessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      setActiveSessionId(currentSessionId);
 
-    // Update thread title if it was "New Chat"
-    const activeThread = threads.find((t) => t.id === currentThreadId);
-    if (activeThread && activeThread.title === "New Chat" && messageContent) {
       const titleCandidate =
-        messageContent.length > 30
-          ? `${messageContent.slice(0, 28)}...`
+        messageContent.length > 34
+          ? `${messageContent.slice(0, 32)}...`
           : messageContent;
-      renameThread(currentThreadId, titleCandidate);
+
+      const newSession: ChatSession = {
+        id: currentSessionId,
+        title: titleCandidate,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        turnsCount: 1,
+      };
+
+      const updatedSessions = [newSession, ...sessions];
+      setSessions(updatedSessions);
+      saveSessionsList(updatedSessions);
+    } else {
+      // Continuing existing session: update timestamp and turns count
+      const updatedSessions = sessions.map((s) =>
+        s.id === currentSessionId
+          ? {
+              ...s,
+              updatedAt: Date.now(),
+              turnsCount: (s.turnsCount || 1) + 1,
+            }
+          : s
+      );
+      setSessions(updatedSessions);
+      saveSessionsList(updatedSessions);
     }
 
-    // Create User Message
-    const userMsgId = `user_${Date.now()}`;
+    // 2. Create User Conversation Turn
+    const userTurnId = `conv_user_${Date.now()}`;
     const userMessage: MessageItem = {
-      id: userMsgId,
+      id: userTurnId,
+      sessionId: currentSessionId,
       role: "user",
       content: messageContent,
       attachment: currentAttachment
@@ -267,14 +267,15 @@ export default function ChatPage() {
       }),
     };
 
-    // Placeholder Assistant Message
-    const assistantMsgId = `asst_${Date.now() + 1}`;
+    // 3. Create Placeholder Assistant Conversation Turn
+    const asstTurnId = `conv_asst_${Date.now() + 1}`;
     const initialAssistantMessage: MessageItem = {
-      id: assistantMsgId,
+      id: asstTurnId,
+      sessionId: currentSessionId,
       role: "assistant",
       content: "",
       stage: "Thinking",
-      stageDetail: "Gemini 3.8 Flash evaluating query & tools...",
+      stageDetail: "Illuminating intent & evaluating tools with Gemini 3.8 Flash...",
       sources: [],
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -294,14 +295,15 @@ export default function ChatPage() {
     abortControllerRef.current = controller;
 
     try {
-      // Connect to Next.js API route proxy (same origin, no direct port 8000 calls)
+      // Connect to Next.js API route proxy (same origin, passing session_id and conversation_id)
       const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: messageContent,
           attachment_path: attachmentToSubmit?.filePath,
-          session_id: currentThreadId,
+          session_id: currentSessionId,
+          conversation_id: userTurnId,
         }),
         signal: controller.signal,
       });
@@ -316,7 +318,7 @@ export default function ChatPage() {
       let accumulatedContent = "";
       let latestGenUI: any = null;
       let activeStage: AgentStage = "Thinking";
-      let activeStageDetail = "Gemini 3.8 Flash evaluating query & tools...";
+      let activeStageDetail = "Illuminating intent & evaluating tools with Gemini 3.8 Flash...";
       let activeSources: SearchSource[] = [];
 
       const processParsedEvent = (parsed: any, eventType: string) => {
@@ -364,7 +366,7 @@ export default function ChatPage() {
         // Update assistant message state
         setMessages((prev) => {
           const updated = prev.map((msg) => {
-            if (msg.id === assistantMsgId) {
+            if (msg.id === asstTurnId) {
               return {
                 ...msg,
                 content: accumulatedContent,
@@ -376,7 +378,7 @@ export default function ChatPage() {
             }
             return msg;
           });
-          saveThreadMessages(currentThreadId, updated);
+          saveSessionMessages(currentSessionId!, updated);
           return updated;
         });
       };
@@ -390,80 +392,51 @@ export default function ChatPage() {
         buffer = blocks.pop() || "";
 
         for (const block of blocks) {
-          if (!block.trim()) continue;
+          const trimmed = block.trim();
+          if (!trimmed) continue;
 
           let eventType = "message";
-          let dataStr = "";
+          let dataLines: string[] = [];
 
-          for (const line of block.split("\n")) {
-            if (line.startsWith("event: ")) {
-              eventType = line.slice(7).trim();
-            } else if (line.startsWith("data: ")) {
-              dataStr = line.slice(6).trim();
+          for (const line of trimmed.split("\n")) {
+            if (line.startsWith("event:")) {
+              eventType = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+              dataLines.push(line.slice(5).trim());
             }
           }
 
-          if (!dataStr) continue;
+          const rawData = dataLines.join("\n");
+          if (!rawData) continue;
 
           try {
-            const parsed = JSON.parse(dataStr);
+            const parsed = JSON.parse(rawData);
             processParsedEvent(parsed, eventType);
           } catch {
-            // Ignore non-JSON chunks
+            if (rawData.trim() && rawData !== "[DONE]") {
+              processParsedEvent({ delta: rawData }, "delta");
+            }
           }
         }
       }
-
-      // Process any trailing bytes remaining in buffer
-      if (buffer.trim()) {
-        let eventType = "message";
-        let dataStr = "";
-        for (const line of buffer.split("\n")) {
-          if (line.startsWith("event: ")) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith("data: ")) {
-            dataStr = line.slice(6).trim();
-          }
-        }
-        if (dataStr) {
-          try {
-            const parsed = JSON.parse(dataStr);
-            processParsedEvent(parsed, eventType);
-          } catch {}
-        }
-      }
-
-      // Mark stage as completed upon stream termination
-      setMessages((prev) => {
-        const updated = prev.map((msg) => {
-          if (msg.id === assistantMsgId) {
-            return {
-              ...msg,
-              stage: "Completed" as AgentStage,
-              sources: activeSources.length > 0 ? activeSources : msg.sources,
-              genui: latestGenUI || msg.genui,
-            };
-          }
-          return msg;
-        });
-        saveThreadMessages(currentThreadId, updated);
-        return updated;
-      });
     } catch (err: any) {
-      if (err.name === "AbortError") {
-        // User deliberately aborted stream
-      } else {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMsgId
+      if (err.name !== "AbortError") {
+        console.error("SSE stream reading failed:", err);
+        setMessages((prev) => {
+          const updated = prev.map((msg) =>
+            msg.id === asstTurnId
               ? {
                   ...msg,
-                  content: `⚠️ Connection error: ${err.message}. Please verify the agent service is active.`,
-                  stage: "Completed",
+                  content:
+                    msg.content ||
+                    "I encountered an issue connecting to the Gemini 3.8 Flash backend. Please verify that the server is running on port 8000.",
+                  stage: "Completed" as AgentStage,
                 }
               : msg
-          )
-        );
+          );
+          saveSessionMessages(currentSessionId!, updated);
+          return updated;
+        });
       }
     } finally {
       setIsStreaming(false);
@@ -471,62 +444,67 @@ export default function ChatPage() {
     }
   };
 
-  // Render appropriate Generative UI component based on tool call
+  // Dynamically render GenUI component matching backend tool output
   const renderGenUIComponent = (genui?: { tool: string; data: any }) => {
-    if (!genui || !genui.tool) return null;
+    if (!genui || !genui.data) return null;
 
-    const { tool, data } = genui;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="mt-4"
-      >
-        {tool === "get_weather_data" && <WeatherCard data={data} />}
-        {tool === "get_sales_analytics" && <SalesDashboard data={data} />}
-        {tool === "generate_planning_board" && <PlanningBoard data={data} />}
-        {tool === "search_product_catalog" && <ProductCatalogCard data={data} />}
-        {tool === "calculate_route_distance" && <RouteDistanceCard data={data} />}
-        {tool === "generate_code_snippet" && <CodeStudioCard data={data} />}
-        {tool === "search_jobs" && <JobBoardCard data={data} />}
-        {tool === "search_flights" && <FlightDetailsCard data={data} />}
-        {tool === "convert_currency" && <CurrencyConverterCard data={data} />}
-        {tool === "search_youtube_videos" && <YouTubeVideoCard data={data} />}
-        {tool === "fetch_website_info" && <WebsiteLinkCard data={data} />}
-        {(tool === "request_sensitive_action" ||
-          tool === "execute_approved_action") && (
-          <HITLApprovalCard
-            data={data}
-            onDecision={async (actionId, decision) => {
-              console.log("HITL action decision:", actionId, decision);
-            }}
-          />
-        )}
-      </motion.div>
-    );
+    switch (genui.tool) {
+      case "get_weather_forecast":
+        return <WeatherCard data={genui.data} />;
+      case "get_sales_metrics":
+      case "parse_sales_excel":
+        return <SalesDashboard data={genui.data} />;
+      case "generate_planning_board":
+        return <PlanningBoard data={genui.data} />;
+      case "search_product_catalog":
+        return <ProductCatalogCard data={genui.data} />;
+      case "calculate_route_distance":
+        return <RouteDistanceCard data={genui.data} />;
+      case "request_sensitive_action":
+        return <HITLApprovalCard data={genui.data} />;
+      case "generate_code_snippet":
+        return <CodeStudioCard data={genui.data} />;
+      case "search_jobs":
+        return <JobBoardCard data={genui.data} />;
+      case "search_flights":
+        return <FlightDetailsCard data={genui.data} />;
+      case "convert_currency":
+        return <CurrencyConverterCard data={genui.data} />;
+      case "search_youtube_videos":
+        return <YouTubeVideoCard data={genui.data} />;
+      case "fetch_website_info":
+        return <WebsiteLinkCard data={genui.data} />;
+      default:
+        return (
+          <div className="p-4 my-2 rounded-xl bg-slate-50 dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 text-xs">
+            <span className="font-semibold text-blue-500">Tool Executed:</span> {genui.tool}
+            <pre className="mt-2 text-[11px] overflow-x-auto text-slate-600 dark:text-zinc-400">
+              {JSON.stringify(genui.data, null, 2)}
+            </pre>
+          </div>
+        );
+    }
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#131314] text-slate-900 dark:text-[#e3e3e3] antialiased transition-colors">
-      {/* Collapsible Left Sidebar (Gemini / ChatGPT Replica) */}
+    <div className="flex h-screen w-full bg-white dark:bg-[#131314] text-slate-900 dark:text-[#e3e3e3] overflow-hidden antialiased font-sans">
+      {/* Sidebar (Clean Sessions List & Management) */}
       <ChatSidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
-        threads={threads}
-        activeThreadId={activeThreadId}
-        onSelectThread={selectThread}
-        onNewThread={createNewThread}
-        onDeleteThread={deleteThread}
-        onRenameThread={renameThread}
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSelectSession={selectSession}
+        onNewSession={handleNewChat}
+        onDeleteSession={deleteSession}
+        onRenameSession={renameSession}
         user={user}
         onLogout={handleLogout}
       />
 
-      {/* Main Chat Canvas Area */}
+      {/* Main Canvas Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        {/* Top Header Bar */}
+        {/* Top Header */}
         <ChatHeader
           user={user}
           sidebarOpen={sidebarOpen}
@@ -547,30 +525,28 @@ export default function ChatPage() {
               {messages.map((msg) => (
                 <div key={msg.id} className="w-full">
                   {msg.role === "user" ? (
-                    /* User Message: Clean right-aligned bubble */
+                    /* User Turn: Clean right-aligned bubble */
                     <div className="flex justify-end mb-4">
                       <div className="max-w-[85%] sm:max-w-[75%] rounded-3xl px-5 py-3.5 bg-slate-100 dark:bg-[#282a2c] text-slate-900 dark:text-[#e3e3e3] text-sm shadow-xs leading-relaxed">
                         {/* File Attachment Pill */}
                         {msg.attachment && (
-                          <div className="flex items-center gap-2 mb-2 p-2 rounded-xl bg-white/70 dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          <div className="flex items-center gap-2 mb-2 p-2 rounded-xl bg-white/80 dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                             <FileSpreadsheet className="w-4 h-4 shrink-0" />
                             <span className="truncate">{msg.attachment.filename}</span>
                           </div>
                         )}
                         <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <div className="text-[10px] text-slate-400 dark:text-[#9aa0a6] text-right mt-1.5">
+                        <div className="text-[10px] text-slate-400 dark:text-[#9aa0a6] text-right mt-1.5 font-mono">
                           {msg.timestamp}
                         </div>
                       </div>
                     </div>
                   ) : (
-                    /* Assistant Message: Clean Gemini layout */
+                    /* Assistant Turn: Clean Gemini layout */
                     <div className="flex items-start gap-3 sm:gap-4 my-4">
                       {/* Gemini Sparkle Avatar */}
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-rose-400 p-0.5 shrink-0 shadow-xs mt-1">
-                        <div className="w-full h-full bg-white dark:bg-[#131314] rounded-full flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                        </div>
+                      <div className="w-8 h-8 rounded-full bg-blue-500/10 dark:bg-white/10 border border-blue-500/20 dark:border-white/10 flex items-center justify-center shrink-0 mt-1">
+                        <Sparkles className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -605,7 +581,7 @@ export default function ChatPage() {
                           <div className="flex items-center gap-2 mt-3 pt-1 text-slate-400">
                             <button
                               onClick={() => handleCopy(msg.id, msg.content)}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                               title="Copy response"
                             >
                               {copiedId === msg.id ? (
@@ -615,13 +591,13 @@ export default function ChatPage() {
                               )}
                             </button>
                             <button
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                               title="Good response"
                             >
                               <ThumbsUp className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                               title="Bad response"
                             >
                               <ThumbsDown className="w-3.5 h-3.5" />
@@ -638,7 +614,7 @@ export default function ChatPage() {
           )}
         </main>
 
-        {/* Floating Bottom Input Bar (Signature Gemini / Google AI Studio Capsule) - visible during active chat */}
+        {/* Floating Bottom Input Bar: Active when conversation is in progress */}
         {messages.length > 0 && (
           <div className="sticky bottom-0 left-0 right-0 px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 dark:to-transparent z-10 transition-colors">
             <div className="w-full max-w-3xl sm:max-w-4xl mx-auto">
@@ -658,7 +634,7 @@ export default function ChatPage() {
                 </div>
               )}
 
-              {/* Main Floating Capsule */}
+              {/* Input Capsule */}
               <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-3xl bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 shadow-lg shadow-blue-500/5 focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500 dark:focus-within:border-blue-400 transition-all">
                 {/* Paperclip Button for Ingestion */}
                 <button
@@ -682,7 +658,7 @@ export default function ChatPage() {
                     }
                   }}
                   rows={1}
-                  placeholder="Describe an app and let Gemini do the rest..."
+                  placeholder="Ask a follow up question in this session..."
                   className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#9aa0a6] max-h-36 py-1 leading-normal"
                 />
 
@@ -715,7 +691,7 @@ export default function ChatPage() {
 
               {/* Disclaimer Subtext */}
               <p className="text-[11px] text-center text-slate-400 dark:text-zinc-500 mt-2">
-                Gemini 3.8 Flash &bull; Google Antigravity SDK &bull; CopilotKit V2 &bull; Generative UI components mount dynamically.
+                Gemini 3.8 Flash &bull; Google Antigravity SDK &bull; CopilotKit V2 &bull; Session: {activeSessionId}
               </p>
             </div>
           </div>
@@ -723,7 +699,7 @@ export default function ChatPage() {
 
         {/* File Upload Modal */}
         {showUploadModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <div className="w-full max-w-lg">
               <FileUploadZone
                 onFileUploaded={(data) => {

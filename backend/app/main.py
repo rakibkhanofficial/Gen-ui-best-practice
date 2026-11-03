@@ -60,6 +60,8 @@ class ChatRequest(BaseModel):
 class StreamChatRequest(BaseModel):
     message: str
     attachment_path: Optional[str] = None
+    session_id: Optional[str] = None
+    conversation_id: Optional[str] = None
     history: Optional[List[Dict[str, str]]] = []
 
 
@@ -182,7 +184,7 @@ def download_sample_excel():
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(payload: StreamChatRequest):
     """Server-Sent Events (SSE) streaming endpoint returning real agent stages, text deltas, and GenUI events."""
-    logger.info(f"SSE Chat Request: '{payload.message}' (Attachment: {payload.attachment_path})")
+    logger.info(f"SSE Chat Request [Session: {payload.session_id}, Conv: {payload.conversation_id}]: '{payload.message}' (Attachment: {payload.attachment_path})")
 
     async def event_generator():
         async for sse_chunk in stream_agent_reasoning(
