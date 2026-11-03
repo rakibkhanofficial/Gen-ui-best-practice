@@ -4,17 +4,14 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plane,
-  Clock,
   Luggage,
   ShieldCheck,
   Calendar,
   Users,
-  ArrowRight,
-  ExternalLink,
   ChevronDown,
-  Sparkles,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Coins,
 } from "lucide-react";
 
 export interface FlightSegment {
@@ -45,6 +42,9 @@ export interface FlightOption {
   refundable: boolean;
   score: number;
   badge?: string;
+  price_bdt?: number;
+  price_inr?: number;
+  preferred_currency?: string;
 }
 
 export interface FlightDetailsData {
@@ -58,13 +58,95 @@ export interface FlightDetailsData {
   cabin_class?: string;
   total_results?: number;
   flights?: FlightOption[];
+  default_currency?: string;
+  exchange_rates?: Record<string, number>;
 }
 
 interface FlightDetailsCardProps {
   data?: FlightDetailsData;
 }
 
+/**
+ * Resilient Airline Logo with smart fallback badge.
+ */
+function AirlineLogo({
+  url,
+  airline,
+  flightNumber,
+}: {
+  url: string;
+  airline: string;
+  flightNumber: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+
+  // Map known airline names to local public assets
+  const aLower = airline.toLowerCase();
+  const localUrl =
+    url?.startsWith("/images/")
+      ? url
+      : aLower.includes("biman")
+      ? "/images/airlines/biman.png"
+      : aLower.includes("us-bangla") || aLower.includes("usbangla")
+      ? "/images/airlines/usbangla.png"
+      : aLower.includes("emirates")
+      ? "/images/airlines/emirates.png"
+      : aLower.includes("qatar")
+      ? "/images/airlines/qatar.png"
+      : aLower.includes("singapore")
+      ? "/images/airlines/singapore.png"
+      : aLower.includes("air india")
+      ? "/images/airlines/airindia.png"
+      : aLower.includes("indigo")
+      ? "/images/airlines/indigo.png"
+      : aLower.includes("thai")
+      ? "/images/airlines/thai.png"
+      : aLower.includes("nippon") || aLower.includes("ana")
+      ? "/images/airlines/ana.png"
+      : aLower.includes("japan airlines") || aLower.includes("jal")
+      ? "/images/airlines/jal.png"
+      : aLower.includes("malaysia")
+      ? "/images/airlines/malaysia.png"
+      : aLower.includes("cathay")
+      ? "/images/airlines/cathay.png"
+      : aLower.includes("british")
+      ? "/images/airlines/britishairways.png"
+      : aLower.includes("saudia")
+      ? "/images/airlines/saudia.png"
+      : url;
+
+  const code = flightNumber?.split(" ")[0] || airline.slice(0, 2).toUpperCase();
+
+  if (hasError || !localUrl) {
+    return (
+      <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-white/10 border border-blue-200/60 dark:border-white/10 flex items-center justify-center shrink-0 font-bold text-xs text-blue-700 dark:text-blue-300">
+        {code}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/95 border border-slate-200/80 dark:border-white/10 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
+      <img
+        src={localUrl}
+        alt={airline}
+        onError={() => setHasError(true)}
+        className="max-h-full max-w-full object-contain"
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
 export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
+  const initialCurrency =
+    data?.default_currency === "INR"
+      ? "INR"
+      : data?.default_currency === "USD"
+      ? "USD"
+      : "BDT";
+
+  const [currency, setCurrency] = useState<"BDT" | "USD" | "INR">(initialCurrency);
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
   const [bookedFlight, setBookedFlight] = useState<string | null>(null);
 
@@ -92,6 +174,18 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
     setTimeout(() => setBookedFlight(null), 3000);
   };
 
+  const formatPrice = (flight: FlightOption) => {
+    if (currency === "BDT") {
+      const bdt = flight.price_bdt ?? Math.round(flight.price * 120);
+      return `৳${bdt.toLocaleString()}`;
+    }
+    if (currency === "INR") {
+      const inr = flight.price_inr ?? Math.round(flight.price * 86.5);
+      return `₹${inr.toLocaleString()}`;
+    }
+    return `$${flight.price.toFixed(0)}`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -99,10 +193,10 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
       transition={{ duration: 0.35 }}
       className="w-full rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-lg overflow-hidden text-slate-800 dark:text-slate-100"
     >
-      {/* Clean Route Header (Google Flights style) */}
+      {/* Route Header with Currency Switcher */}
       <div className="p-5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-white/5 border border-blue-200/50 dark:border-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Plane className="w-4 h-4" />
             </div>
@@ -115,9 +209,48 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
               </span>
             </div>
           </div>
-          <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-slate-600 dark:text-zinc-400 font-medium">
-            {flights.length} flights found
-          </span>
+
+          {/* Currency Switcher */}
+          <div className="flex items-center gap-1.5 self-start sm:self-center">
+            <span className="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 mr-1">
+              <Coins className="w-3.5 h-3.5" /> Currency:
+            </span>
+            <div className="inline-flex rounded-xl bg-slate-200/70 dark:bg-white/5 p-0.5 border border-slate-300/50 dark:border-white/10 text-xs">
+              <button
+                type="button"
+                onClick={() => setCurrency("BDT")}
+                className={`px-2.5 py-1 rounded-lg font-medium text-[11px] transition-all cursor-pointer ${
+                  currency === "BDT"
+                    ? "bg-white dark:bg-emerald-600 text-emerald-700 dark:text-white shadow-xs font-bold"
+                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                ৳ BDT
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency("USD")}
+                className={`px-2.5 py-1 rounded-lg font-medium text-[11px] transition-all cursor-pointer ${
+                  currency === "USD"
+                    ? "bg-white dark:bg-blue-600 text-blue-700 dark:text-white shadow-xs font-bold"
+                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                $ USD
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency("INR")}
+                className={`px-2.5 py-1 rounded-lg font-medium text-[11px] transition-all cursor-pointer ${
+                  currency === "INR"
+                    ? "bg-white dark:bg-indigo-600 text-indigo-700 dark:text-white shadow-xs font-bold"
+                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                ₹ INR
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
@@ -172,17 +305,11 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 {/* Airline & Timing */}
                 <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 flex items-center justify-center p-1.5 shrink-0 shadow-xs">
-                    {/* Airline Logo with fallback */}
-                    <img
-                      src={seg.airline_logo}
-                      alt={seg.airline}
-                      className="max-h-full max-w-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  </div>
+                  <AirlineLogo
+                    url={seg.airline_logo}
+                    airline={seg.airline}
+                    flightNumber={seg.flight_number}
+                  />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -237,17 +364,18 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
                 {/* Pricing & Booking Action */}
                 <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200 dark:border-white/5 shrink-0 gap-1.5">
                   <div className="text-left sm:text-right">
-                    <span className="text-xs text-slate-400">from </span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">
-                      ${flight.price.toFixed(2)}
+                    <span className="text-[11px] text-slate-400">from </span>
+                    <span className="text-lg font-bold font-mono text-slate-900 dark:text-white">
+                      {formatPrice(flight)}
                     </span>
                     <span className="text-[10px] text-slate-500 block">per adult</span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => setSelectedFlight(isSelected ? null : flight.id)}
-                      className="p-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                      className="p-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                       title="View flight details"
                     >
                       <ChevronDown
@@ -255,6 +383,7 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
                       />
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleBook(flight.id)}
                       disabled={isBooked}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-all ${
@@ -329,4 +458,3 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
     </motion.div>
   );
 }
-

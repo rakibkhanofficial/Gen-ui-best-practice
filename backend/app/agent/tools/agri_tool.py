@@ -66,7 +66,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="ACI Flora PGR – ফ্লোরা (Plant Growth Regulator)",
             category="Plant Growth Regulator (PGR)",
             manufacturer="ACI Crop Care (ACI Aronno)",
-            image_url="https://aciaronno.com/cdn/shop/files/flora.jpg?v=1788352992",
+            image_url="/images/agri/flora.jpg",
             pack_size="100 ml Bottle",
             price_bdt=105.00,
             target_crops=["Vegetables", "Paddy/Rice", "Mango", "Litchi", "Chili", "Potato", "Tomato"],
@@ -87,7 +87,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="AC Mix 55 EC (এসি মিক্স ৫৫ ইসি)",
             category="Crop Care & Pesticides",
             manufacturer="ACI Crop Care",
-            image_url="https://aciaronno.com/cdn/shop/files/Acmix.jpg?v=1788179154",
+            image_url="/images/agri/acmix.jpg",
             pack_size="50 ml Bottle",
             price_bdt=98.00,
             target_crops=["Paddy Stem Borer", "Vegetable Caterpillars", "Mustard Aphids", "Brinjal Fruit Borer"],
@@ -108,7 +108,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="Acamite (একামাইট) - Specialist Mite Killer",
             category="Crop Care & Acaricide",
             manufacturer="ACI Crop Care",
-            image_url="https://aciaronno.com/cdn/shop/files/acamite_cc6672a2-84db-4bc3-9707-cc18de8d11f3.jpg?v=1788351134",
+            image_url="/images/agri/acamite.jpg",
             pack_size="100 ml Bottle",
             price_bdt=86.00,
             target_crops=["Chili", "Tea Gardens", "Brinjal", "Citrus", "Pointed Gourd"],
@@ -129,7 +129,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="ACI Bumper Bonemil - 1kg (বোন মিল সার)",
             category="Organic Bio-Fertilizer",
             manufacturer="ACI Agribusiness (ACI Aronno)",
-            image_url="https://aciaronno.com/cdn/shop/files/22.jpg?v=1777461876",
+            image_url="/images/agri/bonemil.jpg",
             pack_size="1 kg Sealed Pack",
             price_bdt=100.00,
             target_crops=["Rooftop Gardening", "Fruit Plants", "Flowering Shrubs", "Vegetable Beds"],
@@ -150,7 +150,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="ACI Bumper Trico Powder 100g (ট্রাইকোডার্মা বায়ো-ফাংগিসাইড)",
             category="Bio-Fungicide",
             manufacturer="ACI Agribusiness",
-            image_url="https://aciaronno.com/cdn/shop/files/3.jpg?v=1777465416",
+            image_url="/images/agri/trico.jpg",
             pack_size="100 g Pack",
             price_bdt=130.00,
             target_crops=["Paddy Seedlings", "Potato", "Tomato", "Ginger", "Turmeric"],
@@ -171,7 +171,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="Bioferti 100ml (বায়োফার্টি তরল সার)",
             category="Bio-Fertilizer & Micronutrients",
             manufacturer="ACI Agribusiness",
-            image_url="https://aciaronno.com/cdn/shop/files/8.jpg?v=1777462421",
+            image_url="/images/agri/bioferti.jpg",
             pack_size="100 ml Bottle",
             price_bdt=180.00,
             target_crops=["All Agricultural Crops", "Boro Rice", "Vegetables", "Orchards"],
@@ -192,7 +192,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="Aimcozim 50 WP (এইমকোজিম ৫০ ডব্লিউপি)",
             category="Crop Care & Fungicide",
             manufacturer="ACI Crop Care",
-            image_url="https://aciaronno.com/cdn/shop/files/aimcozin.jpg?v=1789535091",
+            image_url="/images/agri/aimcozim.jpg",
             pack_size="50 g Pack",
             price_bdt=64.00,
             target_crops=["Paddy Blast", "Wheat Rust", "Mango Anthracnose", "Vegetables"],
@@ -213,7 +213,7 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
             name="ACI Hybrid Dhan-2 (হাইজিন ধান-২)",
             category="Hybrid Seeds",
             manufacturer="ACI Seed (ACI Agribusiness)",
-            image_url="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=640&q=80",
+            image_url="/images/agri/mustard.jpg",
             pack_size="5 kg Seed Bag",
             price_bdt=1450.00,
             target_crops=["Boro Rice", "Aus Rice", "Irrigated Paddy"],
@@ -279,11 +279,37 @@ def _get_curated_agri_products(query: str, category: str) -> AgriProductSearchDa
 
 def search_agri_products(query: str = "ACI agriculture products", category: str = "All") -> Dict[str, Any]:
     """Search ACI Agribusiness products, crop care solutions, fertilizers, and farm machinery."""
+    q_l = query.lower()
+    
+    # For ACI agribusiness queries, prioritize authentic verified catalog
+    if any(k in q_l for k in ["aci", "agri", "crop", "flora", "mix", "acamite", "fertiliz", "seed", "pgr", "bonemil", "trico"]):
+        logger.info(f"Using curated ACI Agribusiness catalog for query: '{query}'")
+        curated = _get_curated_agri_products(query, category)
+        return curated.model_dump()
+
     dynamic_data = _generate_dynamic_agri_products(query, category)
     if dynamic_data:
+        # Guarantee local fallback image if dynamic generator provided broken or external link
+        for p in dynamic_data.products:
+            if not p.image_url or not p.image_url.startswith("/"):
+                p_lower = p.name.lower()
+                if "flora" in p_lower:
+                    p.image_url = "/images/agri/flora.jpg"
+                elif "mix" in p_lower:
+                    p.image_url = "/images/agri/acmix.jpg"
+                elif "bonemil" in p_lower:
+                    p.image_url = "/images/agri/bonemil.jpg"
+                elif "trico" in p_lower:
+                    p.image_url = "/images/agri/trico.jpg"
+                elif "bioferti" in p_lower:
+                    p.image_url = "/images/agri/bioferti.jpg"
+                elif "aimcozim" in p_lower:
+                    p.image_url = "/images/agri/aimcozim.jpg"
+                else:
+                    p.image_url = "/images/agri/flora.jpg"
         logger.info(f"Retrieved dynamic agri products for query: '{query}'")
         return dynamic_data.model_dump()
 
-    logger.info(f"Using curated ACI Agribusiness catalog for query: '{query}'")
+    logger.info(f"Using curated ACI Agribusiness catalog fallback for query: '{query}'")
     curated = _get_curated_agri_products(query, category)
     return curated.model_dump()

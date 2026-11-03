@@ -426,3 +426,4 @@ export function HotelBookingCard({ data }: HotelBookingCardProps) {
     </motion.div>
   );
 }
+

@@ -271,6 +271,9 @@ class FlightOption(BaseModel):
     refundable: bool
     score: int
     badge: Optional[str] = None
+    price_bdt: Optional[float] = None
+    price_inr: Optional[float] = None
+    preferred_currency: Optional[str] = "BDT"
 
 
 class FlightSearchData(BaseModel):
@@ -284,6 +287,8 @@ class FlightSearchData(BaseModel):
     cabin_class: str
     total_results: int
     flights: List[FlightOption]
+    default_currency: str = "BDT"
+    exchange_rates: Optional[Dict[str, float]] = None
 
 
 # --- 10. Currency Converter Schemas ---

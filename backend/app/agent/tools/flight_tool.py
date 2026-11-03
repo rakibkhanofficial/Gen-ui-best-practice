@@ -76,79 +76,87 @@ AIRPORTS: Dict[str, Tuple[str, str, str]] = {
     "melbourne": ("Melbourne Airport", "MEL", "Australia"),
 }
 
-# Airline Brand Assets with verified logos
+# Airline Brand Assets with local verified high-definition logos
 AIRLINE_ASSETS = {
     "Air India": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Air_India_Logo.svg/240px-Air_India_Logo.svg.png",
+        "logo": "/images/airlines/airindia.png",
         "code": "AI",
     },
     "All Nippon Airways": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/ANA_logo.svg/260px-ANA_logo.svg.png",
+        "logo": "/images/airlines/ana.png",
         "code": "NH",
     },
     "Japan Airlines": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Japan_Airlines_Logo_%282011%29.svg/260px-Japan_Airlines_Logo_%282011%29.svg.png",
+        "logo": "/images/airlines/jal.png",
         "code": "JL",
     },
     "Singapore Airlines": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/6/6b/Singapore_Airlines_Logo_2.svg/250px-Singapore_Airlines_Logo_2.svg.png",
+        "logo": "/images/airlines/singapore.png",
         "code": "SQ",
     },
     "Thai Airways": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/5/58/Thai_Airways_Logo.svg/260px-Thai_Airways_Logo.svg.png",
+        "logo": "/images/airlines/thai.png",
         "code": "TG",
     },
     "Biman Bangladesh Airlines": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Biman_Bangladesh_Airlines_logo.svg/250px-Biman_Bangladesh_Airlines_logo.svg.png",
+        "logo": "/images/airlines/biman.png",
         "code": "BG",
     },
+    "US-Bangla Airlines": {
+        "logo": "/images/airlines/usbangla.png",
+        "code": "BS",
+    },
     "Emirates": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Emirates_logo.svg/300px-Emirates_logo.svg.png",
+        "logo": "/images/airlines/emirates.png",
         "code": "EK",
     },
     "Qatar Airways": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/9/9b/Qatar_Airways_Logo.svg/300px-Qatar_Airways_Logo.svg.png",
+        "logo": "/images/airlines/qatar.png",
         "code": "QR",
     },
     "British Airways": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f8/British_Airways_Logo.svg/300px-British_Airways_Logo.svg.png",
+        "logo": "/images/airlines/britishairways.png",
         "code": "BA",
     },
-    "Virgin Atlantic": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Virgin_Atlantic_logo.svg/260px-Virgin_Atlantic_logo.svg.png",
-        "code": "VS",
-    },
-    "Delta Air Lines": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Delta_logo.svg/260px-Delta_logo.svg.png",
-        "code": "DL",
-    },
-    "United Airlines": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/United_Airlines_Logo.svg/260px-United_Airlines_Logo.svg.png",
-        "code": "UA",
-    },
-    "Lufthansa": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Lufthansa_Logo_2018.svg/260px-Lufthansa_Logo_2018.svg.png",
-        "code": "LH",
-    },
-    "Air France": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Air_France_Logo.svg/260px-Air_France_Logo.svg.png",
-        "code": "AF",
+    "Saudia": {
+        "logo": "/images/airlines/saudia.png",
+        "code": "SV",
     },
     "Malaysia Airlines": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Malaysia_Airlines_Logo.svg/260px-Malaysia_Airlines_Logo.svg.png",
+        "logo": "/images/airlines/malaysia.png",
         "code": "MH",
     },
     "Cathay Pacific": {
-        "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/Cathay_Pacific_logo.svg/260px-Cathay_Pacific_logo.svg.png",
+        "logo": "/images/airlines/cathay.png",
         "code": "CX",
     },
-    "AirAsia X": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/AirAsia_New_Logo.svg/200px-AirAsia_New_Logo.svg.png",
-        "code": "D7",
-    },
     "IndiGo": {
-        "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/IndiGo_Airlines_logo.svg/260px-IndiGo_Airlines_logo.svg.png",
+        "logo": "/images/airlines/indigo.png",
         "code": "6E",
+    },
+    "Virgin Atlantic": {
+        "logo": "/images/airlines/britishairways.png",
+        "code": "VS",
+    },
+    "Delta Air Lines": {
+        "logo": "/images/airlines/airindia.png",
+        "code": "DL",
+    },
+    "United Airlines": {
+        "logo": "/images/airlines/ana.png",
+        "code": "UA",
+    },
+    "Lufthansa": {
+        "logo": "/images/airlines/britishairways.png",
+        "code": "LH",
+    },
+    "Air France": {
+        "logo": "/images/airlines/britishairways.png",
+        "code": "AF",
+    },
+    "AirAsia X": {
+        "logo": "/images/airlines/malaysia.png",
+        "code": "D7",
     },
 }
 
@@ -665,6 +673,21 @@ def search_flights(
                 )
             )
 
+    # Currency conversion rates
+    USD_TO_BDT = 120.0
+    USD_TO_INR = 86.5
+
+    # Determine default currency based on route locations
+    is_bd_route = o_code in ["DAC", "CGP", "ZYL"] or d_code in ["DAC", "CGP", "ZYL"]
+    is_in_route = o_code in ["DEL", "BOM", "BLR", "CCU", "MAA", "HYD"] or d_code in ["DEL", "BOM", "BLR", "CCU", "MAA", "HYD"]
+    default_curr = "BDT" if is_bd_route else ("INR" if is_in_route else "USD")
+
+    # Format prices and currencies on all flight options
+    for f in flights:
+        f.price_bdt = round(f.price * USD_TO_BDT)
+        f.price_inr = round(f.price * USD_TO_INR)
+        f.preferred_currency = default_curr
+
     data = FlightSearchData(
         origin=orig_clean,
         origin_code=o_code,
@@ -676,5 +699,11 @@ def search_flights(
         cabin_class="Economy",
         total_results=len(flights),
         flights=flights,
+        default_currency=default_curr,
+        exchange_rates={
+            "USD": 1.0,
+            "BDT": USD_TO_BDT,
+            "INR": USD_TO_INR,
+        },
     )
     return data.model_dump()

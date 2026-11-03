@@ -372,3 +372,4 @@ def search_hotels(
     logger.info(f"Using curated hotels catalog for location: '{loc}'")
     curated = _get_curated_hotels(loc, check_in, check_out, guests)
     return curated.model_dump()
+
