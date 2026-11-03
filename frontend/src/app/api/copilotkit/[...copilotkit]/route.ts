@@ -1,64 +1,7 @@
-import {
-  CopilotRuntime,
-  createCopilotHonoHandler,
-  InMemoryAgentRunner,
-  BuiltInAgent,
-} from "@copilotkit/runtime/v2";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { GeminiTranscriptionService } from "@/lib/transcription-service";
+import { handleRequest } from "@/lib/copilot-handler";
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-
-// Built-in Gemini Agent (zero LangSmith key required)
-const defaultAgent = new BuiltInAgent({
-  model: "google/gemini-3.8-flash",
-  apiKey: apiKey,
-});
-
-// CopilotRuntime with OpenGenerativeUI, A2UI, Excalidraw MCP Apps, and Voice Transcription
-const runtime = new CopilotRuntime({
-  agents: { default: defaultAgent },
-  runner: new InMemoryAgentRunner(),
-  transcriptionService: new GeminiTranscriptionService(apiKey),
-  openGenerativeUI: true,
-  a2ui: {
-    injectA2UITool: false,
-  },
-  mcpApps: {
-    servers: [
-      {
-        type: "http",
-        url: process.env.MCP_SERVER_URL || "https://mcp.excalidraw.com",
-        serverId: "example_mcp_app",
-      },
-    ],
-  },
-  threads: {
-    access: "open",
-  },
-});
-
-// Modern non-deprecated Hono handler for CopilotKit
-const copilotApp = createCopilotHonoHandler({
-  runtime,
-  basePath: "/api/copilotkit",
-});
-
-// Wrap in parent Hono app with CORS middleware registered first
-const app = new Hono();
-app.use(
-  "*",
-  cors({
-    origin: (origin) => origin ?? "*",
-    credentials: true,
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["*"],
-  }),
-);
-app.route("/", copilotApp);
-
-// Standard Next.js Web Request handlers (no deprecated hono/vercel adapter needed)
-export const GET = (req: Request) => app.fetch(req);
-export const POST = (req: Request) => app.fetch(req);
-export const OPTIONS = (req: Request) => app.fetch(req);
+export const GET = (req: Request) => handleRequest(req);
+export const POST = (req: Request) => handleRequest(req);
+export const PATCH = (req: Request) => handleRequest(req);
+export const DELETE = (req: Request) => handleRequest(req);
+export const OPTIONS = (req: Request) => handleRequest(req);

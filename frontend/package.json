@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@copilotkit/react-core": "^1.83.0",
-    "@copilotkit/react-ui": "^1.83.0",
-    "@copilotkit/runtime": "^1.83.0",
+    "@copilotkit/core": "1.84.0",
+    "@copilotkit/react-core": "1.84.0",
+    "@copilotkit/react-ui": "1.84.0",
+    "@copilotkit/runtime": "1.84.0",
+    "@copilotkit/shared": "1.84.0",
     "@copilotkit/voice": "^1.84.0",
     "@google/generative-ai": "^0.24.1",
     "@types/canvas-confetti": "^1.9.0",
