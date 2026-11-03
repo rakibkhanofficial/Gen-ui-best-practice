@@ -2,19 +2,21 @@ import {
   CopilotRuntime,
   createCopilotEndpoint,
   InMemoryAgentRunner,
+  BuiltInAgent,
 } from "@copilotkit/runtime/v2";
-import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handle } from "hono/vercel";
 
-const defaultAgent = new LangGraphAgent({
-  deploymentUrl:
-    process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123",
-  graphId: "sample_agent",
-  langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+
+// Built-in Gemini Agent (no LangSmith API key required)
+const defaultAgent = new BuiltInAgent({
+  model: "google/gemini-3.8-flash",
+  apiKey: apiKey,
 });
 
+// CopilotRuntime with OpenGenerativeUI, A2UI, and Excalidraw MCP Apps
 const runtime = new CopilotRuntime({
   agents: { default: defaultAgent },
   runner: new InMemoryAgentRunner(),
@@ -31,6 +33,9 @@ const runtime = new CopilotRuntime({
       },
     ],
   },
+  threads: {
+    access: "open",
+  },
 });
 
 const copilotApp = createCopilotEndpoint({
@@ -38,11 +43,7 @@ const copilotApp = createCopilotEndpoint({
   basePath: "/api/copilotkit",
 });
 
-// Wrap the CopilotKit endpoint in a parent Hono app that runs CORS middleware
-// FIRST. Order matters in Hono — middleware runs in registration order, so
-// CORS must be registered before the CopilotKit routes are mounted.
-// This lets the slides dev server (Vite :5173) call this Next.js runtime
-// (:3000) cross-origin without preflight failures on /agent/*/connect etc.
+// Wrap the CopilotKit endpoint in a parent Hono app with CORS middleware registered first
 const app = new Hono();
 app.use(
   "*",

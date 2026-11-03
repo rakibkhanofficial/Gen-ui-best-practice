@@ -161,11 +161,15 @@ def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -
             ),
         ]
 
+    initial_mode = "canvas" if any(k in t_lower for k in ["excalidraw", "diagram", "canvas", "architecture", "flowchart", "wireframe", "schema", "draw"]) else "board"
+
     board = PlanningBoardData(
         board_id=f"board-{abs(hash(topic)) % 10000}",
-        title=f"Miro Canvas: {topic.title()}",
-        description=f"Interactive collaborative planning canvas for '{topic}'. Drag notes, vote, or add new ideas.",
+        title=f"Miro & Excalidraw Canvas: {topic.title()}",
+        description=f"Interactive collaborative planning canvas for '{topic}'. Drag notes, vote, or switch to live Excalidraw MCP canvas.",
         last_updated="Just now",
         columns=cols,
+        initial_mode=initial_mode,
+        mcp_app_url="https://mcp.excalidraw.com",
     )
     return board.model_dump()

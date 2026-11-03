@@ -44,6 +44,8 @@ interface PlanningBoardData {
   description?: string;
   last_updated?: string;
   columns?: BoardColumn[];
+  initial_mode?: "board" | "canvas";
+  mcp_app_url?: string;
 }
 
 interface PlanningBoardProps {
@@ -104,6 +106,9 @@ export function PlanningBoard({ data, status = "complete" }: PlanningBoardProps)
       if (data.columns[0]?.id) {
         setTargetCol(data.columns[0].id);
       }
+    }
+    if (data?.initial_mode) {
+      setCanvasMode(data.initial_mode);
     }
   }, [data]);
 

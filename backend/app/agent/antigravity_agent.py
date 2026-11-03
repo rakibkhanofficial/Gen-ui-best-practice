@@ -282,7 +282,7 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
                 break
         return {"tool": "get_sales_analytics", "args": {"quarter": quarter, "year": 2026}}
 
-    if any(k in p for k in ["plan", "planning", "miro", "roadmap", "sticky", "board", "kanban", "sprint"]):
+    if any(k in p for k in ["plan", "planning", "miro", "roadmap", "sticky", "board", "kanban", "sprint", "excalidraw", "diagram", "canvas", "architecture", "flowchart", "wireframe", "system design"]):
         return {"tool": "generate_planning_board", "args": {"topic": prompt}}
 
     if any(k in p for k in ["product", "laptop", "macbook", "spec", "specs", "compare", "price", "hardware", "workstation"]):

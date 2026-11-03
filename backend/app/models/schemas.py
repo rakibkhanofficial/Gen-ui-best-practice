@@ -96,6 +96,8 @@ class PlanningBoardData(BaseModel):
     description: str
     last_updated: str
     columns: List[BoardColumn]
+    initial_mode: Optional[str] = "board"
+    mcp_app_url: Optional[str] = "https://mcp.excalidraw.com"
 
 
 # --- 4. Product Catalog & Comparison Schemas ---
