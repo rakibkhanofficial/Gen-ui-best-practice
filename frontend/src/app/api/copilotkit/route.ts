@@ -1,6 +1,6 @@
 import {
   CopilotRuntime,
-  createCopilotEndpoint,
+  createCopilotHonoHandler,
   InMemoryAgentRunner,
   BuiltInAgent,
 } from "@copilotkit/runtime/v2";
@@ -10,7 +10,7 @@ import { handle } from "hono/vercel";
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
-// Built-in Gemini Agent (no LangSmith API key required)
+// Built-in Gemini Agent (zero LangSmith key required)
 const defaultAgent = new BuiltInAgent({
   model: "google/gemini-3.8-flash",
   apiKey: apiKey,
@@ -38,12 +38,13 @@ const runtime = new CopilotRuntime({
   },
 });
 
-const copilotApp = createCopilotEndpoint({
+// Modern non-deprecated Hono handler for CopilotKit
+const copilotApp = createCopilotHonoHandler({
   runtime,
   basePath: "/api/copilotkit",
 });
 
-// Wrap the CopilotKit endpoint in a parent Hono app with CORS middleware registered first
+// Wrap in parent Hono app with CORS middleware registered first
 const app = new Hono();
 app.use(
   "*",
