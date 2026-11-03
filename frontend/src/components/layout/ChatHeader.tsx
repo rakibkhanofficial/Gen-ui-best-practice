@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PanelLeft, Sun, Moon } from "lucide-react";
+import { PanelLeft, Sun, Moon, Zap, Brain, Mic } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { UserSession } from "@/lib/auth";
 
@@ -9,12 +9,16 @@ interface ChatHeaderProps {
   user: UserSession | null;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  syncStatus?: string | null;
+  learnedCount?: number;
 }
 
 export function ChatHeader({
   user,
   sidebarOpen,
   onToggleSidebar,
+  syncStatus,
+  learnedCount = 3,
 }: ChatHeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -43,13 +47,35 @@ export function ChatHeader({
             Gen UI Best Practice
           </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-600 dark:bg-white/10 dark:text-blue-300 font-mono">
-            Copilot & Antigravity
+            Copilot &amp; Antigravity
           </span>
         </div>
       </div>
 
+      {/* Center: CopilotKit Capabilities Badges (Realtime Sync & Continual Learning) */}
+      <div className="hidden md:flex items-center gap-2 text-[11px]">
+        {/* Realtime Sync Badge */}
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium"
+          title={syncStatus || "Real-time bidirectional state sync with CopilotKit Runtime"}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+          <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+          <span>Realtime Sync</span>
+        </div>
+
+        {/* Learning Memory Badge */}
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-medium"
+          title={`CopilotKit Learning Container active with ${learnedCount} learned behavioral skills`}
+        >
+          <Brain className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+          <span>Learning ({learnedCount} skills)</span>
+        </div>
+      </div>
+
       {/* Right: Theme Switcher Only */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         <button
           onClick={toggleTheme}
           suppressHydrationWarning

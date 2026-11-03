@@ -10,7 +10,10 @@ export default function ChatLayout({
 }) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
-      <CopilotKit runtimeUrl="/api/copilotkit" showDevConsole={false}>
+      <CopilotKit
+        runtimeUrl="/api/copilotkit"
+        showDevConsole={true}
+      >
         {children}
       </CopilotKit>
     </Suspense>
