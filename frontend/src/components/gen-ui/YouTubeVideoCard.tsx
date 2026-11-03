@@ -383,15 +383,36 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
                     </div>
                   </div>
 
-                  {/* 16:9 YouTube Embedded Iframe */}
-                  <div className="relative w-full aspect-video bg-black shadow-inner">
+                  {/* 16:9 YouTube Embedded Iframe with Privacy Sandbox & Fallback */}
+                  <div className="relative w-full aspect-video bg-black shadow-inner flex flex-col items-center justify-center">
                     <iframe
-                      src={`https://www.youtube.com/embed/${activeVideo.video_id}?autoplay=1&rel=0`}
+                      src={`https://www.youtube-nocookie.com/embed/${activeVideo.video_id}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`}
                       title={activeVideo.title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
-                      className="w-full h-full border-0"
+                      className="w-full h-full border-0 relative z-10"
                     />
+
+                    {/* Background fallback banner visible if iframe is blocked or restricted */}
+                    <div className="absolute inset-0 z-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center">
+                      <Tv className="w-12 h-12 text-red-500 mb-2 animate-pulse" />
+                      <p className="text-sm font-semibold text-white mb-1">
+                        Video stream loading or playback restricted
+                      </p>
+                      <p className="text-xs text-slate-400 mb-3 max-w-md">
+                        If your browser or privacy extension blocks YouTube embeds, you can watch it directly on YouTube.
+                      </p>
+                      <a
+                        href={`https://www.youtube.com/watch?v=${activeVideo.video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg transition-colors"
+                      >
+                        <Play className="w-4 h-4 fill-white" />
+                        <span>Watch Directly on YouTube</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   </div>
 
                   {/* Modal Footer / Metadata */}

@@ -250,3 +250,4 @@ def search_doctors(
     logger.info(f"Using curated doctor directory for query: '{query}'")
     curated = _get_curated_doctors(query, specialty, location)
     return curated.model_dump()
+

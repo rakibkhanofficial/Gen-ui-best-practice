@@ -160,3 +160,4 @@ def search_places_map(query: str = "National Heart Foundation Hospital Dhaka", l
     logger.info(f"Using curated map landmarks for query: '{query}'")
     curated = _get_curated_map_data(query, location)
     return curated.model_dump()
+

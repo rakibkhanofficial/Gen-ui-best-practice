@@ -9,11 +9,10 @@ import {
   Check,
   Sparkles,
   Layers,
-  ChevronDown,
-  ChevronUp,
-  LineChart,
   Lightbulb,
+  Sigma,
 } from "lucide-react";
+import { MathView } from "./MathView";
 
 export interface MathStep {
   step_number: number;
@@ -41,7 +40,6 @@ interface MathSolverCardProps {
 
 export function MathSolverCard({ data }: MathSolverCardProps) {
   const [copied, setCopied] = useState(false);
-  const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
   if (!data?.solution_summary) {
     return (
@@ -77,25 +75,31 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
       transition={{ duration: 0.3 }}
       className="w-full max-w-3xl my-3 rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-sm text-slate-800 dark:text-slate-100 overflow-hidden"
     >
-      {/* Math Card Header */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-white/10 bg-gradient-to-r from-purple-500/10 via-indigo-500/5 to-transparent dark:from-purple-950/30">
+      {/* Header Banner */}
+      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-white/10 bg-gradient-to-r from-purple-600/10 via-indigo-500/5 to-transparent dark:from-purple-950/30">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-600/30">
               <Calculator className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                   {problem_title}
                 </h3>
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800 uppercase">
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800 uppercase">
                   {problem_type}
                 </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  KaTeX Rendered
+                </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-zinc-400 font-mono mt-0.5">
-                Input: {latex_input || input_expression}
-              </p>
+
+              {/* Rendered Equation Input */}
+              <div className="mt-1 flex items-center gap-2 text-sm text-slate-700 dark:text-zinc-200">
+                <span className="text-xs text-slate-400 font-sans">Input:</span>
+                <MathView math={latex_input || input_expression} displayMode={false} className="text-base font-semibold" />
+              </div>
             </div>
           </div>
 
@@ -106,7 +110,7 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">Copied Solution</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">Copied</span>
               </>
             ) : (
               <>
@@ -117,9 +121,9 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
           </button>
         </div>
 
-        {/* Final Solution Callout Box */}
+        {/* Final Solution Callout Box with KaTeX Render */}
         <div className="mt-4 p-4 rounded-xl bg-purple-600/10 dark:bg-purple-950/40 border border-purple-500/30">
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               Verified Mathematical Solution
@@ -129,25 +133,26 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
             </span>
           </div>
 
-          <div className="text-lg sm:text-xl font-bold font-mono text-purple-950 dark:text-purple-100 py-1">
-            {solution_latex || solution_summary}
+          {/* Large Rendered KaTeX Solution */}
+          <div className="my-2 p-3 rounded-lg bg-white/80 dark:bg-black/40 border border-purple-300/40 dark:border-purple-800/40 overflow-x-auto text-purple-950 dark:text-purple-100 flex items-center justify-center">
+            <MathView math={solution_latex || solution_summary} displayMode={true} className="text-lg sm:text-xl font-bold" />
           </div>
 
-          <p className="text-xs text-purple-900/80 dark:text-purple-200/80 mt-1 leading-relaxed">
+          <p className="text-xs text-purple-900/80 dark:text-purple-200/80 mt-2 leading-relaxed">
             {solution_summary}
           </p>
         </div>
       </div>
 
-      {/* Step-by-Step Derivation */}
+      {/* Step-by-Step Derivation with KaTeX */}
       <div className="p-4 sm:p-5 space-y-4">
         <div>
           <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-purple-500" />
-            <span>Step-by-Step Derivation ({steps.length} Steps)</span>
+            <span>Step-by-Step Mathematical Derivation</span>
           </h4>
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {steps.map((st) => (
               <div
                 key={st.step_number}
@@ -172,10 +177,10 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
                   {st.explanation}
                 </p>
 
-                {/* Formula Highlight */}
+                {/* Formula Step Rendered with KaTeX */}
                 {st.latex_expression && (
-                  <div className="mt-2.5 px-3 py-2 rounded-lg bg-white dark:bg-black/30 border border-slate-200/70 dark:border-white/5 font-mono text-xs font-semibold text-purple-700 dark:text-purple-300 overflow-x-auto">
-                    {st.latex_expression}
+                  <div className="mt-2.5 px-3 py-2 rounded-lg bg-white dark:bg-black/40 border border-slate-200/70 dark:border-white/5 overflow-x-auto text-purple-700 dark:text-purple-300 flex items-center justify-start">
+                    <MathView math={st.latex_expression} displayMode={false} className="text-xs sm:text-sm" />
                   </div>
                 )}
               </div>
@@ -183,22 +188,22 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
           </div>
         </div>
 
-        {/* Formula Identity or Theorem Pill */}
+        {/* Core Formula Identity Theorem */}
         {formula_identity && (
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-start gap-2.5 text-xs">
-            <Sparkles className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-slate-900 dark:text-white block mb-0.5">
-                Core Theorem / Formula Applied:
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-start gap-2.5 text-xs">
+            <Sigma className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <span className="font-semibold text-slate-900 dark:text-white block mb-1">
+                Core Theorem / Identity Applied:
               </span>
-              <code className="text-purple-700 dark:text-purple-300 font-mono text-xs">
-                {formula_identity}
-              </code>
+              <div className="p-2 rounded-lg bg-white dark:bg-black/30 border border-slate-200/70 dark:border-white/5 overflow-x-auto text-purple-700 dark:text-purple-300">
+                <MathView math={formula_identity} displayMode={false} className="text-xs sm:text-sm" />
+              </div>
             </div>
           </div>
         )}
 
-        {/* Practical Application */}
+        {/* Real-World Practical Application */}
         {practical_application && (
           <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
             <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />

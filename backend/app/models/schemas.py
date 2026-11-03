@@ -389,6 +389,9 @@ class MedicineAlternative(BaseModel):
     price_bdt: float   # e.g. 1.20
     is_requested: bool = False
     highlights: Optional[str] = None  # e.g. "Direct Generic Match", "XR Extended Release", "Cost-effective"
+    company_favicon_url: Optional[str] = None
+    image_url: Optional[str] = None
+    dar_reg_no: Optional[str] = None
 
 
 class MedicineItem(BaseModel):
@@ -408,6 +411,9 @@ class MedicineItem(BaseModel):
     alternatives: List[MedicineAlternative]
     ecommerce_available: bool = True
     in_stock: bool = True
+    company_favicon_url: Optional[str] = None
+    image_url: Optional[str] = None
+    dar_reg_no: Optional[str] = None
 
 
 class MedicineSearchData(BaseModel):

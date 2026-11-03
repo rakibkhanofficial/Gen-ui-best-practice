@@ -165,3 +165,4 @@ def solve_math_problem(expression: str = "x^2 - x - 6 = 0", problem_type: str = 
     logger.info(f"Using curated math solution for: '{expression}'")
     curated = _get_curated_math_data(expression, problem_type)
     return curated.model_dump()
+
