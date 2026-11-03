@@ -106,6 +106,32 @@ def resolve_sources_for_query(
         ]
 
     if tool_name == "search_flights" or any(k in p for k in ["flight", "flights", "airline", "fly"]):
+        carrier_name = "Air India"
+        carrier_domain = "airindia.com"
+        carrier_url = "https://www.airindia.com"
+        carrier_status = "Flag Carrier Schedule"
+
+        if "dhaka" in p or (tool_args and tool_args.get("origin", "").lower() == "dhaka"):
+            carrier_name = "Biman Bangladesh Airlines"
+            carrier_domain = "biman-airlines.com"
+            carrier_url = "https://www.biman-airlines.com"
+            carrier_status = "Flag Carrier Direct"
+        elif "london" in p or (tool_args and tool_args.get("origin", "").lower() == "london"):
+            carrier_name = "British Airways"
+            carrier_domain = "britishairways.com"
+            carrier_url = "https://www.britishairways.com"
+            carrier_status = "National Carrier Network"
+        elif "dubai" in p or (tool_args and tool_args.get("origin", "").lower() == "dubai"):
+            carrier_name = "Emirates"
+            carrier_domain = "emirates.com"
+            carrier_url = "https://www.emirates.com"
+            carrier_status = "Global Hub Schedule"
+        elif "new york" in p or (tool_args and tool_args.get("origin", "").lower() in ["new york", "jfk"]):
+            carrier_name = "Delta Air Lines"
+            carrier_domain = "delta.com"
+            carrier_url = "https://www.delta.com"
+            carrier_status = "Transatlantic Direct"
+
         return [
             {
                 "name": "Google Flights",
@@ -122,11 +148,11 @@ def resolve_sources_for_query(
                 "status": "Live Fare Aggregator",
             },
             {
-                "name": "Biman Bangladesh Airlines",
-                "domain": "biman-airlines.com",
-                "favicon": "https://www.google.com/s2/favicons?domain=biman-airlines.com&sz=128",
-                "url": "https://www.biman-airlines.com",
-                "status": "National Carrier Direct",
+                "name": carrier_name,
+                "domain": carrier_domain,
+                "favicon": f"https://www.google.com/s2/favicons?domain={carrier_domain}&sz=128",
+                "url": carrier_url,
+                "status": carrier_status,
             },
         ]
 

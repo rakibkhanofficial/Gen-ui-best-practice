@@ -293,16 +293,40 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
 
     # Flight search and details
     if any(k in p for k in ["flight", "flights", "fly to", "airline", "booking", "plane ticket", "airfare", "aviation"]):
-        origin = "Dhaka"
+        # Clean up stop words and trailing descriptive phrases
+        cleaned = re.sub(
+            r"\b(with\s+(airlines?|pricing|prices?|schedules?|options?|costs?)|and\s+(pricing|prices?|airlines?)|for\s+(next\s+week|tomorrow|\d+\s+people)|round\s*trip|one\s*way|tickets?|cheap(est)?|please|details?)\b.*",
+            "",
+            p,
+            flags=re.IGNORECASE
+        ).strip()
+
+        origin = "Delhi"
         destination = "Tokyo"
-        to_splits = re.split(r"\bto\b", p, flags=re.IGNORECASE)
-        if len(to_splits) > 1:
-            dest_candidate = to_splits[-1].strip().rstrip("?.,!").title()
-            if dest_candidate:
-                destination = dest_candidate
-            from_candidate = to_splits[0].strip().split()[-1].title() if to_splits[0].strip() else "Dhaka"
-            if from_candidate and from_candidate not in ["Flights", "Flight", "Find", "Search", "Show", "Book", "Get", "Cheap", "The", "From"]:
-                origin = from_candidate
+
+        # Match 'from <origin> to <destination>'
+        from_to_match = re.search(r"\bfrom\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)", cleaned, re.IGNORECASE)
+        if from_to_match:
+            cand_orig = from_to_match.group(1).strip()
+            cand_dest = from_to_match.group(2).strip()
+            cand_orig = re.sub(r"^(flights?|find|search|show|book|fly|cheap|get|the)\s+", "", cand_orig, flags=re.IGNORECASE).strip()
+            cand_dest = re.sub(r"\s+(flights?|tickets?|airlines?)$", "", cand_dest, flags=re.IGNORECASE).strip()
+            if cand_orig:
+                origin = cand_orig.title()
+            if cand_dest:
+                destination = cand_dest.title()
+        else:
+            to_match = re.search(r"([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)", cleaned, re.IGNORECASE)
+            if to_match:
+                cand_orig = to_match.group(1).strip()
+                cand_dest = to_match.group(2).strip()
+                cand_orig = re.sub(r"^(flights?|find|search|show|book|fly|cheap|get|the|from)\s+", "", cand_orig, flags=re.IGNORECASE).strip()
+                cand_dest = re.sub(r"\s+(flights?|tickets?|airlines?)$", "", cand_dest, flags=re.IGNORECASE).strip()
+                if cand_orig:
+                    origin = cand_orig.title()
+                if cand_dest:
+                    destination = cand_dest.title()
+
         return {"tool": "search_flights", "args": {"origin": origin, "destination": destination}}
 
     # Currency conversion & exchange rates
