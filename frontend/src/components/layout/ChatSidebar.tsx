@@ -21,6 +21,8 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   turnsCount?: number;
+  userId?: string;
+  userType?: "guest" | "google";
 }
 
 interface ChatSidebarProps {

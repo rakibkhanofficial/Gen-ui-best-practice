@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "@copilotkit/react-ui/styles.css";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 
 export const metadata: Metadata = {
   title: "Gen UI Best Practice | CopilotKit & Google Antigravity SDK",
@@ -21,11 +22,13 @@ export default function RootLayout({
         className="bg-white dark:bg-[#131314] text-slate-900 dark:text-[#e3e3e3] antialiased min-h-screen selection:bg-blue-500/20"
         suppressHydrationWarning
       >
-        <ThemeProvider>
-          <Suspense fallback={<div className="min-h-screen bg-white dark:bg-[#131314]" />}>
-            {children}
-          </Suspense>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <Suspense fallback={<div className="min-h-screen bg-white dark:bg-[#131314]" />}>
+              {children}
+            </Suspense>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

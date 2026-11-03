@@ -7,6 +7,8 @@ import os
 import shutil
 import logging
 import asyncio
+import time
+from datetime import datetime
 
 from app.config import settings
 from app.agent.antigravity_agent import (
@@ -62,7 +64,14 @@ class StreamChatRequest(BaseModel):
     attachment_path: Optional[str] = None
     session_id: Optional[str] = None
     conversation_id: Optional[str] = None
+    user_id: Optional[str] = None
+    user_type: Optional[str] = None
     history: Optional[List[Dict[str, str]]] = []
+
+
+# In-memory user-wise isolated chat session store
+# Structure: USER_SESSIONS[user_id][session_id] = { id, title, user_id, user_type, created_at, updated_at, turns: [...] }
+USER_SESSIONS: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
 
 class HITLDecisionRequest(BaseModel):
@@ -184,7 +193,41 @@ def download_sample_excel():
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(payload: StreamChatRequest):
     """Server-Sent Events (SSE) streaming endpoint returning real agent stages, text deltas, and GenUI events."""
-    logger.info(f"SSE Chat Request [Session: {payload.session_id}, Conv: {payload.conversation_id}]: '{payload.message}' (Attachment: {payload.attachment_path})")
+    user_id = payload.user_id or "guest_default"
+    session_id = payload.session_id or f"session_{int(time.time())}"
+    conv_id = payload.conversation_id or f"conv_user_{int(time.time() * 1000)}"
+
+    logger.info(f"SSE Chat Request [User: {user_id}, Session: {session_id}, Conv: {conv_id}]: '{payload.message}'")
+
+    # Optimistically record session and user turn in backend store
+    if user_id not in USER_SESSIONS:
+        USER_SESSIONS[user_id] = {}
+
+    title = payload.message.strip()
+    if len(title) > 36:
+        title = title[:34] + "..."
+
+    now_iso = datetime.now().isoformat()
+    if session_id not in USER_SESSIONS[user_id]:
+        USER_SESSIONS[user_id][session_id] = {
+            "id": session_id,
+            "title": title or "New Conversation",
+            "user_id": user_id,
+            "user_type": payload.user_type or ("google" if "google" in user_id else "guest"),
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "turns": []
+        }
+    else:
+        USER_SESSIONS[user_id][session_id]["updated_at"] = now_iso
+
+    USER_SESSIONS[user_id][session_id]["turns"].append({
+        "id": conv_id,
+        "role": "user",
+        "content": payload.message,
+        "attachment_path": payload.attachment_path,
+        "timestamp": now_iso
+    })
 
     async def event_generator():
         async for sse_chunk in stream_agent_reasoning(
@@ -203,6 +246,39 @@ async def chat_stream_endpoint(payload: StreamChatRequest):
             "X-Accel-Buffering": "no"
         }
     )
+
+
+@app.get("/api/chat/sessions")
+def get_user_sessions(user_id: str = "guest_default"):
+    """Returns chat sessions belonging exclusively to this user."""
+    sessions = USER_SESSIONS.get(user_id, {})
+    sorted_sessions = sorted(
+        sessions.values(),
+        key=lambda s: s.get("updated_at", ""),
+        reverse=True
+    )
+    return {
+        "user_id": user_id,
+        "sessions": sorted_sessions
+    }
+
+
+@app.get("/api/chat/sessions/{session_id}")
+def get_session_history(session_id: str, user_id: str = "guest_default"):
+    """Returns conversation history for a specific session of this user."""
+    user_data = USER_SESSIONS.get(user_id, {})
+    if session_id not in user_data:
+        return {"session_id": session_id, "user_id": user_id, "turns": []}
+    return user_data[session_id]
+
+
+@app.delete("/api/chat/sessions/{session_id}")
+def delete_user_session(session_id: str, user_id: str = "guest_default"):
+    """Deletes a session for this user."""
+    if user_id in USER_SESSIONS and session_id in USER_SESSIONS[user_id]:
+        del USER_SESSIONS[user_id][session_id]
+        return {"status": "deleted", "session_id": session_id}
+    return {"status": "not_found", "session_id": session_id}
 
 
 @app.post("/api/chat")
