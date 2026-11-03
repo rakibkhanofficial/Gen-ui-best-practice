@@ -4,7 +4,7 @@ from app.models.schemas import PlanningBoardData, BoardColumn, StickyNote
 
 
 def build_excalidraw_scene(columns: List[BoardColumn]) -> List[Dict[str, Any]]:
-    """Builds valid Excalidraw v2 / Miro MCP scene elements for the board."""
+    """Builds valid Excalidraw v2 MCP scene elements for the plan."""
     elements: List[Dict[str, Any]] = []
     color_map = {
         "yellow": {"bg": "#fef08a", "stroke": "#f59e0b"},
@@ -18,14 +18,14 @@ def build_excalidraw_scene(columns: List[BoardColumn]) -> List[Dict[str, Any]]:
     prev_note_pos = None
 
     for col_idx, col in enumerate(columns):
-        col_x = col_idx * 270 + 40
+        col_x = col_idx * 280 + 40
         # Lane boundary container
         elements.append({
             "id": f"lane-{col.id}",
             "type": "rectangle",
             "x": col_x,
             "y": 40,
-            "width": 240,
+            "width": 250,
             "height": 420,
             "backgroundColor": "#f8fafc",
             "strokeColor": col.color_accent,
@@ -53,13 +53,13 @@ def build_excalidraw_scene(columns: List[BoardColumn]) -> List[Dict[str, Any]]:
             c = color_map.get(note.color, color_map["yellow"])
             note_elem_id = f"note-{note.id}"
 
-            # Sticky Note Card
+            # Excalidraw Sticky Note Card
             elements.append({
                 "id": note_elem_id,
                 "type": "rectangle",
                 "x": col_x + 14,
                 "y": note_y,
-                "width": 212,
+                "width": 222,
                 "height": 120,
                 "backgroundColor": c["bg"],
                 "strokeColor": c["stroke"],
@@ -82,7 +82,7 @@ def build_excalidraw_scene(columns: List[BoardColumn]) -> List[Dict[str, Any]]:
             })
 
             # Connector arrows between stages
-            current_pos = (col_x + 226, note_y + 60)
+            current_pos = (col_x + 236, note_y + 60)
             if prev_note_pos and col_idx > 0 and note_idx == 0:
                 elements.append({
                     "id": f"arrow-{note.id}",
@@ -101,12 +101,12 @@ def build_excalidraw_scene(columns: List[BoardColumn]) -> List[Dict[str, Any]]:
 
 
 def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -> Dict[str, Any]:
-    """Generates an interactive Miro & Excalidraw style visual planning board tailored dynamically to the user's topic."""
+    """Generates an interactive Excalidraw architecture & sprint plan diagram using MCP (Model Context Protocol)."""
     t_lower = topic.lower()
 
     # Clean up user command prefixes so titles remain concise and clean
     cleaned_topic = re.sub(
-        r"^(generate|create|show|build|make|give me|draw)\s+(a\s+)?(miro-style\s+|miro\s+)?(sprint\s+)?(planning\s+)?(board\s+)?(for\s+|about\s+|on\s+)?(our\s+|my\s+|the\s+)?",
+        r"^(generate|create|show|build|make|give me|draw)\s+(an?\s+)?(excalidraw\s+|miro-style\s+|miro\s+)?(sprint\s+)?(planning\s+|plan\s+)?(board\s+|canvas\s+|diagram\s+)?(for\s+|about\s+|on\s+)?(our\s+|my\s+|the\s+)?",
         "",
         topic,
         flags=re.IGNORECASE,
@@ -269,14 +269,14 @@ def generate_planning_board(topic: str = "Generative AI Architecture Roadmap") -
             ),
         ]
 
-    initial_mode = "canvas" if any(k in t_lower for k in ["excalidraw", "diagram", "canvas", "flowchart", "wireframe", "schema", "draw"]) else "board"
+    initial_mode = "canvas"
 
     mcp_elements = build_excalidraw_scene(cols)
 
     board = PlanningBoardData(
         board_id=f"board-{abs(hash(topic)) % 10000}",
-        title=f"Sprint Canvas: {topic_display}",
-        description=f"Interactive Miro-style collaborative sprint canvas for {topic_display}. Drag notes, vote, or switch to live Excalidraw MCP canvas.",
+        title=f"Excalidraw Plan: {topic_display}",
+        description=f"Interactive Excalidraw architecture and sprint plan diagram for {topic_display}.",
         last_updated="Just now",
         columns=cols,
         initial_mode=initial_mode,

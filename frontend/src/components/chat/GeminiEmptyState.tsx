@@ -81,8 +81,8 @@ export function GeminiEmptyState({
     },
     {
       icon: Kanban,
-      label: "Miro Sprint Board",
-      prompt: "Generate a Miro-style sprint planning board for our GenUI release",
+      label: "Excalidraw Plan",
+      prompt: "Generate an Excalidraw architecture and sprint plan for our GenUI release",
     },
     {
       icon: Briefcase,
@@ -217,7 +217,7 @@ export function GeminiEmptyState({
             placeholder={
               isListening
                 ? "Listening... speak now into your microphone"
-                : "Ask about flights, sales charts, Miro plans, tech jobs, code, or drop files..."
+                : "Ask about flights, sales charts, Excalidraw diagrams, tech jobs, code, or drop files..."
             }
             className="w-full bg-transparent border-0 outline-none resize-none text-[15px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-sans"
           />

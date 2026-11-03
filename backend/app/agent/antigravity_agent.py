@@ -78,7 +78,7 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "generate_planning_board",
-                "description": "Create a Miro-style visual roadmap and planning board with draggable sticky notes and status columns.",
+                "description": "Create an interactive Excalidraw visual architecture and sprint plan diagram using MCP (Model Context Protocol).",
                 "parameters": {
                     "type": "object",
                     "properties": {

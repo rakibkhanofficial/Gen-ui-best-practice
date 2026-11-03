@@ -537,7 +537,7 @@ async def stream_agent_reasoning(
             "schedule_meeting": "Checking calendar availability & slots",
             "search_flights": "Searching flight routes & live fares",
             "get_sales_analytics": "Analyzing enterprise revenue & margins",
-            "generate_planning_board": "Generating collaborative sprint board",
+            "generate_planning_board": "Generating Excalidraw architecture & plan",
             "search_jobs": "Querying engineering job opportunities",
             "get_weather_data": "Fetching local weather conditions",
             "calculate_route_distance": "Calculating transit routing & distance",

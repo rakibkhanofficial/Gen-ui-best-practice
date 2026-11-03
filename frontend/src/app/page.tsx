@@ -450,7 +450,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
             }`}
           >
             <Kanban className="w-3.5 h-3.5" />
-            <span>Miro Sprint Board</span>
+            <span>Excalidraw Plan</span>
           </button>
 
           <button
@@ -755,7 +755,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
             Ready to experience Gen UI Best Practice?
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 dark:text-slate-600 mt-2 max-w-lg mx-auto">
-            Try multi-turn conversational sessions with dynamic airline schedules, analytics charts, code execution, and Miro-style planning boards.
+            Try multi-turn conversational sessions with dynamic airline schedules, analytics charts, code execution, and interactive Excalidraw architecture plans.
           </p>
           <div className="mt-6">
             <Link
