@@ -99,48 +99,53 @@ export function FlightDetailsCard({ data }: FlightDetailsCardProps) {
       transition={{ duration: 0.35 }}
       className="w-full rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-lg overflow-hidden text-slate-800 dark:text-slate-100"
     >
-      {/* Top Banner / Route Summary */}
-      <div className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 text-white p-5">
+      {/* Clean Route Header (Google Flights style) */}
+      <div className="p-5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-xs">
-              <Plane className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-white/5 border border-blue-200/50 dark:border-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <Plane className="w-4 h-4" />
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-sky-100">
-              Interactive Flight Search
-            </span>
+            <div>
+              <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                Google Flights Search
+              </span>
+              <span className="block text-[11px] text-slate-500 dark:text-zinc-400">
+                Live verified airfare & schedules
+              </span>
+            </div>
           </div>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs font-medium">
+          <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-slate-600 dark:text-zinc-400 font-medium">
             {flights.length} flights found
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
           <div className="flex items-center gap-4">
             <div>
-              <div className="text-2xl font-bold tracking-tight">{origin_code}</div>
-              <div className="text-xs text-sky-100/90">{origin}</div>
+              <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{origin_code}</div>
+              <div className="text-xs text-slate-500 dark:text-zinc-400">{origin}</div>
             </div>
             <div className="flex flex-col items-center px-2">
-              <span className="text-[10px] text-sky-200 font-mono">One Way</span>
-              <div className="w-16 h-0.5 bg-white/40 relative my-1">
-                <Plane className="w-3.5 h-3.5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white rotate-90" />
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">One Way</span>
+              <div className="w-16 h-0.5 bg-slate-200 dark:bg-zinc-700 relative my-1">
+                <Plane className="w-3.5 h-3.5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 rotate-90" />
               </div>
             </div>
             <div>
-              <div className="text-2xl font-bold tracking-tight">{destination_code}</div>
-              <div className="text-xs text-sky-100/90">{destination}</div>
+              <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{destination_code}</div>
+              <div className="text-xs text-slate-500 dark:text-zinc-400">{destination}</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs bg-black/20 backdrop-blur-xs px-3 py-1.5 rounded-xl border border-white/15">
+          <div className="flex items-center gap-3 text-xs bg-white dark:bg-[#202124] px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-zinc-300 shadow-2xs">
             <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-sky-200" />
+              <Calendar className="w-3.5 h-3.5 text-blue-500" />
               <span>{departure_date}</span>
             </div>
-            <span className="text-white/40">&bull;</span>
+            <span className="text-slate-300 dark:text-zinc-600">&bull;</span>
             <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-sky-200" />
+              <Users className="w-3.5 h-3.5 text-blue-500" />
               <span>{passengers} Pax ({cabin_class})</span>
             </div>
           </div>

@@ -84,36 +84,41 @@ export function CurrencyConverterCard({ data }: CurrencyConverterCardProps) {
       transition={{ duration: 0.35 }}
       className="w-full rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-lg overflow-hidden text-slate-800 dark:text-slate-100"
     >
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white p-5">
-        <div className="flex items-center justify-between mb-2">
+      {/* Clean Financial Header (Google Finance style) */}
+      <div className="p-5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-xs">
-              <Coins className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/50 dark:border-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <Coins className="w-4 h-4" />
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-100">
-              Interactive Currency Exchange
-            </span>
+            <div>
+              <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                Live Forex Exchange Rates
+              </span>
+              <span className="block text-[11px] text-slate-500 dark:text-zinc-400">
+                Verified international currency data
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-emerald-100 bg-black/20 backdrop-blur-xs px-2.5 py-1 rounded-full">
-            <Clock className="w-3 h-3" />
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400 bg-white dark:bg-[#202124] px-2.5 py-1 rounded-full border border-slate-200/80 dark:border-white/10 shadow-2xs">
+            <Clock className="w-3 h-3 text-slate-400" />
             <span>{initialConversion.last_updated}</span>
           </div>
         </div>
 
         {/* Big Conversion Display */}
-        <div className="mt-3">
-          <div className="text-xs text-emerald-200 font-medium mb-1">
+        <div className="mt-2">
+          <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium mb-1">
             {amount} {fromCurrency} =
           </div>
-          <div className="text-3xl sm:text-4xl font-bold tracking-tight text-white flex items-baseline gap-2">
+          <div className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white flex items-baseline gap-2">
             <span>{Number(calculatedAmount).toLocaleString()}</span>
-            <span className="text-lg font-semibold text-emerald-200">{toCurrency}</span>
+            <span className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">{toCurrency}</span>
           </div>
-          <div className="mt-2 text-xs text-emerald-100/90 flex flex-wrap items-center gap-3">
-            <span>1 {fromCurrency} = {rate.toFixed(4)} {toCurrency}</span>
-            <span className="text-white/40">&bull;</span>
-            <span>1 {toCurrency} = {inverseRate} {fromCurrency}</span>
+          <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 flex flex-wrap items-center gap-3">
+            <span>1 {fromCurrency} = <strong className="text-slate-700 dark:text-zinc-200">{rate.toFixed(4)}</strong> {toCurrency}</span>
+            <span className="text-slate-300 dark:text-zinc-600">&bull;</span>
+            <span>1 {toCurrency} = <strong className="text-slate-700 dark:text-zinc-200">{inverseRate}</strong> {fromCurrency}</span>
           </div>
         </div>
       </div>

@@ -60,25 +60,30 @@ export function WebsiteLinkCard({ data }: WebsiteLinkCardProps) {
       transition={{ duration: 0.35 }}
       className="w-full rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-lg overflow-hidden text-slate-800 dark:text-slate-100"
     >
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 text-white p-5">
-        <div className="flex items-center justify-between mb-1.5">
+      {/* Clean Header */}
+      <div className="p-5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-xs">
-              <Globe className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200/50 dark:border-purple-900/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
+              <Globe className="w-4 h-4" />
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-purple-100">
-              Verified Web Resources & Metadata
-            </span>
+            <div>
+              <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                Verified Web Resources & Metadata
+              </span>
+              <span className="block text-[11px] text-slate-500 dark:text-zinc-400">
+                Authoritative documentation & tools
+              </span>
+            </div>
           </div>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs font-medium">
+          <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-slate-600 dark:text-zinc-400 font-medium">
             {websites.length} Curated Sites
           </span>
         </div>
-        <h3 className="text-lg font-bold tracking-tight text-white line-clamp-1">
+        <h3 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-zinc-200 line-clamp-1 mt-1">
           {query}
         </h3>
-        <p className="text-xs text-purple-100/90 mt-0.5">
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
           Metadata, favicons, and verified secure links extracted for your query.
         </p>
       </div>

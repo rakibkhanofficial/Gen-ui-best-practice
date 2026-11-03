@@ -540,6 +540,7 @@ export default function ChatPage() {
             <GeminiEmptyState
               userName={user?.name || "Presenter"}
               onSelectPrompt={(p) => handleSendMessage(p)}
+              onOpenUpload={() => setShowUploadModal(true)}
             />
           ) : (
             <div className="w-full max-w-3xl sm:max-w-4xl mx-auto space-y-6 pb-24">
@@ -637,86 +638,88 @@ export default function ChatPage() {
           )}
         </main>
 
-        {/* Floating Bottom Input Bar (Signature Gemini / ChatGPT Capsule) */}
-        <div className="sticky bottom-0 left-0 right-0 px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 dark:to-transparent z-10 transition-colors">
-          <div className="w-full max-w-3xl sm:max-w-4xl mx-auto">
-            {/* File Attachment Chip */}
-            {currentAttachment && (
-              <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1e1f20] border border-slate-300 dark:border-white/10 text-xs w-fit shadow-xs">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                <span className="font-medium text-slate-800 dark:text-slate-200">
-                  {currentAttachment.filename}
-                </span>
-                <button
-                  onClick={() => setCurrentAttachment(null)}
-                  className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-
-            {/* Main Floating Capsule */}
-            <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-3xl bg-slate-100 dark:bg-[#1e1f20] border border-slate-200 dark:border-[#333538] shadow-md focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500 dark:focus-within:border-blue-400 transition-all">
-              {/* Paperclip Button for Ingestion */}
-              <button
-                type="button"
-                onClick={() => setShowUploadModal(true)}
-                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-[#9aa0a6] hover:text-slate-900 dark:hover:text-white transition-colors"
-                title="Attach Excel spreadsheet (.xlsx, .csv) or image"
-              >
-                <Paperclip className="w-4 h-4" />
-              </button>
-
-              {/* Textarea */}
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                rows={1}
-                placeholder="Ask Gemini anything, request Miro plans, or analyze sales data..."
-                className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#9aa0a6] max-h-36 py-1 leading-normal"
-              />
-
-              {/* Action Button: Stop or Send */}
-              {isStreaming ? (
-                <button
-                  type="button"
-                  onClick={handleStopStream}
-                  className="p-2 rounded-full bg-slate-800 text-white hover:bg-slate-900 dark:bg-white dark:text-black dark:hover:bg-slate-200 transition-all shadow-xs"
-                  title="Stop generating"
-                >
-                  <Square className="w-4 h-4 fill-current" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!input.trim() && !currentAttachment}
-                  onClick={() => handleSendMessage()}
-                  className={`p-2 rounded-full transition-all shadow-xs ${
-                    input.trim() || currentAttachment
-                      ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200 cursor-pointer"
-                      : "bg-slate-200 text-slate-400 dark:bg-white/10 dark:text-slate-600 cursor-not-allowed"
-                  }`}
-                  title="Send message"
-                >
-                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-                </button>
+        {/* Floating Bottom Input Bar (Signature Gemini / Google AI Studio Capsule) - visible during active chat */}
+        {messages.length > 0 && (
+          <div className="sticky bottom-0 left-0 right-0 px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#131314] dark:via-[#131314]/95 dark:to-transparent z-10 transition-colors">
+            <div className="w-full max-w-3xl sm:max-w-4xl mx-auto">
+              {/* File Attachment Chip */}
+              {currentAttachment && (
+                <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1e1f20] border border-slate-300 dark:border-white/10 text-xs w-fit shadow-xs">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                    {currentAttachment.filename}
+                  </span>
+                  <button
+                    onClick={() => setCurrentAttachment(null)}
+                    className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               )}
-            </div>
 
-            {/* Disclaimer Subtext */}
-            <p className="text-[11px] text-center text-slate-400 dark:text-[#9aa0a6] mt-2">
-              Gemini 3.8 Flash &bull; Google Antigravity SDK &bull; CopilotKit V2 &bull; Generative UI components mount dynamically.
-            </p>
+              {/* Main Floating Capsule */}
+              <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-3xl bg-white dark:bg-[#1e1f20] border border-slate-200/90 dark:border-white/10 shadow-lg shadow-blue-500/5 focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500 dark:focus-within:border-blue-400 transition-all">
+                {/* Paperclip Button for Ingestion */}
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(true)}
+                  className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-[#9aa0a6] hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  title="Attach Excel spreadsheet (.xlsx, .csv) or image"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+
+                {/* Textarea */}
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  rows={1}
+                  placeholder="Describe an app and let Gemini do the rest..."
+                  className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#9aa0a6] max-h-36 py-1 leading-normal"
+                />
+
+                {/* Action Button: Stop or Send */}
+                {isStreaming ? (
+                  <button
+                    type="button"
+                    onClick={handleStopStream}
+                    className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200 transition-all shadow-xs cursor-pointer"
+                    title="Stop generating"
+                  >
+                    <Square className="w-4 h-4 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!input.trim() && !currentAttachment}
+                    onClick={() => handleSendMessage()}
+                    className={`p-2 rounded-full transition-all shadow-xs ${
+                      input.trim() || currentAttachment
+                        ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200 cursor-pointer"
+                        : "bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-600 cursor-not-allowed"
+                    }`}
+                    title="Send message"
+                  >
+                    <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                )}
+              </div>
+
+              {/* Disclaimer Subtext */}
+              <p className="text-[11px] text-center text-slate-400 dark:text-zinc-500 mt-2">
+                Gemini 3.8 Flash &bull; Google Antigravity SDK &bull; CopilotKit V2 &bull; Generative UI components mount dynamically.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* File Upload Modal */}
         {showUploadModal && (

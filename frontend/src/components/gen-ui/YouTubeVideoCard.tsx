@@ -87,27 +87,29 @@ export function YouTubeVideoCard({ data }: YouTubeVideoCardProps) {
         transition={{ duration: 0.35 }}
         className="w-full rounded-2xl bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 shadow-lg overflow-hidden text-slate-800 dark:text-slate-100"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white p-5">
-          <div className="flex items-center justify-between mb-1.5">
+        {/* Clean Header */}
+        <div className="p-5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-black/20">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-xs">
-                <Tv className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200/50 dark:border-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400">
+                <Tv className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-red-100">
-                YouTube Video Suggestions
-              </span>
+              <div>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                  YouTube Video Suggestions
+                </span>
+                <span className="block text-[11px] text-slate-500 dark:text-zinc-400">
+                  Streaming previews & modal player
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs font-medium">
-              {videos.length} Videos Available
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-slate-600 dark:text-zinc-400 font-medium">
+              {videos.length} Videos
             </span>
           </div>
-          <h3 className="text-lg font-bold tracking-tight text-white line-clamp-1">
+          <h3 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-zinc-200 line-clamp-1 mt-1">
             {query}
           </h3>
-          <p className="text-xs text-red-100/90 mt-0.5">
-            Click any video thumbnail or &quot;Play Video&quot; to open the interactive theater modal.
-          </p>
         </div>
 
         {/* Video Grid */}

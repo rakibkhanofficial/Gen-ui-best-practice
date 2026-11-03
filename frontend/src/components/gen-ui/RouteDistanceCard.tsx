@@ -95,31 +95,31 @@ export function RouteDistanceCard({ data, status = "complete" }: RouteDistancePr
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="w-full max-w-2xl my-4 rounded-2xl glass-panel-elevated p-6 border border-slate-700/60 shadow-2xl relative overflow-hidden text-slate-100"
+      className="w-full max-w-2xl my-4 rounded-3xl bg-white dark:bg-[#1e1f20] p-6 border border-slate-200/90 dark:border-white/10 shadow-xl shadow-teal-500/5 relative overflow-hidden text-slate-800 dark:text-zinc-100"
     >
       {/* Background glow */}
       <div className="absolute top-0 right-1/4 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-700/60 gap-3">
+      <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10 gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              <Navigation className="w-5 h-5 text-teal-400" />
+            <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              <Navigation className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               Route & Distance Explorer
             </h3>
-            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-teal-950/80 text-teal-300 border border-teal-800 font-medium">
+            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-medium">
               <Sparkles className="w-3 h-3" /> GenUI Geo
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">{data.map_summary}</p>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{data.map_summary}</p>
         </div>
 
         {/* Origin / Dest pill */}
-        <div className="flex items-center gap-1 text-xs bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700">
-          <span className="text-teal-400 font-semibold">{data.origin}</span>
-          <ChevronRight className="w-3 h-3 text-slate-500" />
-          <span className="text-white font-semibold">{data.destination}</span>
+        <div className="flex items-center gap-1 text-xs bg-slate-100 dark:bg-[#202124] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shadow-2xs">
+          <span className="text-teal-600 dark:text-teal-400 font-semibold">{data.origin}</span>
+          <ChevronRight className="w-3 h-3 text-slate-400" />
+          <span className="text-slate-800 dark:text-zinc-100 font-semibold">{data.destination}</span>
         </div>
       </div>
 
@@ -131,14 +131,14 @@ export function RouteDistanceCard({ data, status = "complete" }: RouteDistancePr
             <button
               key={opt.mode}
               onClick={() => setSelectedMode(opt.mode)}
-              className={`p-3 rounded-xl border text-left transition-all relative ${
+              className={`p-3 rounded-2xl border text-left transition-all relative cursor-pointer ${
                 isSelected
-                  ? "bg-teal-950/70 border-teal-500 text-white shadow-md"
-                  : "bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300"
+                  ? "bg-teal-50/80 dark:bg-teal-950/40 border-teal-500 text-slate-900 dark:text-white shadow-xs"
+                  : "bg-slate-50 dark:bg-[#282a2c]/60 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 text-slate-700 dark:text-zinc-300"
               }`}
             >
               {opt.is_recommended && (
-                <span className="absolute -top-2 right-2 text-[9px] bg-teal-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full uppercase">
+                <span className="absolute -top-2 right-2 text-[9px] bg-teal-600 text-white font-bold px-2 py-0.5 rounded-full uppercase shadow-2xs">
                   Fastest
                 </span>
               )}
@@ -146,8 +146,8 @@ export function RouteDistanceCard({ data, status = "complete" }: RouteDistancePr
                 {getModeIcon(opt.mode)}
                 <span>{opt.mode}</span>
               </div>
-              <div className="text-base font-bold text-white">{opt.duration_text}</div>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-base font-bold text-slate-900 dark:text-white">{opt.duration_text}</div>
+              <div className="text-[11px] text-slate-500 dark:text-zinc-400">
                 {opt.distance_miles} miles ({opt.distance_km} km)
               </div>
             </button>
@@ -157,21 +157,21 @@ export function RouteDistanceCard({ data, status = "complete" }: RouteDistancePr
 
       {/* Mode Details / Visual Progress Waypoints */}
       {activeOption && (
-        <div className="p-4 bg-slate-900/70 rounded-xl border border-slate-800 my-4">
+        <div className="p-4 bg-slate-50/80 dark:bg-black/30 rounded-2xl border border-slate-200/80 dark:border-white/5 my-4">
           <div className="flex justify-between items-center mb-4 text-xs">
-            <span className="font-semibold text-slate-300">
+            <span className="font-semibold text-slate-800 dark:text-zinc-200">
               Waypoints & Elevation Route
             </span>
-            <div className="flex items-center gap-3 text-slate-400 text-[11px]">
+            <div className="flex items-center gap-3 text-slate-500 dark:text-zinc-400 text-[11px]">
               {activeOption.estimated_cost && (
-                <span className="flex items-center gap-1 text-white">
-                  <DollarSign className="w-3 h-3 text-emerald-400" />
+                <span className="flex items-center gap-1 text-slate-900 dark:text-white">
+                  <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   {activeOption.estimated_cost}
                 </span>
               )}
               {activeOption.carbon_kg && (
-                <span className="flex items-center gap-1 text-teal-300">
-                  <Leaf className="w-3 h-3 text-teal-400" />
+                <span className="flex items-center gap-1 text-teal-700 dark:text-teal-300">
+                  <Leaf className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                   ~{activeOption.carbon_kg} kg CO₂
                 </span>
               )}
@@ -179,17 +179,17 @@ export function RouteDistanceCard({ data, status = "complete" }: RouteDistancePr
           </div>
 
           {/* Visual Route Track */}
-          <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-teal-400 before:via-sky-400 before:to-emerald-400">
+          <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-zinc-700">
             {(data.waypoints || []).map((wp, idx) => (
               <div key={idx} className="relative flex items-start gap-2.5 text-xs">
-                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-teal-400 border-2 border-slate-900" />
+                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-teal-500 border-2 border-white dark:border-[#1e1f20]" />
                 <div className="flex-1">
-                  <span className="font-bold text-white">{wp.name}</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{wp.name}</span>
                   {wp.note && (
-                    <span className="text-[11px] text-slate-400 block">{wp.note}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400 block">{wp.note}</span>
                   )}
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono">
+                <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
                   {wp.distance_from_start_km} km
                 </span>
               </div>
