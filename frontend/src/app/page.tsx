@@ -331,7 +331,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
 
             <Link
               href="/chat"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 text-xs font-semibold shadow-xs transition-colors duration-150 cursor-pointer"
             >
               <span>Launch Studio</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -382,7 +382,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
         >
           <Link
             href="/chat"
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer group"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-colors duration-150 cursor-pointer group"
           >
             <span>Open Gen UI Studio</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -390,7 +390,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
 
           <a
             href="#architecture"
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-zinc-200 font-medium text-sm transition-all cursor-pointer"
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-zinc-200 font-medium text-sm transition-colors duration-150 cursor-pointer"
           >
             <span>Implementation Guide</span>
             <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -441,7 +441,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
         <div className="flex flex-wrap items-center justify-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 max-w-fit mx-auto mb-6">
           <button
             onClick={() => setActiveTab("flight")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
               activeTab === "flight"
                 ? "bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-white shadow-xs"
                 : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
@@ -453,7 +453,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
 
           <button
             onClick={() => setActiveTab("sales")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
               activeTab === "sales"
                 ? "bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-white shadow-xs"
                 : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
@@ -465,7 +465,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
 
           <button
             onClick={() => setActiveTab("planning")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
               activeTab === "planning"
                 ? "bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-white shadow-xs"
                 : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
@@ -477,7 +477,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
 
           <button
             onClick={() => setActiveTab("job")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
               activeTab === "job"
                 ? "bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-white shadow-xs"
                 : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
@@ -489,7 +489,7 @@ async def stream_genui_events(prompt: str) -> AsyncGenerator[str, None]:
 
           <button
             onClick={() => setActiveTab("code")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
               activeTab === "code"
                 ? "bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-white shadow-xs"
                 : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"

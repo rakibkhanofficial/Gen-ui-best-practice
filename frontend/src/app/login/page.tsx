@@ -113,7 +113,7 @@ export default function LoginPage() {
       <button
         onClick={toggleTheme}
         suppressHydrationWarning
-        className="absolute top-4 right-4 p-2.5 rounded-full bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-[#c4c7c5] hover:shadow-md transition-all z-20 cursor-pointer"
+        className="absolute top-4 right-4 p-2.5 rounded-full bg-white dark:bg-[#1e1f20] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-[#c4c7c5] hover:shadow-md transition-colors duration-150 z-20 cursor-pointer"
         title="Toggle Light / Dark mode"
       >
         {!isMounted ? (

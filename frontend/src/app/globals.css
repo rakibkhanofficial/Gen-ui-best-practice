@@ -52,20 +52,63 @@ body {
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Smooth global theme switching transitions */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Smooth global theme switching for surfaces, backgrounds, and borders without font shaking */
 html.theme-transitioning,
-html.theme-transitioning *,
-html.theme-transitioning *::before,
-html.theme-transitioning *::after {
-  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              fill 0.25s ease,
-              stroke 0.25s ease,
-              box-shadow 0.3s ease !important;
+html.theme-transitioning body,
+html.theme-transitioning header,
+html.theme-transitioning aside,
+html.theme-transitioning main,
+html.theme-transitioning nav,
+html.theme-transitioning section,
+html.theme-transitioning article,
+html.theme-transitioning div:not(:empty),
+html.theme-transitioning .glass-panel {
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   transition-delay: 0s !important;
+}
+
+/* Explicitly exempt all text elements from color/font transition so font glyphs NEVER shake, jitter, or snap */
+html.theme-transitioning p,
+html.theme-transitioning span,
+html.theme-transitioning h1,
+html.theme-transitioning h2,
+html.theme-transitioning h3,
+html.theme-transitioning h4,
+html.theme-transitioning h5,
+html.theme-transitioning h6,
+html.theme-transitioning a,
+html.theme-transitioning label,
+html.theme-transitioning code,
+html.theme-transitioning pre,
+html.theme-transitioning strong,
+html.theme-transitioning em,
+html.theme-transitioning b,
+html.theme-transitioning i,
+html.theme-transitioning button,
+html.theme-transitioning input,
+html.theme-transitioning textarea {
+  transition-property: background-color, border-color, box-shadow !important;
+  transition-duration: 0.25s !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* SVG icons smoothly transition their stroke/fill without affecting surrounding text layout */
+html.theme-transitioning svg {
+  transition: stroke 0.2s ease, fill 0.2s ease !important;
 }
 
 /* Custom scrollbars */

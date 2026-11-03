@@ -125,7 +125,7 @@ export function ChatSidebar({
 
       {/* Clean Minimal Sidebar with Glitch-Free Fixed Inner Container */}
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 flex flex-col transition-all duration-300 ease-in-out select-none overflow-hidden
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 flex flex-col transition-[width,transform,opacity] duration-300 ease-in-out select-none overflow-hidden
           ${
             isOpen
               ? "w-64 translate-x-0 opacity-100 border-r border-slate-200/90 dark:border-white/10"
@@ -182,7 +182,7 @@ export function ChatSidebar({
             <Link
               href="/chat"
               onClick={onNewSession}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 font-medium text-xs shadow-xs transition-all cursor-pointer group"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 font-medium text-xs shadow-xs transition-colors duration-150 cursor-pointer group"
             >
               <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform duration-200" />
               <span>New Chat</span>
@@ -239,7 +239,7 @@ export function ChatSidebar({
                         <div
                           key={session.id}
                           onClick={() => onSelectSession(session.id)}
-                          className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
+                          className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-colors duration-150 ${
                             isActive
                               ? "bg-slate-200/80 dark:bg-white/10 text-slate-900 dark:text-white font-medium shadow-2xs"
                               : "text-slate-600 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"

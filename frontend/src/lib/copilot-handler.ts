@@ -225,3 +225,4 @@ app.delete("/api/copilotkit/threads/:threadId", async (c) => {
 app.route("/", copilotApp);
 
 export const handleRequest = (req: Request) => app.fetch(req);
+

@@ -527,7 +527,7 @@ export function PlanningBoard({
                       duration: 0.35,
                       ease: "easeOut",
                     }}
-                    className={`rounded-2xl border-2 ${theme.border} ${theme.bg} p-4 shadow-sm backdrop-blur-xs min-h-[360px] flex flex-col justify-between transition-all ${
+                    className={`rounded-2xl border-2 ${theme.border} ${theme.bg} p-4 shadow-sm backdrop-blur-xs min-h-[360px] flex flex-col justify-between transition-colors duration-150 ${
                       !isVisible ? "filter blur-[0.5px] pointer-events-none" : ""
                     }`}
                     style={{
@@ -561,7 +561,7 @@ export function PlanningBoard({
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 4 }}
                             transition={{ duration: 0.25 }}
-                            className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-slate-200/90 dark:border-white/10 shadow-xs hover:border-slate-400 dark:hover:border-white/20 transition-all"
+                            className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-slate-200/90 dark:border-white/10 shadow-xs hover:border-slate-400 dark:hover:border-white/20 transition-colors duration-150"
                             style={{
                               boxShadow: "2px 2px 0px rgba(0,0,0,0.04)",
                             }}

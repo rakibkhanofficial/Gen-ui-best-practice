@@ -161,7 +161,7 @@ export function GeminiEmptyState({
           }`}
         />
 
-        <div className="relative w-full bg-white dark:bg-[#1e1f20] rounded-3xl border border-slate-200/90 dark:border-white/10 p-4 shadow-lg shadow-blue-500/5 transition-all">
+        <div className="relative w-full bg-white dark:bg-[#1e1f20] rounded-3xl border border-slate-200/90 dark:border-white/10 p-4 shadow-lg shadow-blue-500/5 transition-colors duration-200">
           {/* Active Attached File Pill inside Prompt Box */}
           {currentAttachment && (
             <div className="flex items-center gap-2 mb-3 p-1.5 pr-2.5 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 w-fit text-xs text-slate-800 dark:text-zinc-200 shadow-2xs animate-in fade-in slide-in-from-bottom-1">
@@ -329,7 +329,7 @@ export function GeminiEmptyState({
                 type="button"
                 disabled={!input.trim() && !currentAttachment}
                 onClick={handleSend}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all shadow-xs cursor-pointer ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors duration-150 shadow-xs cursor-pointer ${
                   input.trim() || currentAttachment
                     ? "bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 cursor-pointer"
                     : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-zinc-600 cursor-not-allowed"
@@ -356,7 +356,7 @@ export function GeminiEmptyState({
             <button
               key={idx}
               onClick={() => onSendMessage(item.prompt)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-medium text-slate-700 dark:text-zinc-300 transition-all shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e1f20] hover:bg-slate-100 dark:hover:bg-[#282a2c] border border-slate-200/80 dark:border-white/10 text-xs font-medium text-slate-700 dark:text-zinc-300 transition-colors duration-150 shadow-xs hover:border-slate-300 dark:hover:border-white/20 cursor-pointer"
             >
               <Icon className="w-3.5 h-3.5 text-blue-500 shrink-0" />
               <span>{item.label}</span>

@@ -1390,7 +1390,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
             {/* Input Box: Sleek, perfectly aligned single-line bar */}
             <div className="relative">
               <div
-                className={`flex items-center gap-2 px-3 py-2 rounded-2xl bg-white dark:bg-[#1e1f20] border transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-2xl bg-white dark:bg-[#1e1f20] border transition-colors duration-150 ${
                   isListening
                     ? "border-rose-500/80 ring-2 ring-rose-500/20 shadow-xs"
                     : "border-slate-200/90 dark:border-white/10 shadow-xs focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10"
@@ -1541,7 +1541,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                       type="button"
                       onClick={() => handleSendMessage()}
                       disabled={!input.trim() && !currentAttachment}
-                      className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed"
+                      className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 flex items-center justify-center transition-colors duration-150 cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed"
                       title="Send message"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
