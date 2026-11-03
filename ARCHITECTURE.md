@@ -263,6 +263,10 @@ flowchart TD
 | **`HITLApprovalCard`** | High-risk refunds, database changes, permissions | 60-second real-time countdown, risk level badges, Approve/Reject callbacks | React hooks, Framer Motion |
 | **`CodeStudioCard`** | Code generation, architectural review | Multi-file tab switcher (Python/TypeScript), copy code, simulated execution console | Monospace fonts, Lucide |
 | **`JobBoardCard`** | Talent search, career recommendations | Dual-source tabs (BDJobs & LinkedIn), salary filters, Gemini interview tips | Tailwind v4, Lucide |
+| **`FlightDetailsCard`** | Aviation search, itineraries | Airline logos, layover timeline, collapsible baggage & refund drawer, one-click booking | Framer Motion, Lucide |
+| **`CurrencyConverterCard`** | Forex, real-time conversion | Reactive live calculation input, currency swap, global benchmark rates, 24h trends | React state, Tailwind v4 |
+| **`YouTubeVideoCard`** | Video suggestions, tutorial streaming | 16:9 embedded inline YouTube iframe player, duration badges, view counts | Framer Motion, Lucide |
+| **`WebsiteLinkCard`** | Authoritative resource recommendations | Live favicon extraction, OG image previews, domain verification badges, copy link | Tailwind v4, Lucide |
 
 ---
 
