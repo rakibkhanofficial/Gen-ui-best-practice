@@ -299,6 +299,24 @@ def resolve_sources_for_query(
             },
         ]
 
+    if tool_name == "search_news" or any(k in p for k in ["news", "headline", "breaking news", "press release"]):
+        return [
+            {
+                "name": "Reuters Global Wire",
+                "domain": "reuters.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=reuters.com&sz=128",
+                "url": "https://www.reuters.com",
+                "status": "Verified Wire Service",
+            },
+            {
+                "name": "TechCrunch & Bloomberg News",
+                "domain": "techcrunch.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=techcrunch.com&sz=128",
+                "url": "https://techcrunch.com",
+                "status": "Technology & Market Editorial",
+            },
+        ]
+
     if tool_name == "search_medicines" or any(k in p for k in ["napa", "xcel", "paracetamol", "medicine"]):
         return [
             {
@@ -654,6 +672,8 @@ async def stream_agent_reasoning(
             "search_places_map": "Locating places & embedding interactive Google Maps",
             "solve_math_problem": "Deriving mathematical solution & LaTeX graph coordinates",
             "search_hotels": "Searching premier luxury hotels, suites & live rates",
+            "search_product_catalog": "Evaluating device specs, benchmarks & hardware comparison",
+            "search_news": "Aggregating real-time breaking headlines, editorial summaries & source reporting",
         }
         friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 
@@ -738,6 +758,57 @@ Formatting guidelines:
                 for word in fallback_code_md.split(" "):
                     yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
                     await asyncio.sleep(0.015)
+
+        elif tool_name == "search_hotels":
+            if component_data.get("is_clarification_needed"):
+                explanation = (
+                    "Where would you like to stay? Please select one of the popular global or local destinations below, "
+                    "or enter any city, region, or country in the world to explore premier stays."
+                )
+            else:
+                loc_name = component_data.get("location") or "your destination"
+                hotel_count = len(component_data.get("hotels", []))
+                explanation = (
+                    f"I have gathered {hotel_count} premier luxury hotels and verified stays in **{loc_name}**. "
+                    "You can switch currency between ৳ BDT and $ USD, filter by 5-star rating or amenities, and reserve your room directly below."
+                )
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
+
+        elif tool_name == "search_product_catalog":
+            is_comp = component_data.get("is_comparison", False)
+            prods = component_data.get("products", [])
+            if is_comp:
+                prod_names = " vs ".join([p.get("name", "") for p in prods]) if prods else "requested devices"
+                explanation = (
+                    f"I have prepared an in-depth side-by-side comparison for **{prod_names}**. "
+                    "Explore the direct specification breakdown, benchmark scores, category winners, and overall purchasing verdict below."
+                )
+            else:
+                p_name = prods[0].get("name", "Flagship Smartphone") if prods else "the product"
+                explanation = (
+                    f"Here is the comprehensive specification breakdown for the **{p_name}**. "
+                    "Review pricing across storage capacities in USD and BDT, interactive color finishes, camera capabilities, and flagship comparisons below."
+                )
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
+
+        elif tool_name == "search_news":
+            feat = component_data.get("featured_article")
+            cat = component_data.get("category") or "Global News"
+            feat_title = feat.get("title", "Breaking News") if feat else "Latest Headlines"
+            source = feat.get("source_name", "Verified Wire Services") if feat else "Wire Services"
+            art_count = len(component_data.get("articles", [])) + (1 if feat else 0)
+            explanation = (
+                f"I have compiled {art_count} verified news reports on **{cat}**. "
+                f"Top story from *{source}*: **{feat_title}**. "
+                "Explore editorial summaries, key takeaways, source links, and follow-up topics below."
+            )
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
 
         else:
             explanation = f"I have prepared the requested interactive **{tool_name.replace('_', ' ').title()}** component below. You can interact directly with the cards, toggle parameters, or review metrics in real-time."

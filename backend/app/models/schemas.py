@@ -109,6 +109,33 @@ class ProductSpec(BaseModel):
     highlight: bool = False
 
 
+class ProductColorOption(BaseModel):
+    name: str
+    hex_code: str
+    label: str
+
+
+class ProductStorageOption(BaseModel):
+    capacity: str
+    price_usd: float
+    price_bdt: float
+
+
+class ComparisonCategoryWinner(BaseModel):
+    category: str        # e.g. "Camera & Video", "Chipset & Speed", "Battery Life", "Display & Glass", "Value"
+    winner_name: str     # e.g. "iPhone 16 Pro"
+    winner_reason: str   # e.g. "4K 120fps Dolby Vision, ProRes Log & dedicated Camera Control button"
+
+
+class ProductComparisonMatrix(BaseModel):
+    title: str
+    verdict: str
+    winner_device_id: str
+    category_winners: List[ComparisonCategoryWinner]
+    recommended_for_a: str
+    recommended_for_b: str
+
+
 class ProductItem(BaseModel):
     id: str
     name: str
@@ -116,14 +143,22 @@ class ProductItem(BaseModel):
     brand: str
     category: str
     price: float
-    currency: str
+    currency: str = "USD ($)"
+    price_bdt: Optional[float] = None
     rating: float
     review_count: int
     image_url: str
     badge: Optional[str] = None
     specs: List[ProductSpec]
     key_features: List[str]
-    in_stock: bool
+    in_stock: bool = True
+    # Enhanced Phone & Tech Specs
+    colors: Optional[List[ProductColorOption]] = None
+    storage_options: Optional[List[ProductStorageOption]] = None
+    pros: Optional[List[str]] = None
+    cons: Optional[List[str]] = None
+    benchmarks: Optional[Dict[str, str]] = None
+    overall_score: Optional[float] = 9.4
 
 
 class ProductCatalogData(BaseModel):
@@ -131,6 +166,9 @@ class ProductCatalogData(BaseModel):
     total_found: int
     highlight_category: str
     products: List[ProductItem]
+    is_comparison: bool = False
+    comparison_matrix: Optional[ProductComparisonMatrix] = None
+    available_competitors: Optional[List[str]] = None
 
 
 # --- 5. Route & Distance Explorer Schemas ---
@@ -547,6 +585,7 @@ class MathSolverData(BaseModel):
 class HotelRoomType(BaseModel):
     name: str
     price_bdt: float
+    price_usd: Optional[float] = None
     bed_type: str
     capacity: str
     features: List[str]
@@ -562,6 +601,7 @@ class HotelItem(BaseModel):
     rating: float     # 4.8
     review_count: int # 2450
     price_per_night_bdt: float
+    price_per_night_usd: Optional[float] = None
     image_url: str
     amenities: List[str]  # ["Free WiFi", "Swimming Pool", "Airport Shuttle", "Breakfast Included", "Spa & Wellness", "Gym"]
     featured_badge: Optional[str] = None  # "Top Luxury", "Near Airport", "Best Value"
@@ -573,12 +613,58 @@ class HotelItem(BaseModel):
     distance_to_center_km: Optional[float] = None
 
 
+class HotelDestinationSuggestion(BaseModel):
+    id: str
+    name: str
+    country: str
+    flag: str
+    tagline: str
+    image_url: Optional[str] = None
+    popular_stay: Optional[str] = None
+
+
 class HotelSearchData(BaseModel):
     query: str
     location: str
-    check_in: str
-    check_out: str
+    check_in: str = "Tomorrow"
+    check_out: str = "In 2 days"
     guests: int = 2
-    total_results: int
-    hotels: List[HotelItem]
-    price_range_summary: str
+    total_results: int = 0
+    hotels: List[HotelItem] = Field(default_factory=list)
+    price_range_summary: str = ""
+    is_clarification_needed: bool = False
+    clarification_title: Optional[str] = "Where would you like to stay?"
+    clarification_message: Optional[str] = "Please specify a destination city, region, or country to find top-rated luxury hotels and verified stays."
+    suggested_destinations: Optional[List[HotelDestinationSuggestion]] = None
+
+
+# --- 18. Real-time News & Breaking Stories Schemas ---
+class NewsArticle(BaseModel):
+    id: str
+    title: str
+    summary: str
+    content_snippet: str
+    source_name: str
+    source_url: str = "https://news.google.com"
+    source_icon: Optional[str] = "📰"
+    author: Optional[str] = "Staff Correspondent"
+    published_at: str
+    category: str
+    image_url: str
+    read_time_minutes: int = 3
+    key_takeaways: List[str] = Field(default_factory=list)
+    sentiment: str = "Neutral"
+    sentiment_label: Optional[str] = "Market Watch"
+    tags: List[str] = Field(default_factory=list)
+
+
+class NewsSearchData(BaseModel):
+    query: str
+    category: str = "All"
+    total_results: int = 0
+    breaking_alert: Optional[str] = None
+    featured_article: Optional[NewsArticle] = None
+    articles: List[NewsArticle] = Field(default_factory=list)
+    trending_topics: List[str] = Field(default_factory=list)
+    suggested_followups: List[str] = Field(default_factory=list)
+    last_updated: str = "Just now"

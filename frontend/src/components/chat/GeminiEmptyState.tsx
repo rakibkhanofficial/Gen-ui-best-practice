@@ -27,6 +27,8 @@ import {
   Sprout,
   MapPin,
   Calculator,
+  Building2,
+  Newspaper,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -117,6 +119,16 @@ export function GeminiEmptyState({
       icon: Calculator,
       label: "Math Quadratic Solver",
       prompt: "Solve quadratic equation x^2 - x - 6 = 0 step by step",
+    },
+    {
+      icon: Building2,
+      label: "Premier Hotels",
+      prompt: "Find premier luxury hotels and resorts with live rates",
+    },
+    {
+      icon: Newspaper,
+      label: "Editorial News Wire",
+      prompt: "Show the latest breaking tech and AI news",
     },
     {
       icon: Plane,

@@ -27,6 +27,7 @@ from app.agent.tools.agri_tool import search_agri_products
 from app.agent.tools.map_tool import search_places_map
 from app.agent.tools.math_tool import solve_math_problem
 from app.agent.tools.hotel_tool import search_hotels
+from app.agent.tools.news_tool import search_news
 
 logger = logging.getLogger("genui.agent")
 
@@ -54,6 +55,7 @@ TOOL_REGISTRY = {
     "search_places_map": search_places_map,
     "solve_math_problem": solve_math_problem,
     "search_hotels": search_hotels,
+    "search_news": search_news,
 }
 
 
@@ -106,11 +108,11 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "search_product_catalog",
-                "description": "Search e-commerce tech product catalog and compare specifications, pricing, and ratings side-by-side.",
+                "description": "Search smartphones, flagship devices, laptops, and tech products. Provides deep technical specifications, colors, storage options, and side-by-side comparison matrices with category winners.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "Search query or category, e.g. 'MacBook M4', 'AI Workstation'"}
+                        "query": {"type": "string", "description": "Product name or comparison query, e.g. 'iPhone 16 Pro details', 'iPhone 16 Pro vs Samsung Galaxy S24 Ultra'"}
                     },
                     "required": ["query"]
                 }
@@ -271,12 +273,27 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "search_hotels",
-                "description": "Find premier luxury hotels, resorts, boutique stays, nightly pricing, and amenities in Dhaka, Bangladesh, or globally.",
+                "description": "Find premier luxury hotels, resorts, boutique stays, nightly pricing, and amenities for any city, region, or country worldwide. If user has not specified a destination, pass an empty location to trigger interactive clarification.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "location": {"type": "string", "description": "City or neighborhood, e.g. 'Dhaka', 'Gulshan', 'Cox\\'s Bazar'"}
+                        "location": {"type": "string", "description": "City, region, or country name, e.g. 'Paris', 'Tokyo', 'Cox\\'s Bazar', or empty string if unspecified."}
                     }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_news",
+                "description": "Searches real-time news articles, breaking headlines, and editorial briefings across tech, AI, business, financial markets, science, space, and world affairs.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Specific news topic, keyword, or query (e.g. 'latest AI news', 'NVIDIA Blackwell news', 'SpaceX news', 'Bangladesh economy')."},
+                        "category": {"type": "string", "description": "Optional category filter: 'All', 'Technology & AI', 'Business & Markets', 'Science & Space', 'Bangladesh', 'World'."}
+                    },
+                    "required": ["query"]
                 }
             }
         }
@@ -304,6 +321,7 @@ class ToolCallDecision(BaseModel):
         "search_places_map",
         "solve_math_problem",
         "search_hotels",
+        "search_news",
         "none"
     ]
     query: Optional[str] = None
@@ -347,8 +365,9 @@ Available interactive tools:
 - search_jobs(query): For tech jobs, hiring, vacancies on BDJobs/LinkedIn.
 - convert_currency(from_currency, to_currency, amount): For currency exchange and forex.
 - calculate_route_distance(origin, destination): For driving distances, travel routes, directions, maps, OpenStreetMap navigation between places (e.g. Mohakhali to Airport Road).
-- search_hotels(location): For finding luxury 5-star hotels, resorts, boutique stays, room rates, amenities, and hotel booking in Dhaka, Bangladesh, or globally.
-- search_product_catalog(query): For comparing hardware, laptops, MacBooks, gadgets, specs.
+- search_hotels(location): For finding luxury 5-star hotels, resorts, boutique stays, room rates, amenities, and hotel booking in any city, region, or country worldwide. If the user does not specify a location, call search_hotels(location="") so an interactive destination clarification card is presented.
+- search_product_catalog(query): For inspecting smartphone specs (e.g. iPhone 16 Pro, Galaxy S24 Ultra, Pixel 9 Pro), flagship hardware, prices in USD and BDT, colors, storage options, and side-by-side device comparison matrices with category winners.
+- search_news(query, category): For real-time news articles, breaking headlines, tech & AI developments, financial markets, and global news stories.
 - request_sensitive_action(reason): For human-in-the-loop approvals (refunds, prod deploys).
 - schedule_meeting(reason, duration_minutes): For booking time slots, calendar availability, Google Meet scheduling.
 - fetch_website_info(query): For recommending authoritative websites, developer portals, URLs.
@@ -441,7 +460,13 @@ Decide the most appropriate tool to display interactive GenUI component for the 
             args["origin"] = data.get("origin") or "Mohakhali, Dhaka"
             args["destination"] = data.get("destination") or "Airport Road, Dhaka"
         elif tool == "search_hotels":
-            args["location"] = data.get("location") or "Dhaka, Bangladesh"
+            raw_loc = (data.get("location") or data.get("city") or data.get("destination") or "").strip()
+            if raw_loc.lower() in ["any", "anywhere", "hotel", "hotels", "stay", "resort", "unspecified", "none"]:
+                raw_loc = ""
+            args["location"] = raw_loc
+        elif tool == "search_news":
+            args["query"] = data.get("query") or prompt
+            args["category"] = data.get("category") or "All"
         elif tool == "request_sensitive_action":
             args["action_type"] = "customer_refund"
             args["target_id"] = "ORD-8921"
@@ -651,10 +676,11 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
                 break
         return {"tool": "get_sales_analytics", "args": {"quarter": quarter, "year": 2026}}
 
-    # 10. Hardware product catalog comparison
+    # 10. Hardware product catalog & smartphone specs / comparison
     if (
-        re.search(r"\b(macbook|thinkpad|dell\s*xps|laptop\s*specs|compare\s*laptops?|hardware\s*specs|product\s*catalog|macbook\s*vs)\b", p) or
-        (re.search(r"\bcompare\b", p) and re.search(r"\b(m3|m4|laptop|specs|macbook|thinkpad)\b", p))
+        re.search(r"\b(iphone|galaxy|s24|pixel\s*[789]|oneplus|xiaomi|macbook|thinkpad|dell\s*xps|smartphone|flagship\s*phone|mobile\s*specs|phone\s*specs|phone\s*details|compare\s*phones?|hardware\s*specs|product\s*catalog|macbook\s*vs|iphone\s*vs)\b", p) or
+        (re.search(r"\b(specs|specifications|details|features|price|pricing)\b", p) and re.search(r"\b(iphone|samsung|galaxy|pixel|oneplus|phone|macbook|laptop|m4|s24)\b", p)) or
+        (re.search(r"\b(compare|vs|versus)\b", p) and re.search(r"\b(iphone|samsung|galaxy|pixel|oneplus|phone|laptop|macbook|thinkpad|s24)\b", p))
     ):
         return {"tool": "search_product_catalog", "args": {"query": prompt}}
 
@@ -742,21 +768,78 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
         p_type = "Calculus" if any(k in p for k in ["deriv", "calculus", "integral", "diff"]) else "Algebra"
         return {"tool": "solve_math_problem", "args": {"expression": prompt, "problem_type": p_type}}
 
-    # 18. Hotel Booking & Resort Directory (Dhaka, Cox's Bazar, Gulshan, near me, etc.)
+    # 18. Hotel Booking & Resort Directory (Any location worldwide, or interactive clarification if none provided)
     if (
         re.search(r"\b(hotels?|resorts?|motels?|guest\s*houses?|luxury\s*hotel|boutique\s*hotel|hotel\s*rooms?|hotel\s*rates?|hotel\s*price|stay\s+at\s+hotel|book\s+hotel|hotels?\s+in\b|hotels?\s+near\s+me)\b", p) or
         (re.search(r"\b(find|search|show|recommend|book|top|best)\b", p) and re.search(r"\b(hotel|resort|stay|suite)\b", p))
     ):
-        loc = "Dhaka, Bangladesh"
-        for candidate_city in ["cox's bazar", "coxs bazar", "cox bazar", "gulshan", "banani", "uttara", "chittagong", "sylhet", "tokyo", "dubai", "london", "singapore", "bangkok", "new york"]:
-            if candidate_city in p:
-                loc = candidate_city.title() + (", Bangladesh" if candidate_city in ["cox's bazar", "coxs bazar", "cox bazar", "gulshan", "banani", "uttara", "chittagong", "sylhet"] else "")
-                break
+        loc = ""
+        non_loc_tokens = {
+            "me", "us", "some", "luxury", "good", "nice", "any", "premier", "cheap", "popular", "great",
+            "best", "top", "5-star", "5", "star", "vacation", "weekend", "family", "business", "boutique",
+            "recommended", "recommendations", "booking", "stays", "stay", "hotel", "hotels", "resort", "resorts",
+            "room", "rooms", "places", "place", "where", "what", "options", "option", "show", "find", "get",
+            "a", "an", "the", "for", "with", "at", "to", "my", "our", "trip", "tour", "view", "rates"
+        }
 
-        if "near me" in p or "this location" in p or "current location" in p or "current region" in p:
+        # Pattern 1: "hotels in Paris", "resorts near Inani Beach", "hotels at Gulshan", "hotels around Bali"
+        m_in = re.search(r"\b(?:hotels?|resorts?|motels?|stays?|luxury\s+hotel)\s+(?:in|at|near|around|for)\s+([a-zA-Z\s,'\-\.]+?)(?:\s+(?:for|with|from|on|check|next|tomorrow|\d|\?|$)|$)", p)
+        if m_in:
+            cand = m_in.group(1).strip()
+            cand_tokens = [t.strip(",. ") for t in cand.lower().split() if t.strip(",. ")]
+            if cand_tokens and not all(t in non_loc_tokens for t in cand_tokens):
+                # Filter out leading non-loc words
+                meaningful = [t for t in cand.split() if t.lower().strip(",. ") not in {"a", "an", "the", "some", "my", "our", "good", "best", "top", "luxury", "5-star"}]
+                if meaningful:
+                    loc = " ".join(meaningful).strip(",. ").title()
+
+        # Pattern 2: "Paris hotels", "Tokyo resorts", "Cox's Bazar luxury hotel"
+        if not loc:
+            m_pre = re.search(r"\b([a-zA-Z\s,'\-\.]+?)\s+(?:hotels?|resorts?|luxury\s+hotel)\b", p)
+            if m_pre:
+                cand = m_pre.group(1).strip()
+                cand_tokens = [t.strip(",. ") for t in cand.lower().split() if t.strip(",. ")]
+                if cand_tokens and not all(t in non_loc_tokens for t in cand_tokens):
+                    meaningful = [t for t in cand.split() if t.lower().strip(",. ") not in non_loc_tokens]
+                    if meaningful:
+                        loc = " ".join(meaningful).strip(",. ").title()
+
+        # Pattern 3: Comprehensive recognized destinations list
+        if not loc:
+            known_destinations = [
+                "paris", "tokyo", "dubai", "cox's bazar", "coxs bazar", "cox bazar", "inani",
+                "bali", "new york", "london", "sylhet", "sreemangal", "dhaka", "gulshan", "banani",
+                "uttara", "chittagong", "bangkok", "singapore", "rome", "switzerland", "maldives",
+                "toronto", "amsterdam", "sydney", "barcelona", "kuala lumpur", "istanbul", "kyoto",
+                "cairo", "san francisco", "los angeles", "berlin", "vienna", "venice", "santorini"
+            ]
+            for kd in known_destinations:
+                if kd in p:
+                    loc = kd.title() + (", Bangladesh" if kd in ["cox's bazar", "coxs bazar", "cox bazar", "inani", "gulshan", "banani", "uttara", "chittagong", "sylhet", "sreemangal", "dhaka"] else "")
+                    break
+
+        if "near me" in p or "this location" in p or "current location" in p:
             loc = "Dhaka, Bangladesh"
 
+        # If user explicitly asked without specifying any location, loc remains ""
+        # which triggers interactive clarification HITL component!
         return {"tool": "search_hotels", "args": {"location": loc}}
+
+    # 19. Real-Time News, Breaking Headlines & Editorial Reports
+    if (
+        re.search(r"\b(news|headlines?|breaking\s*news|latest\s*update\s*on|what('s|\s+is)\s+happening|current\s*events|press\s*release|top\s*stories|daily\s*briefing|news\s*feed|wire\s*service)\b", p) or
+        (re.search(r"\b(latest|breaking|today'?s|recent)\b", p) and re.search(r"\b(news|updates?|reports?|stories)\b", p))
+    ):
+        cat = "All"
+        if any(k in p for k in ["tech", "ai", "artificial intelligence", "gemini", "deepmind", "gpu", "nvidia", "software", "apple"]):
+            cat = "Technology & AI"
+        elif any(k in p for k in ["business", "finance", "market", "stocks", "wall street", "economy", "fed", "inflation"]):
+            cat = "Business & Markets"
+        elif any(k in p for k in ["space", "spacex", "starship", "nasa", "science", "fusion", "quantum"]):
+            cat = "Science & Space"
+        elif any(k in p for k in ["bangladesh", "dhaka", "bd"]):
+            cat = "Bangladesh"
+        return {"tool": "search_news", "args": {"query": prompt, "category": cat}}
 
     return None
 

@@ -70,6 +70,7 @@ import { AgriProductCard } from "@/components/gen-ui/AgriProductCard";
 import { GoogleMapCard } from "@/components/gen-ui/GoogleMapCard";
 import { MathSolverCard } from "@/components/gen-ui/MathSolverCard";
 import { HotelBookingCard } from "@/components/gen-ui/HotelBookingCard";
+import { NewsCard } from "@/components/gen-ui/NewsCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -1128,7 +1129,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       case "generate_planning_board":
         return <PlanningBoard data={genui.data} isLiveStreaming={isLastMessageStreaming || genui.data?.is_live_generating} />;
       case "search_product_catalog":
-        return <ProductCatalogCard data={genui.data} />;
+        return (
+          <ProductCatalogCard
+            data={genui.data}
+            onTriggerQuery={(q: string) => handleSendMessage(q)}
+          />
+        );
       case "calculate_route_distance":
         return <RouteDistanceCard data={genui.data} />;
       case "request_sensitive_action":
@@ -1163,7 +1169,19 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       case "solve_math_problem":
         return <MathSolverCard data={genui.data} />;
       case "search_hotels":
-        return <HotelBookingCard data={genui.data} />;
+        return (
+          <HotelBookingCard
+            data={genui.data}
+            onSelectDestination={(destQuery: string) => handleSendMessage(destQuery)}
+          />
+        );
+      case "search_news":
+        return (
+          <NewsCard
+            data={genui.data}
+            onTriggerQuery={(q: string) => handleSendMessage(q)}
+          />
+        );
       default:
         return (
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs">
