@@ -1,3 +1,5 @@
+export PATH := $(HOME)/.nvm/versions/node/v25.8.0/bin:/Users/rakibkhan/.local/bin:/Users/rakibkhan/.cargo/bin:$(PATH)
+
 .PHONY: help install dev dev-deps docker-local docker-prod docker-down backend frontend test clean
 
 help:

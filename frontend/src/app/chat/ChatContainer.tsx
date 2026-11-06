@@ -768,6 +768,9 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       fetch(`/api/chat/sessions/${sessionId}?user_id=${encodeURIComponent(user.id)}`, {
         method: "DELETE",
       }).catch(() => {});
+      fetch(`/api/copilotkit/threads/${sessionId}`, {
+        method: "DELETE",
+      }).catch(() => {});
     } catch {}
 
     if (activeSessionId === sessionId) {
@@ -784,6 +787,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     saveSessionsList(user.id, updated);
 
     fetch(`/api/chat/sessions/${sessionId}?user_id=${encodeURIComponent(user.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTitle }),
+    }).catch(() => {});
+
+    fetch(`/api/copilotkit/threads/${sessionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: newTitle }),
@@ -909,6 +918,19 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     const newMessages = [...messages, userMessage, initialAssistantMessage];
     setMessages(newMessages);
     saveSessionMessages(user.id, currentSessionId, newMessages);
+
+    // Sync User turn to CopilotKit thread for telemetry & analytics
+    try {
+      fetch(`/api/copilotkit/threads/${currentSessionId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: userTurnId,
+          role: "user",
+          content: messageContent,
+        }),
+      }).catch(() => {});
+    } catch {}
 
     setInput("");
     const attachmentToSubmit = currentAttachment;
@@ -1039,6 +1061,21 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         }
         return updated;
       });
+
+      // Sync Assistant turn to CopilotKit thread for telemetry & analytics
+      if (accumulatedContent) {
+        try {
+          fetch(`/api/copilotkit/threads/${currentSessionId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: asstTurnId,
+              role: "assistant",
+              content: accumulatedContent,
+            }),
+          }).catch(() => {});
+        } catch {}
+      }
     } catch (err: any) {
       if (err.name === "AbortError") {
         setMessages((prev) => {
