@@ -67,6 +67,10 @@ def analyze_document(
             f"Status: Validated.\nTotal pages: {page_count}\nExtracted text stream verified."
         ),
         "download_url": f"/api/files/{filename}",
+        "minio_url": f"http://localhost:9000/genui-uploads/{filename}",
+        "s3_uri": f"s3://genui-uploads/{filename}",
+        "silo_bucket": "genui-uploads",
+        "stored_in_silo": True,
         "processed_at": "Just now",
     }
 
@@ -115,6 +119,10 @@ def analyze_image(
         "detected_labels": detected_labels,
         "dominant_colors": dominant_colors,
         "ocr_extracted_text": prompt or "Gen UI Best Practice • CopilotKit & Antigravity SDK",
+        "minio_url": f"http://localhost:9000/genui-uploads/{filename}",
+        "s3_uri": f"s3://genui-uploads/{filename}",
+        "silo_bucket": "genui-uploads",
+        "stored_in_silo": True,
         "processed_at": "Just now",
     }
 

@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import { CopilotKit } from "@copilotkit/react-core/v2";
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
 import {
   FullPageChatSkeleton,
   FullPageEmptyChatSkeleton,
@@ -27,14 +27,12 @@ export default function ChatLayout({
 
   return (
     <Suspense fallback={<FallbackSkeleton />}>
-      <CopilotKit
+      <CopilotKitProvider
         runtimeUrl="/api/copilotkit"
         publicApiKey={publicApiKey}
-        transcribeAudioUrl="/api/copilotkit/transcribe"
-        enableInspector={true}
       >
         {children}
-      </CopilotKit>
+      </CopilotKitProvider>
     </Suspense>
   );
 }

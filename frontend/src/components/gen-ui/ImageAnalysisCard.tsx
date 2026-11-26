@@ -28,6 +28,9 @@ export interface ImageAnalysisData {
   detected_labels: Array<{ label: string; confidence: number }>;
   dominant_colors: Array<{ name: string; hex: string }>;
   ocr_extracted_text?: string;
+  minio_url?: string;
+  s3_uri?: string;
+  silo_bucket?: string;
   processed_at?: string;
 }
 
@@ -67,6 +70,9 @@ export function ImageAnalysisCard({ data }: ImageAnalysisCardProps) {
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold">
                 {data.format}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800">
+                Silo MinIO
               </span>
             </div>
             <span className="text-[11px] text-slate-400 dark:text-zinc-500 block truncate">

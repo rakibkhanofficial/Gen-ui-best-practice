@@ -91,7 +91,7 @@ export function FileUploadZone({ onFileUploaded, onClose }: FileUploadZoneProps)
       <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10 mb-3">
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-          <h4 className="text-xs font-bold text-slate-900 dark:text-white">Upload Dataset or Image</h4>
+          <h4 className="text-xs font-bold text-slate-900 dark:text-white">Upload to Silo MinIO Storage</h4>
         </div>
         {onClose && (
           <button
@@ -119,7 +119,7 @@ export function FileUploadZone({ onFileUploaded, onClose }: FileUploadZoneProps)
           ref={fileInputRef}
           type="file"
           onChange={handleFileChange}
-          accept=".xlsx,.xls,.csv,image/*"
+          accept=".pdf,.doc,.docx,.txt,.md,.xlsx,.xls,.csv,image/*"
           className="hidden"
         />
 
@@ -128,10 +128,10 @@ export function FileUploadZone({ onFileUploaded, onClose }: FileUploadZoneProps)
         </div>
 
         <p className="text-xs font-semibold text-slate-900 dark:text-white">
-          {isUploading ? "Uploading & parsing with pandas..." : "Click to select or drag & drop"}
+          {isUploading ? "Uploading to Silo MinIO (S3)..." : "Click to select or drag & drop"}
         </p>
         <p className="text-[11px] text-slate-500 dark:text-[#9aa0a6] mt-1">
-          Supports Excel (.xlsx, .xls), CSV, or PNG/JPEG image files
+          Supports Documents (PDF, Word, TXT), Images (PNG, JPG, SVG), &amp; Spreadsheets (Excel, CSV)
         </p>
       </div>
 

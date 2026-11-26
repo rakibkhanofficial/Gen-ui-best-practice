@@ -5,6 +5,7 @@ import os
 
 class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     BACKEND_PORT: int = 8000
     DATABASE_URL: str = "postgresql://postgres:postgrespassword@localhost:5432/genui_db"
     REDIS_URL: str = "redis://localhost:6379/0"

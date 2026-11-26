@@ -27,6 +27,9 @@ export interface DocumentAnalysisData {
   topics: string[];
   preview_text: string;
   download_url?: string;
+  minio_url?: string;
+  s3_uri?: string;
+  silo_bucket?: string;
   processed_at?: string;
 }
 
@@ -66,6 +69,9 @@ export function DocumentAnalysisCard({ data }: DocumentAnalysisCardProps) {
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold">
                 {data.file_type}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800">
+                Silo MinIO
               </span>
             </div>
             <span className="text-[11px] text-slate-400 dark:text-zinc-500 block truncate">

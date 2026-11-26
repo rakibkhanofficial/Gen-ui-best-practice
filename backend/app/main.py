@@ -21,7 +21,7 @@ from app.services.excel_service import (
     create_sample_sales_excel,
     parse_sales_excel
 )
-from app.services.silo_service import upload_to_silo
+from app.services.silo_service import upload_to_silo, list_silo_objects, get_silo_stats
 from app.services.gemini_service import stream_agent_reasoning
 from app.services.db_service import init_db, save_uploaded_file, get_uploaded_file
 
@@ -91,7 +91,7 @@ def root():
     return {
         "status": "online",
         "service": "Generative UI Agent Engine",
-        "model": "gemini-3.8-flash",
+        "model": settings.GEMINI_MODEL,
         "frameworks": ["Google Antigravity SDK", "FastAPI", "CopilotKit Runtime", "UV"],
         "endpoints": [
             "/api/health",
@@ -110,7 +110,7 @@ def root():
 def health_check():
     return {
         "status": "healthy",
-        "model": "gemini-3.8-flash",
+        "model": settings.GEMINI_MODEL,
         "gemini_api_key_configured": bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your_gemini_api_key_here"),
         "available_tools": list(TOOL_REGISTRY.keys()),
         "architecture": "Google Antigravity SDK + CopilotKit GenUI"
@@ -120,6 +120,18 @@ def health_check():
 @app.get("/api/tools")
 def list_tools():
     return {"tools": get_available_tools_schema()}
+
+
+@app.get("/api/silo/stats")
+def silo_stats_endpoint():
+    """Returns overview statistics of Silo MinIO object storage."""
+    return get_silo_stats()
+
+
+@app.get("/api/silo/files")
+def silo_files_endpoint(prefix: str = ""):
+    """Lists files archived in Silo MinIO object storage."""
+    return {"files": list_silo_objects(prefix=prefix)}
 
 
 @app.post("/api/tools/execute")
@@ -276,10 +288,19 @@ async def chat_stream_endpoint(payload: StreamChatRequest):
         "timestamp": now_iso
     })
 
+    # Resolve attachment path for file analysis
+    resolved_attachment_path = payload.attachment_path
+    if not resolved_attachment_path and payload.attachment:
+        resolved_attachment_path = payload.attachment.get("filePath") or payload.attachment.get("filename")
+    if resolved_attachment_path and not os.path.isabs(resolved_attachment_path):
+        candidate = os.path.join(UPLOAD_DIR, resolved_attachment_path)
+        if os.path.exists(candidate):
+            resolved_attachment_path = candidate
+
     async def event_generator():
         async for sse_chunk in stream_agent_reasoning(
             prompt=payload.message,
-            attachment_path=payload.attachment_path,
+            attachment_path=resolved_attachment_path,
             history=payload.history
         ):
             yield sse_chunk
@@ -358,9 +379,13 @@ def update_user_session(session_id: str, payload: UpdateSessionRequest, user_id:
 def get_session_history(session_id: str, user_id: str = "guest_default"):
     """Returns conversation history for a specific session of this user."""
     user_data = USER_SESSIONS.get(user_id, {})
-    if session_id not in user_data:
-        return {"session_id": session_id, "user_id": user_id, "turns": []}
-    return user_data[session_id]
+    if session_id in user_data:
+        return user_data[session_id]
+    # Check any other user sessions on backend
+    for u_id, sessions in USER_SESSIONS.items():
+        if session_id in sessions:
+            return sessions[session_id]
+    return {"session_id": session_id, "user_id": user_id, "turns": []}
 
 
 @app.delete("/api/chat/sessions/{session_id}")

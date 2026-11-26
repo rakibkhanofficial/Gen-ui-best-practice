@@ -71,6 +71,7 @@ import { GoogleMapCard } from "@/components/gen-ui/GoogleMapCard";
 import { MathSolverCard } from "@/components/gen-ui/MathSolverCard";
 import { HotelBookingCard } from "@/components/gen-ui/HotelBookingCard";
 import { NewsCard } from "@/components/gen-ui/NewsCard";
+import { SiloStorageCard } from "@/components/gen-ui/SiloStorageCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -188,6 +189,39 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, [authStatus, authSession]);
 
+  // Robust helper to retrieve messages across current user and previous guest sessions
+  const getStoredMessages = useCallback((userId: string, sessionId: string): MessageItem[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      // 1. Direct match with current user key
+      const directKey = getUserMessagesKey(userId, sessionId);
+      const directVal = localStorage.getItem(directKey);
+      if (directVal) {
+        const parsed = JSON.parse(directVal);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+
+      // 2. Fallback: Search all keys in localStorage matching this sessionId
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.endsWith(`_${sessionId}`) || k.includes(`_${sessionId}`))) {
+          const val = localStorage.getItem(k);
+          if (val) {
+            try {
+              const parsed = JSON.parse(val);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                // Link to current user's session storage
+                localStorage.setItem(directKey, val);
+                return parsed;
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+    return [];
+  }, []);
+
   const loadUserSessions = async (userId: string) => {
     setIsLoadingSessions(true);
     let localSessions: ChatSession[] = [];
@@ -196,8 +230,50 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       const stored = localStorage.getItem(key);
       if (stored) {
         localSessions = JSON.parse(stored);
-        setSessions(localSessions);
       }
+
+      // Also gather any sessions from other guest keys in localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("genui_sessions_") && k !== key) {
+          const val = localStorage.getItem(k);
+          if (val) {
+            try {
+              const otherSessions = JSON.parse(val);
+              if (Array.isArray(otherSessions)) {
+                otherSessions.forEach((os: ChatSession) => {
+                  if (!localSessions.some((s) => s.id === os.id)) {
+                    localSessions.push(os);
+                  }
+                });
+              }
+            } catch {}
+          }
+        }
+      }
+
+      // If initialChatId exists but not in localSessions, recover it
+      if (initialChatId && !localSessions.some((s) => s.id === initialChatId)) {
+        const foundMsgs = getStoredMessages(userId, initialChatId);
+        const titleCandidate =
+          foundMsgs.length > 0 && foundMsgs[0].content
+            ? (foundMsgs[0].content.length > 32
+                ? `${foundMsgs[0].content.slice(0, 30)}...`
+                : foundMsgs[0].content)
+            : `Chat ${initialChatId.slice(0, 8)}`;
+        localSessions.unshift({
+          id: initialChatId,
+          title: titleCandidate,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          turnsCount: foundMsgs.length || 1,
+          userId: userId,
+          userType: "guest",
+        });
+      }
+
+      setSessions(localSessions);
+      saveSessionsList(userId, localSessions);
     } catch {}
 
     try {
@@ -661,24 +737,35 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       setActiveSessionId(initialChatId);
       setActiveChatCookie(initialChatId);
 
-      const msgsKey = getUserMessagesKey(user.id, initialChatId);
-      try {
-        const stored = localStorage.getItem(msgsKey);
-        if (stored) {
-          setMessages(JSON.parse(stored));
-        } else {
-          setMessages([]);
-        }
-      } catch {
-        setMessages([]);
+      const msgs = getStoredMessages(user.id, initialChatId);
+      if (msgs.length > 0) {
+        setMessages(msgs);
+        setIsLoadingSession(false);
+      } else {
+        // Fallback: check remote backend
+        fetch(`/api/chat/sessions/${initialChatId}?user_id=${encodeURIComponent(user.id)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data && Array.isArray(data.turns) && data.turns.length > 0) {
+              setMessages(data.turns);
+              saveSessionMessages(user.id, initialChatId, data.turns);
+            } else {
+              setMessages([]);
+            }
+          })
+          .catch(() => {
+            setMessages([]);
+          })
+          .finally(() => {
+            setIsLoadingSession(false);
+          });
       }
-      setIsLoadingSession(false);
     } else {
       setActiveSessionId(null);
       setMessages([]);
       setIsLoadingSession(false);
     }
-  }, [initialChatId, user]);
+  }, [initialChatId, user, getStoredMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -729,15 +816,21 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     // Smooth skeleton shimmer transition before rendering the session messages
     setTimeout(() => {
       if (user) {
-        try {
-          const stored = localStorage.getItem(getUserMessagesKey(user.id, sessionId));
-          if (stored) {
-            setMessages(JSON.parse(stored));
-          } else {
-            setMessages([]);
-          }
-        } catch {
-          setMessages([]);
+        const msgs = getStoredMessages(user.id, sessionId);
+        if (msgs.length > 0) {
+          setMessages(msgs);
+        } else {
+          fetch(`/api/chat/sessions/${sessionId}?user_id=${encodeURIComponent(user.id)}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data && Array.isArray(data.turns) && data.turns.length > 0) {
+                setMessages(data.turns);
+                saveSessionMessages(user.id, sessionId, data.turns);
+              } else {
+                setMessages([]);
+              }
+            })
+            .catch(() => setMessages([]));
         }
       }
       setIsLoadingSession(false);
@@ -1182,6 +1275,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
             onTriggerQuery={(q: string) => handleSendMessage(q)}
           />
         );
+      case "explore_silo_storage":
+      case "manage_silo_storage":
+        return (
+          <SiloStorageCard
+            data={genui.data}
+            onTriggerQuery={(q: string) => handleSendMessage(q)}
+          />
+        );
       default:
         return (
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs">
@@ -1231,7 +1332,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         <input
           ref={docInputRef}
           type="file"
-          accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json,application/pdf"
+          accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json,image/*,application/*"
           className="hidden"
           style={{ display: "none" }}
           onChange={(e) => {
@@ -1633,6 +1734,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
               </div>
             )}
 
+            {/* Uploading progress indicator */}
+            {isUploading && (
+              <div className="mb-2 p-2 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 flex items-center gap-2 max-w-fit shadow-xs text-xs text-blue-600 dark:text-blue-300">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                <span className="font-medium">Uploading to MinIO storage via backend...</span>
+              </div>
+            )}
+
             {/* Input Box: Sleek, perfectly aligned single-line bar */}
             <div className="relative">
               <div
@@ -1642,6 +1751,17 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                     : "border-slate-200/90 dark:border-white/10 shadow-xs focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10"
                 }`}
               >
+                {/* Direct Paperclip File Upload Button (Uploads to MinIO via Backend API) */}
+                <button
+                  type="button"
+                  onClick={() => docInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer shrink-0"
+                  title="Attach file (Uploads to MinIO via backend API)"
+                >
+                  <Paperclip className="w-3.5 h-3.5" />
+                </button>
+
                 {/* Left: Plus (+) Button for Native File & Gallery Picker */}
                 <div ref={attachMenuRef} className="relative shrink-0 flex items-center">
                   <button

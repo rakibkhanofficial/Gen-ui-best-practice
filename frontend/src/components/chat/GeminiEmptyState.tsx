@@ -29,6 +29,7 @@ import {
   Calculator,
   Building2,
   Newspaper,
+  HardDrive,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -129,6 +130,11 @@ export function GeminiEmptyState({
       icon: Newspaper,
       label: "Editorial News Wire",
       prompt: "Show the latest breaking tech and AI news",
+    },
+    {
+      icon: HardDrive,
+      label: "Silo MinIO Storage",
+      prompt: "Show all files stored in Silo MinIO object storage",
     },
     {
       icon: Plane,

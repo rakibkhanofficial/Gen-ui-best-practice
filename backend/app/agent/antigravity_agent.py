@@ -28,6 +28,7 @@ from app.agent.tools.map_tool import search_places_map
 from app.agent.tools.math_tool import solve_math_problem
 from app.agent.tools.hotel_tool import search_hotels
 from app.agent.tools.news_tool import search_news
+from app.agent.tools.silo_tool import explore_silo_storage
 
 logger = logging.getLogger("genui.agent")
 
@@ -56,6 +57,7 @@ TOOL_REGISTRY = {
     "solve_math_problem": solve_math_problem,
     "search_hotels": search_hotels,
     "search_news": search_news,
+    "explore_silo_storage": explore_silo_storage,
 }
 
 
@@ -296,6 +298,20 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     "required": ["query"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "explore_silo_storage",
+                "description": "Explores, inspects, and manages documents, images, and files stored in Silo MinIO S3 object storage.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Optional search term to filter stored files by name or type."},
+                        "file_type": {"type": "string", "description": "Filter by type: 'all', 'document', 'image', or 'spreadsheet'."}
+                    }
+                }
+            }
         }
     ]
 
@@ -322,6 +338,7 @@ class ToolCallDecision(BaseModel):
         "solve_math_problem",
         "search_hotels",
         "search_news",
+        "explore_silo_storage",
         "none"
     ]
     query: Optional[str] = None
@@ -467,6 +484,9 @@ Decide the most appropriate tool to display interactive GenUI component for the 
         elif tool == "search_news":
             args["query"] = data.get("query") or prompt
             args["category"] = data.get("category") or "All"
+        elif tool == "explore_silo_storage":
+            args["query"] = data.get("query") or ""
+            args["file_type"] = data.get("file_type") or "all"
         elif tool == "request_sensitive_action":
             args["action_type"] = "customer_refund"
             args["target_id"] = "ORD-8921"
@@ -484,6 +504,20 @@ Decide the most appropriate tool to display interactive GenUI component for the 
 def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     """Priority-ordered, regex-bounded heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
     p = prompt.lower().strip()
+
+    # -1. Silo MinIO Object Storage & Stored Files Explorer
+    if (
+        re.search(r"\b(silo|minio|object\s*storage|s3\s*storage|s3\s*bucket)\b", p) or
+        re.search(r"\b(uploaded\s*files?|stored\s*files?|my\s*files?|list\s*files?|show\s*files?|file\s*storage|browse\s*storage|storage\s*browser)\b", p)
+    ):
+        file_type = "all"
+        if any(w in p for w in ["image", "images", "photo", "photos", "picture", "pictures"]):
+            file_type = "image"
+        elif any(w in p for w in ["document", "documents", "doc", "docs", "pdf", "pdfs", "text"]):
+            file_type = "document"
+        elif any(w in p for w in ["spreadsheet", "spreadsheets", "excel", "sheets", "csv"]):
+            file_type = "spreadsheet"
+        return {"tool": "explore_silo_storage", "args": {"query": "", "file_type": file_type}}
 
     # 0. Explicit Code Studio Requests (write/generate scripts, code files, functions, APIs, HTML/CSS web artifacts)
     is_code_request = bool(

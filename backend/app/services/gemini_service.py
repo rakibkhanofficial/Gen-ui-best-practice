@@ -57,6 +57,25 @@ def resolve_sources_for_query(
             },
         ]
 
+    # 1b. Silo MinIO Storage context
+    if tool_name == "explore_silo_storage" or any(k in p for k in ["silo", "minio", "bucket", "object storage", "uploaded file", "stored file"]):
+        return [
+            {
+                "name": "Silo Object Storage (MinIO S3)",
+                "domain": "min.io",
+                "favicon": "https://www.google.com/s2/favicons?domain=min.io&sz=128",
+                "url": "http://localhost:9001",
+                "status": "S3 High-Performance Object Engine",
+            },
+            {
+                "name": "AWS S3 Protocol Standard",
+                "domain": "aws.amazon.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=aws.amazon.com&sz=128",
+                "url": "https://aws.amazon.com/s3/",
+                "status": "Bucket & Blob Protocol",
+            },
+        ]
+
     # 2. Tool-specific verified sources
     if tool_name == "search_youtube_videos" or any(k in p for k in ["youtube", "video", "watch"]):
         sources = [
@@ -544,10 +563,11 @@ async def stream_agent_reasoning(
 
             stream_text = (
                 f"### 🖼️ Image Successfully Processed & Analyzed\n\n"
-                f"I have inspected **`{basename}`** using the Antigravity Vision pipeline.\n\n"
+                f"I have inspected **`{basename}`** using the Antigravity Vision pipeline and persisted it to **Silo MinIO Object Storage**.\n\n"
                 f"- **Format & Dimensions**: {image_data['format']} ({image_data['dimensions']})\n"
                 f"- **File Size**: {image_data['file_size_kb']} KB\n"
-                f"- **Primary Visual Category**: {image_data['detected_labels'][0]['label']} ({int(image_data['detected_labels'][0]['confidence']*100)}% confidence)\n\n"
+                f"- **Primary Visual Category**: {image_data['detected_labels'][0]['label']} ({int(image_data['detected_labels'][0]['confidence']*100)}% confidence)\n"
+                f"- **Silo MinIO S3 Object**: [`s3://genui-uploads/{basename}`]({image_data.get('minio_url', 'http://localhost:9000/genui-uploads/' + basename)})\n\n"
                 f"The interactive **Image Visual Inspector Card** has been mounted below."
             )
             for token in stream_text.split(" "):
@@ -587,10 +607,11 @@ async def stream_agent_reasoning(
 
             stream_text = (
                 f"### 📄 Document Ingested & Analyzed\n\n"
-                f"I have parsed the document **`{basename}`**.\n\n"
+                f"I have parsed the document **`{basename}`** and safely archived it in **Silo MinIO Object Storage**.\n\n"
                 f"- **Type**: {doc_data['file_type']}\n"
                 f"- **Volume**: {doc_data['word_count']:,} words across ~{doc_data['page_count']} pages\n"
-                f"- **Key Takeaways Extracted**: {len(doc_data['key_takeaways'])}\n\n"
+                f"- **Key Takeaways Extracted**: {len(doc_data['key_takeaways'])}\n"
+                f"- **Silo MinIO S3 Object**: [`s3://genui-uploads/{basename}`]({doc_data.get('minio_url', 'http://localhost:9000/genui-uploads/' + basename)})\n\n"
                 f"The interactive **Document Analysis & Summary Card** has been mounted below."
             )
             for token in stream_text.split(" "):
@@ -674,6 +695,7 @@ async def stream_agent_reasoning(
             "search_hotels": "Searching premier luxury hotels, suites & live rates",
             "search_product_catalog": "Evaluating device specs, benchmarks & hardware comparison",
             "search_news": "Aggregating real-time breaking headlines, editorial summaries & source reporting",
+            "explore_silo_storage": "Connecting to Silo MinIO S3 object storage & indexing files",
         }
         friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 
@@ -795,6 +817,22 @@ Formatting guidelines:
                 yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
                 await asyncio.sleep(0.015)
 
+        elif tool_name == "explore_silo_storage":
+            storage_text = (
+                f"### 🗄️ Silo MinIO S3 Storage Synchronized\n\n"
+                f"I have connected to your local **Silo MinIO Object Storage** on [`{component_data.get('endpoint')}`]({component_data.get('endpoint')}) "
+                f"(Bucket: **`{component_data.get('bucket')}`**).\n\n"
+                f"- **Total Stored Objects**: {component_data.get('total_files')} files ({component_data.get('total_size_formatted')})\n"
+                f"- **Categorization**: 📄 {component_data.get('type_counts', {}).get('documents', 0)} Documents &bull; "
+                f"🖼️ {component_data.get('type_counts', {}).get('images', 0)} Images &bull; "
+                f"📊 {component_data.get('type_counts', {}).get('spreadsheets', 0)} Spreadsheets\n"
+                f"- **MinIO Web Console**: Live at [`{component_data.get('console_url')}`]({component_data.get('console_url')})\n\n"
+                f"The interactive **Silo MinIO File Explorer & Storage Card** has been mounted below with live preview, download links, and AI analysis triggers."
+            )
+            for word in storage_text.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
+
         elif tool_name == "search_news":
             feat = component_data.get("featured_article")
             cat = component_data.get("category") or "Global News"
@@ -813,11 +851,11 @@ Formatting guidelines:
         else:
             explanation = f"I have prepared the requested interactive **{tool_name.replace('_', ' ').title()}** component below. You can interact directly with the cards, toggle parameters, or review metrics in real-time."
             
-            # If client is available, get a brief commentary from Gemini 3.8 Flash
+            # If client is available, get a brief commentary from Gemini 3.5 Flash Lite
             if client:
                 try:
                     response = client.models.generate_content(
-                        model="gemini-3.8-flash",
+                        model=settings.GEMINI_MODEL,
                         contents=f"You are a helpful GenUI AI assistant. The user asked: '{prompt}'. You have just rendered an interactive {tool_name} widget. Briefly provide a 2-sentence helpful introduction to the user.",
                     )
                     if response.text:
@@ -846,7 +884,7 @@ Formatting guidelines:
     if client:
         try:
             stream = client.models.generate_content_stream(
-                model="gemini-3.8-flash",
+                model=settings.GEMINI_MODEL,
                 contents=prompt,
             )
             for chunk in stream:
