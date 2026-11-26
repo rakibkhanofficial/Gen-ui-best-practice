@@ -30,6 +30,7 @@ from app.agent.tools.hotel_tool import search_hotels
 from app.agent.tools.news_tool import search_news
 from app.agent.tools.silo_tool import explore_silo_storage
 from app.agent.tools.hris_tool import query_hris_attendance
+from app.agent.tools.inventory_pos_tool import query_inventory_pos
 
 logger = logging.getLogger("genui.agent")
 
@@ -60,6 +61,7 @@ TOOL_REGISTRY = {
     "search_news": search_news,
     "explore_silo_storage": explore_silo_storage,
     "query_hris_attendance": query_hris_attendance,
+    "query_inventory_pos": query_inventory_pos,
 }
 
 
@@ -331,6 +333,22 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     }
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_inventory_pos",
+                "description": "Queries POS inventory levels, forecasts stockout dates, predicts demand velocity, and calculates optimal replenishment reorder orders across product categories.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Product search query, category, or SKU"},
+                        "category": {"type": "string", "description": "Category filter ('All', 'Electronics', 'FMCG', 'Pharmacy', 'Apparel', 'Hardware')"},
+                        "filter_type": {"type": "string", "description": "Filter type ('all', 'critical', 'reorder', 'high_demand', 'overstocked')"},
+                        "sku": {"type": "string", "description": "Specific product SKU (e.g. SKU-ELEC-881)"}
+                    }
+                }
+            }
         }
     ]
 
@@ -359,6 +377,7 @@ class ToolCallDecision(BaseModel):
         "search_news",
         "explore_silo_storage",
         "query_hris_attendance",
+        "query_inventory_pos",
         "none"
     ]
     query: Optional[str] = None
@@ -533,6 +552,48 @@ Decide the most appropriate tool to display interactive GenUI component for the 
 def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     """Priority-ordered, regex-bounded heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
     p = prompt.lower().strip()
+
+    # -3. POS, Inventory Management, Stockout Forecasts, Demand Velocity & Predictive Replenishment
+    if (
+        re.search(r"\b(pos|inventory|enventory|stock|stocks|stockout|stockouts|replenishment|reorder|re-order|sku|skus|barcode)\b", p) or
+        (re.search(r"\b(products?|items?|goods?)\b", p) and re.search(r"\b(demand|high\s*demand|low\s*stock|out\s*of\s*stock|restock|reorder|forecast|predict|sales\s*history|velocity|stock\s*need)\b", p)) or
+        re.search(r"\b(most\s*important\s*product|which\s*stock|which\s*products?\s*demand|need\s*more\s*stock|upcoming\s*predict|predict\s*which\s*time)\b", p) or
+        re.search(r"\bsku-[a-z]+-\d+\b", p)
+    ):
+        cat = "All"
+        if any(w in p for w in ["electronic", "tech", "gadget", "charger", "monitor", "earbud"]):
+            cat = "Electronics"
+        elif any(w in p for w in ["fmcg", "beverage", "coffee", "brew", "drink", "supermarket"]):
+            cat = "FMCG"
+        elif any(w in p for w in ["pharmacy", "medicine", "thermometer", "health", "vitamin"]):
+            cat = "Pharmacy"
+        elif any(w in p for w in ["apparel", "fashion", "clothing", "shirt", "pullover", "wool"]):
+            cat = "Apparel"
+        elif any(w in p for w in ["hardware", "tool", "drill", "screwdriver"]):
+            cat = "Hardware"
+
+        filter_t = "all"
+        if any(w in p for w in ["critical", "out of stock", "urgent", "immediate"]):
+            filter_t = "critical"
+        elif any(w in p for w in ["reorder", "restock", "replenish", "reorder point"]):
+            filter_t = "reorder"
+        elif any(w in p for w in ["high demand", "surging", "fast moving", "top demand"]):
+            filter_t = "high_demand"
+        elif any(w in p for w in ["overstocked", "slow moving", "excess"]):
+            filter_t = "overstocked"
+
+        sku_m = re.search(r"\b(sku-[a-z]+-\d+)\b", p)
+        target_sku = sku_m.group(1).upper() if sku_m else None
+
+        return {
+            "tool": "query_inventory_pos",
+            "args": {
+                "query": prompt,
+                "category": cat,
+                "filter_type": filter_t,
+                "sku": target_sku,
+            }
+        }
 
     # -2. HRIS, Employee Attendance, Punch Timelines, Deep Query & YoY Comparisons
     if (

@@ -427,6 +427,40 @@ async def chat_handler(payload: ChatRequest):
                 )
             else:
                 assistant_content = f"Here is the biometric attendance and performance summary across {len(data.get('employees', []))} employees. Select any employee for a deep Year-over-Year breakdown."
+        elif tool_name == "query_inventory_pos":
+            pos_mode = data.get("mode", "reorder_plan")
+            if pos_mode == "timing_forecast":
+                peak_info = data.get("peak_summary", {})
+                assistant_content = (
+                    f"Here is the POS Demand Timing & Peak Volume Predictor. "
+                    f"The daily prime window is **{peak_info.get('daily_prime_window', '17:00 – 21:00')}** "
+                    f"({peak_info.get('prime_volume_share', '48% of sales')}) with a **{peak_info.get('weekend_multiplier', '+35% weekend surge')}**. "
+                    f"{peak_info.get('best_dispatch_window', 'Transmit POs before 14:00')}."
+                )
+            elif pos_mode == "top_products":
+                top_summary = data.get("summary", {})
+                assistant_content = (
+                    f"Here is the Top Products & ABC Margin Analysis. "
+                    f"Class-A products drive **{top_summary.get('class_a_revenue_share', '74.8% of store revenue')}**, "
+                    f"led by **{top_summary.get('top_driver', 'Gaming Monitor')}** generating {top_summary.get('top_monthly_revenue', '$0')}/mo."
+                )
+            elif pos_mode == "sku_deep_dive":
+                sku_item = data.get("item", {})
+                assistant_content = (
+                    f"Here is the product burn rate and velocity analysis for **{sku_item.get('name')}** ({sku_item.get('sku')}). "
+                    f"Current stock of **{sku_item.get('current_stock')} {sku_item.get('unit')}** will deplete in **{sku_item.get('days_left')} days** "
+                    f"(estimated stockout on {sku_item.get('stockout_date_str')})."
+                )
+            else:
+                kpis = data.get("kpis", {})
+                crit = kpis.get("critical_reorders", 0)
+                items = data.get("items", [])
+                top_item = items[0]["name"] if items else "key products"
+                assistant_content = (
+                    f"Here is the Predictive Replenishment & Stockout Runway. "
+                    f"**{crit} critical SKUs** require immediate replenishment (led by {top_item}). "
+                    f"Pending reorder budget is **{kpis.get('pending_reorder_budget', '$0.00')}** with a daily POS sales runrate of **{kpis.get('daily_sales_runrate', '$0/day')}**."
+                )
         else:
             assistant_content = f"I have prepared the interactive **{tool_name.replace('_', ' ').title()}** component below."
 

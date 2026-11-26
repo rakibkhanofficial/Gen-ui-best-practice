@@ -31,6 +31,7 @@ import {
   Newspaper,
   HardDrive,
   Users,
+  Boxes,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -97,6 +98,11 @@ export function GeminiEmptyState({
 
   // Real, dynamic GenUI capabilities of our project
   const suggestions = [
+    {
+      icon: Boxes,
+      label: "POS Demand & Restock",
+      prompt: "Show critical stockout items and predict upcoming inventory reorder needs based on sales velocity",
+    },
     {
       icon: Users,
       label: "YoY Employee Comparison",

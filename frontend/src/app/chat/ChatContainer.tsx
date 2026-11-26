@@ -73,6 +73,7 @@ import { HotelBookingCard } from "@/components/gen-ui/HotelBookingCard";
 import { NewsCard } from "@/components/gen-ui/NewsCard";
 import { SiloStorageCard } from "@/components/gen-ui/SiloStorageCard";
 import { HrisAttendanceCard } from "@/components/gen-ui/HrisAttendanceCard";
+import { InventoryPosCard } from "@/components/gen-ui/InventoryPosCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -1336,6 +1337,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       case "evaluate_employee_attendance":
         return (
           <HrisAttendanceCard
+            data={genui.data}
+            onTriggerQuery={(q: string) => handleSendMessage(q)}
+          />
+        );
+      case "query_inventory_pos":
+      case "manage_inventory_pos":
+        return (
+          <InventoryPosCard
             data={genui.data}
             onTriggerQuery={(q: string) => handleSendMessage(q)}
           />
