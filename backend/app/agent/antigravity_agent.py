@@ -29,6 +29,7 @@ from app.agent.tools.math_tool import solve_math_problem
 from app.agent.tools.hotel_tool import search_hotels
 from app.agent.tools.news_tool import search_news
 from app.agent.tools.silo_tool import explore_silo_storage
+from app.agent.tools.hris_tool import query_hris_attendance
 
 logger = logging.getLogger("genui.agent")
 
@@ -58,6 +59,7 @@ TOOL_REGISTRY = {
     "search_hotels": search_hotels,
     "search_news": search_news,
     "explore_silo_storage": explore_silo_storage,
+    "query_hris_attendance": query_hris_attendance,
 }
 
 
@@ -312,6 +314,23 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     }
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_hris_attendance",
+                "description": "Searches and evaluates employee HRIS attendance records, punch timelines, first/last punch times, late arrivals, overtime, and supervisor performance evaluations across departments and business units.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query, staff name or ID"},
+                        "department": {"type": "string", "description": "Department or business unit (Engineering, Product & Design, Sales & Marketing, HR & Operations, Finance, or All)"},
+                        "sort_by": {"type": "string", "description": "Sorting metric (attendance, overtime, punctuality, performance)"},
+                        "filter_metric": {"type": "string", "description": "Filter criteria (best_attendance, overtime, late, absent, performance, all)"},
+                        "staff_id": {"type": "string", "description": "Specific staff ID to evaluate (e.g. EMP-1001)"}
+                    }
+                }
+            }
         }
     ]
 
@@ -339,6 +358,7 @@ class ToolCallDecision(BaseModel):
         "search_hotels",
         "search_news",
         "explore_silo_storage",
+        "query_hris_attendance",
         "none"
     ]
     query: Optional[str] = None
@@ -358,6 +378,9 @@ class ToolCallDecision(BaseModel):
     category: Optional[str] = None
     expression: Optional[str] = None
     problem_type: Optional[str] = None
+    department: Optional[str] = None
+    filter_metric: Optional[str] = None
+    staff_id: Optional[str] = None
 
 
 def route_intent_with_llm(prompt: str, client: Any) -> Optional[Dict[str, Any]]:
@@ -388,6 +411,7 @@ Available interactive tools:
 - request_sensitive_action(reason): For human-in-the-loop approvals (refunds, prod deploys).
 - schedule_meeting(reason, duration_minutes): For booking time slots, calendar availability, Google Meet scheduling.
 - fetch_website_info(query): For recommending authoritative websites, developer portals, URLs.
+- query_hris_attendance(query, department, filter_metric, staff_id): For HRIS employee management, attendance records, first punch & last punch, punch timelines, late days, absent days, present days, overtime hours, average daily hours, staff ID search, supervisor performance evaluation, and top attendance rankings across departments or business units.
 
 User query: "{prompt}"
 Decide the most appropriate tool to display interactive GenUI component for the user query. If no tool is needed, return tool 'none'."""
@@ -487,6 +511,11 @@ Decide the most appropriate tool to display interactive GenUI component for the 
         elif tool == "explore_silo_storage":
             args["query"] = data.get("query") or ""
             args["file_type"] = data.get("file_type") or "all"
+        elif tool == "query_hris_attendance":
+            args["query"] = data.get("query") or prompt
+            args["department"] = data.get("department") or "All"
+            args["filter_metric"] = data.get("filter_metric") or "all"
+            args["staff_id"] = data.get("staff_id")
         elif tool == "request_sensitive_action":
             args["action_type"] = "customer_refund"
             args["target_id"] = "ORD-8921"
@@ -504,6 +533,51 @@ Decide the most appropriate tool to display interactive GenUI component for the 
 def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
     """Priority-ordered, regex-bounded heuristic tool dispatcher for instant, reliable interactive GenUI demo execution."""
     p = prompt.lower().strip()
+
+    # -2. HRIS, Employee Attendance, Punch Timelines, Deep Query & YoY Comparisons
+    if (
+        re.search(r"\b(hris|attendance|attendence|punch|first\s*punch|last\s*punch|overtime|late\s*punch|late\s*days|absent|absenteeism|present|staff\s*id|employee\s*id|employee\s*attendance|staff\s*attendance|employee\s*performance|evaluate\s*employee|attendance\s*report)\b", p) or
+        (re.search(r"\b(employees?|staff|workers?|workforce|ayesha|nusrat|tanvir|sadia|zubair)\b", p) and re.search(r"\b(attendance|present|absent|late|hours|overtime|performance|evaluate|rating|salary|timeline|last\s*year|compare|yoy|2025|growth|trajectory)\b", p)) or
+        (re.search(r"\b(search|find|show|get|who|compare|comparison)\b", p) and re.search(r"\b(best\s*attendance|top\s*attendance|most\s*present|highest\s*attendance|best\s*present|top\s*present|most\s*overtime|late\s*arrivals?|last\s*year|previous\s*year|yoy|2025)\b", p)) or
+        re.search(r"\b(deep\s*query|yoy|year\s*over\s*year|compare\s*with\s*last\s*year|compare\s*to\s*last\s*year)\b", p) or
+        re.search(r"\bemp-\d{4}\b", p)
+    ):
+        dept = "All"
+        if "engineering" in p:
+            dept = "Engineering"
+        elif any(w in p for w in ["product", "design", "ux"]):
+            dept = "Product & Design"
+        elif any(w in p for w in ["sales", "marketing"]):
+            dept = "Sales & Marketing"
+        elif any(w in p for w in ["hr", "operations", "people"]):
+            dept = "HR & Operations"
+        elif "finance" in p:
+            dept = "Finance"
+
+        filter_metric = "all"
+        if any(w in p for w in ["best attendance", "top attendance", "most present", "highest attendance", "best present", "top present"]):
+            filter_metric = "best_attendance"
+        elif any(w in p for w in ["overtime", "ot", "extra hours"]):
+            filter_metric = "overtime"
+        elif any(w in p for w in ["late", "delayed", "lateness", "late arrivals"]):
+            filter_metric = "late"
+        elif any(w in p for w in ["absent", "leave", "absence", "anomaly"]):
+            filter_metric = "absent"
+        elif any(w in p for w in ["performance", "rating", "evaluation", "kpi"]):
+            filter_metric = "performance"
+
+        staff_match = re.search(r"\b(emp-\d{4})\b", p)
+        staff_id = staff_match.group(1).upper() if staff_match else None
+
+        return {
+            "tool": "query_hris_attendance",
+            "args": {
+                "query": prompt,
+                "department": dept,
+                "filter_metric": filter_metric,
+                "staff_id": staff_id,
+            }
+        }
 
     # -1. Silo MinIO Object Storage & Stored Files Explorer
     if (

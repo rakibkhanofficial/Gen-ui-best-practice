@@ -72,6 +72,7 @@ import { MathSolverCard } from "@/components/gen-ui/MathSolverCard";
 import { HotelBookingCard } from "@/components/gen-ui/HotelBookingCard";
 import { NewsCard } from "@/components/gen-ui/NewsCard";
 import { SiloStorageCard } from "@/components/gen-ui/SiloStorageCard";
+import { HrisAttendanceCard } from "@/components/gen-ui/HrisAttendanceCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -160,7 +161,21 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
 
-  // 1. Resolve User Identity
+  // 1. Immediate Local Recovery on Mount (Ensures sidebar never shows indefinite skeleton)
+  useEffect(() => {
+    try {
+      const cachedGuest = getGuestUser();
+      const effectiveId = cachedGuest?.id || "guest_default";
+      if (cachedGuest) {
+        setUser(cachedGuest);
+      }
+      loadUserSessions(effectiveId);
+    } catch {
+      setIsLoadingSessions(false);
+    }
+  }, []);
+
+  // 2. Resolve User Identity when Auth status changes
   useEffect(() => {
     if (authStatus === "loading") return;
 
@@ -223,7 +238,6 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   }, []);
 
   const loadUserSessions = async (userId: string) => {
-    setIsLoadingSessions(true);
     let localSessions: ChatSession[] = [];
     try {
       const key = getUserSessionsKey(userId);
@@ -232,7 +246,7 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         localSessions = JSON.parse(stored);
       }
 
-      // Also gather any sessions from other guest keys in localStorage
+      // Also gather any sessions from other keys in localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && k.startsWith("genui_sessions_") && k !== key) {
@@ -248,6 +262,35 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                 });
               }
             } catch {}
+          }
+        }
+
+        // Deep search: recover any sessions from conversation message storage keys
+        if (k && (k.includes("genui_msgs_") || k.includes("genui_msgs_v3_"))) {
+          const parts = k.split("_");
+          const sId = parts[parts.length - 1];
+          if (sId && sId.length >= 8 && !localSessions.some((s) => s.id === sId)) {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  const firstUserMsg = parsed.find((m: any) => m.role === "user");
+                  const title = firstUserMsg?.content
+                    ? (firstUserMsg.content.length > 32 ? `${firstUserMsg.content.slice(0, 30)}...` : firstUserMsg.content)
+                    : `Chat ${sId.slice(0, 8)}`;
+                  localSessions.push({
+                    id: sId,
+                    title: title,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    turnsCount: parsed.length,
+                    userId: userId,
+                    userType: "guest",
+                  });
+                }
+              } catch {}
+            }
           }
         }
       }
@@ -272,12 +315,20 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         });
       }
 
-      setSessions(localSessions);
-      saveSessionsList(userId, localSessions);
-    } catch {}
+      if (localSessions.length > 0) {
+        setSessions(localSessions);
+        saveSessionsList(userId, localSessions);
+        setIsLoadingSessions(false); // Stop skeleton immediately once local items are found
+      }
+    } catch {
+      setIsLoadingSessions(false);
+    }
 
     try {
-      const res = await fetch(`/api/chat/sessions?user_id=${encodeURIComponent(userId)}`);
+      // Background remote fetch with 2.5s strict timeout
+      const res = await fetch(`/api/chat/sessions?user_id=${encodeURIComponent(userId)}`, {
+        signal: AbortSignal.timeout(2500),
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.sessions)) {
@@ -308,11 +359,9 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
         }
       }
     } catch (err) {
-      console.warn("Could not fetch remote chat history from API:", err);
+      // Remote timeout or network error is silent - local sessions are preserved
     } finally {
-      setTimeout(() => {
-        setIsLoadingSessions(false);
-      }, localSessions.length === 0 ? 320 : 100);
+      setIsLoadingSessions(false);
     }
   };
 
@@ -1279,6 +1328,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
       case "manage_silo_storage":
         return (
           <SiloStorageCard
+            data={genui.data}
+            onTriggerQuery={(q: string) => handleSendMessage(q)}
+          />
+        );
+      case "query_hris_attendance":
+      case "evaluate_employee_attendance":
+        return (
+          <HrisAttendanceCard
             data={genui.data}
             onTriggerQuery={(q: string) => handleSendMessage(q)}
           />

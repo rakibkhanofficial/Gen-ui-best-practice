@@ -30,6 +30,7 @@ import {
   Building2,
   Newspaper,
   HardDrive,
+  Users,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -135,6 +136,11 @@ export function GeminiEmptyState({
       icon: HardDrive,
       label: "Silo MinIO Storage",
       prompt: "Show all files stored in Silo MinIO object storage",
+    },
+    {
+      icon: Users,
+      label: "YoY Employee Deep Dive",
+      prompt: "Compare Ayesha Rahman (EMP-1001) attendance and performance with last year",
     },
     {
       icon: Plane,

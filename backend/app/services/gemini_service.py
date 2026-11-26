@@ -76,6 +76,32 @@ def resolve_sources_for_query(
             },
         ]
 
+    # 1c. HRIS Attendance & Performance Evaluation Context
+    if tool_name == "query_hris_attendance" or any(k in p for k in ["hris", "attendance", "punch", "absent", "present", "late", "overtime", "employee", "staff id", "evaluate"]):
+        return [
+            {
+                "name": "Enterprise HRIS & Biometric Gateway",
+                "domain": "workday.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=workday.com&sz=128",
+                "url": "https://www.workday.com",
+                "status": "Biometric Punch Telemetry & Timecard",
+            },
+            {
+                "name": "BambooHR People & Talent Analytics",
+                "domain": "bamboohr.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=bamboohr.com&sz=128",
+                "url": "https://www.bamboohr.com",
+                "status": "Verified Performance & KPI Scorecards",
+            },
+            {
+                "name": "PostgreSQL HRIS Secure Vault",
+                "domain": "postgresql.org",
+                "favicon": "https://www.google.com/s2/favicons?domain=postgresql.org&sz=128",
+                "url": "https://www.postgresql.org",
+                "status": "Encrypted Employee Records & Audit Log",
+            },
+        ]
+
     # 2. Tool-specific verified sources
     if tool_name == "search_youtube_videos" or any(k in p for k in ["youtube", "video", "watch"]):
         sources = [
@@ -696,6 +722,7 @@ async def stream_agent_reasoning(
             "search_product_catalog": "Evaluating device specs, benchmarks & hardware comparison",
             "search_news": "Aggregating real-time breaking headlines, editorial summaries & source reporting",
             "explore_silo_storage": "Connecting to Silo MinIO S3 object storage & indexing files",
+            "query_hris_attendance": "Auditing HRIS attendance records, punch timelines & evaluation scores",
         }
         friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 

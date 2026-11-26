@@ -205,7 +205,7 @@ export function ChatSidebar({
 
           {/* 3. Sessions List (Chronological Groups or Shimmer Skeleton) */}
           <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3 text-xs font-sans">
-            {isLoadingSessions ? (
+            {isLoadingSessions && filteredSessions.length === 0 ? (
               <SidebarSessionsSkeleton />
             ) : filteredSessions.length === 0 ? (
               <div className="text-center py-8 text-slate-400 dark:text-zinc-500">
