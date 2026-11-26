@@ -276,6 +276,56 @@ def query_hris_attendance(
                     {"metric": "KPI Score", "y2025": kpi_25, "y2026": kpi_26},
                     {"metric": "Overtime (h)", "y2025": ot_25, "y2026": ot_26},
                 ],
+                "talent_9box": {
+                    "category": "Star / High-Impact Executive" if (rating_26 >= 4.8 and rate_26 >= 92) else ("Core Pillar" if rate_26 >= 90 else "High Potential Specialist"),
+                    "performance_rating": f"{rating_26} / 5.0 (High)",
+                    "reliability_score": f"{rate_26}% (High)",
+                    "box_position": {"x": 3, "y": 3},
+                    "action_recommendation": "Fast-track succession for VP Engineering / Principal Fellow with merit retention grant."
+                },
+                "burnout_flight_risk": {
+                    "index_score": 24 if ot_26 <= 25 else 68,
+                    "level": "Low Risk (High Engagement)" if ot_26 <= 25 else "Moderate Risk (Overtime Warning)",
+                    "factors": [
+                        {"label": "Monthly Overtime", "value": f"{ot_26}h", "status": "Normal" if ot_26 <= 25 else "Warning", "desc": "Logged within safe cognitive fatigue limits"},
+                        {"label": "Late Swipes Frequency", "value": f"{late_26} day", "status": "Normal", "desc": "Arrivals consistently before core hours"},
+                        {"label": "Market Comp Parity", "value": f"${int(sal_26):,} (+{sal_pct}%)", "status": "Strong", "desc": "Top 10th percentile in cloud architecture"},
+                        {"label": "Retention Priority", "value": "Tier-1 Critical", "status": "Strong", "desc": "Key contributor on Generative UI & orchestrator"}
+                    ],
+                    "burnout_advisory": "Maintain sustainable rhythm; schedule mandatory quarterly recharge days."
+                },
+                "human_capital_roi": {
+                    "value_score": 96.8,
+                    "multiplier": "4.8x Enterprise Output Ratio",
+                    "initiatives_delivered": int(rev_2026["projects_completed"] if rev_2026 else 14),
+                    "replacement_hiring_lag": "4.5 Months (High Scarcity Skillset)",
+                    "retention_tier": "Critical Pillar"
+                },
+                "time_allocation_pie": [
+                    {"name": "On-Site Core Work", "value": 64, "fill": "#3b82f6"},
+                    {"name": "Remote VPN Focus", "value": 26, "fill": "#10b981"},
+                    {"name": "Overtime Hours", "value": 7, "fill": "#8b5cf6"},
+                    {"name": "Approved Leave", "value": 3, "fill": "#f59e0b"}
+                ],
+                "monthly_trajectory_line": [
+                    {"month": "Jan", "attendance": 90, "punctuality": 86, "overtime": 10},
+                    {"month": "Feb", "attendance": 92, "punctuality": 88, "overtime": 12},
+                    {"month": "Mar", "attendance": 93, "punctuality": 90, "overtime": 15},
+                    {"month": "Apr", "attendance": 91, "punctuality": 88, "overtime": 14},
+                    {"month": "May", "attendance": 94, "punctuality": 91, "overtime": 16},
+                    {"month": "Jun", "attendance": 95, "punctuality": 93, "overtime": 18},
+                    {"month": "Jul", "attendance": 93, "punctuality": 90, "overtime": 14},
+                    {"month": "Aug", "attendance": 96, "punctuality": 94, "overtime": 19},
+                    {"month": "Sep", "attendance": 97, "punctuality": 95, "overtime": 21},
+                    {"month": "Oct", "attendance": 98, "punctuality": 96, "overtime": 22},
+                    {"month": "Nov", "attendance": float(rate_26), "punctuality": float(stats_2026["punctuality_score"] if stats_2026 else 98), "overtime": float(ot_26)}
+                ],
+                "competency_benchmark_bar": [
+                    {"skill": "Technical Innovation", "employee": 99, "dept_median": 86},
+                    {"skill": "Punctuality & Reliability", "employee": float(stats_2026["punctuality_score"] if stats_2026 else 98), "dept_median": 88},
+                    {"skill": "Team Mentorship", "employee": 96, "dept_median": 82},
+                    {"skill": "Delivery Speed", "employee": 98, "dept_median": 85}
+                ],
                 "biometric_discipline": {
                     "avg_arrival_2025": "09:12 AM",
                     "avg_arrival_2026": "08:50 AM",

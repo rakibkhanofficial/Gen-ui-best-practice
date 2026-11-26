@@ -3,50 +3,30 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users,
   Clock,
-  Calendar,
   CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Award,
   TrendingUp,
-  Search,
-  Filter,
-  ShieldCheck,
-  Building,
-  Briefcase,
-  ChevronRight,
-  Eye,
-  CalendarDays,
-  FileText,
-  DollarSign,
-  UserCheck,
   Star,
-  Download,
-  Send,
-  MessageSquare,
-  Sparkles,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
-  Lock,
-  Unlock,
-  Check,
-  Copy,
-  BarChart3,
-  GitCompare,
-  Database,
-  Terminal,
-  Activity,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Sparkles,
+  BarChart3,
+  PieChart as PieIcon,
+  Calendar,
+  Award,
+  Users
 } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -99,6 +79,47 @@ export interface HrisYoYData {
     y2025: number;
     y2026: number;
   }>;
+  talent_9box?: {
+    category: string;
+    performance_rating: string;
+    reliability_score: string;
+    box_position: { x: number; y: number };
+    action_recommendation: string;
+  };
+  burnout_flight_risk?: {
+    index_score: number;
+    level: string;
+    factors: Array<{
+      label: string;
+      value: string;
+      status: string;
+      desc: string;
+    }>;
+    burnout_advisory: string;
+  };
+  human_capital_roi?: {
+    value_score: number;
+    multiplier: string;
+    initiatives_delivered: number;
+    replacement_hiring_lag: string;
+    retention_tier: string;
+  };
+  time_allocation_pie?: Array<{
+    name: string;
+    value: number;
+    fill: string;
+  }>;
+  monthly_trajectory_line?: Array<{
+    month: string;
+    attendance: number;
+    punctuality: number;
+    overtime: number;
+  }>;
+  competency_benchmark_bar?: Array<{
+    skill: string;
+    employee: number;
+    dept_median: number;
+  }>;
   biometric_discipline?: {
     avg_arrival_2025: string;
     avg_arrival_2026: string;
@@ -139,15 +160,6 @@ export interface HrisYoYData {
     execution_time_ms?: number;
     status?: string;
   };
-  clearance?: {
-    required: boolean;
-    role: string;
-    granted: boolean;
-    authorized_by: string;
-    security_level: string;
-    clearance_token: string;
-    access_scope: string;
-  };
   // Roster audit fallback fields
   employees?: any[];
   summary_kpis?: any;
@@ -163,526 +175,406 @@ interface HrisAttendanceCardProps {
 export function HrisAttendanceCard({ data, onTriggerQuery }: HrisAttendanceCardProps) {
   if (!data) return null;
 
-  const [showSqlDrawer, setShowSqlDrawer] = useState(false);
-  const [showSalary, setShowSalary] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
-  const [copiedToken, setCopiedToken] = useState(false);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [activeChart, setActiveChart] = useState<"yoy" | "trajectory" | "allocation">("yoy");
+  const [showDetails, setShowDetails] = useState(false);
 
   const isYoYMode = data.mode === "yoy_comparison" && !!data.employee;
   const emp = data.employee;
   const yoy = data.yoy_metrics;
-  const chartData = data.comparison_chart || [];
   const telemetry = data.query_telemetry;
-
-  const handleCopySql = () => {
-    if (telemetry?.executed_sql) {
-      navigator.clipboard.writeText(telemetry.executed_sql);
-      setCopiedSql(true);
-      setTimeout(() => setCopiedSql(false), 2000);
-    }
-  };
-
-  const handleCopyToken = () => {
-    if (data.clearance?.clearance_token) {
-      navigator.clipboard.writeText(data.clearance.clearance_token);
-      setCopiedToken(true);
-      setTimeout(() => setCopiedToken(false), 2000);
-    }
-  };
-
-  const handleAction = (msg: string) => {
-    setActionNotice(msg);
-    setTimeout(() => setActionNotice(null), 3500);
-  };
+  const yoyBarData = data.comparison_chart || [];
+  const monthlyLine = data.monthly_trajectory_line || [];
+  const timeAllocationPie = data.time_allocation_pie || [];
 
   // =========================================================================
-  // VIEW A: SPECIFIC EMPLOYEE DEEP QUERY & YoY COMPARISON (2025 vs 2026)
+  // VIEW A: CLEAN & MINIMAL YOY COMPARISON (SENIOR HR EXECUTIVE VIEW)
   // =========================================================================
   if (isYoYMode && emp && yoy) {
     const rev25 = data.reviews_progression?.review_2025;
     const rev26 = data.reviews_progression?.review_2026;
 
     return (
-      <div className="w-full my-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#18181b] shadow-sm overflow-hidden text-slate-900 dark:text-zinc-100 font-sans transition-all">
-        {/* Header: Employee Profile & Executive Clearance */}
-        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-zinc-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
+      <div className="w-full my-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-xs overflow-hidden text-slate-900 dark:text-zinc-100 font-sans transition-all">
+        {/* 1. Header: Clean Profile & Key Status */}
+        <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-zinc-800/80">
+          <div className="flex items-center gap-3 min-w-0">
             <img
               src={emp.avatar}
               alt={emp.name}
-              className="w-12 h-12 rounded-xl object-cover ring-2 ring-blue-500/20 shadow-xs"
+              className="w-11 h-11 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-zinc-700 flex-shrink-0"
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-zinc-100 truncate tracking-tight">
                   {emp.name}
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
                   {emp.staff_id}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-500/20">
-                  YoY Comparison
-                </span>
+                {data.talent_9box && (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40">
+                    <Star className="w-2.5 h-2.5 fill-purple-500 text-purple-500" />
+                    <span>{data.talent_9box.category.split("/")[0].trim()}</span>
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                {emp.designation} &bull; {emp.department} &bull; Supervisor: {emp.supervisor}
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 truncate">
+                {emp.designation} &bull; {emp.department} &bull; {emp.job_type}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            {telemetry && (
-              <button
-                onClick={() => setShowSqlDrawer(!showSqlDrawer)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-xs font-mono text-slate-700 dark:text-zinc-300 transition flex items-center gap-1.5 shadow-xs"
-              >
-                <Terminal className="w-3.5 h-3.5 text-blue-500" />
-                <span>SQL ({telemetry.execution_time_ms}ms)</span>
-                {showSqlDrawer ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
-              </button>
-            )}
-
-            {data.clearance && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-emerald-500/20 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>HR Authorized</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Collapsible SQL Inspector */}
-        <AnimatePresence>
-          {showSqlDrawer && telemetry && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="border-b border-slate-200 dark:border-white/10 bg-slate-900 text-zinc-200 p-4 font-mono text-xs overflow-hidden"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
-                  <Database className="w-3.5 h-3.5 text-blue-400" />
-                  <span>PostgreSQL 16 &bull; {telemetry.query_strategy} ({telemetry.execution_time_ms}ms)</span>
-                </div>
-                <button
-                  onClick={handleCopySql}
-                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] flex items-center gap-1"
-                >
-                  {copiedSql ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedSql ? "Copied" : "Copy SQL"}</span>
-                </button>
-              </div>
-              <pre className="p-3 rounded-lg bg-black/40 overflow-x-auto text-[11px] leading-relaxed text-blue-300">
-                {telemetry.executed_sql}
-              </pre>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Action Notice */}
-        {actionNotice && (
-          <div className="mx-4 sm:mx-5 mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-2 font-medium">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
-            <span>{actionNotice}</span>
-          </div>
-        )}
-
-        {/* 1. Core YoY Comparison Scorecard (2025 vs 2026) */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              Year-over-Year Comparative Scorecard (2025 vs 2026)
-            </h4>
-            <span className="text-[11px] text-slate-400 font-mono">
-              Indexed DB Record &bull; November Baseline
+          <div className="text-right flex-shrink-0">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Period</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+              2025 vs 2026
             </span>
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-            {/* Attendance Rate */}
-            {yoy.attendance_rate && (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/70 dark:bg-zinc-900/40">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Attendance Rate</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">
-                    {yoy.attendance_rate.val_2026}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 line-through">
-                    {yoy.attendance_rate.val_2025}
-                  </span>
-                </div>
-                <div className={`text-[11px] font-semibold mt-1 flex items-center gap-0.5 ${yoy.attendance_rate.improved ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span>{yoy.attendance_rate.delta} YoY</span>
-                </div>
-              </div>
-            )}
-
-            {/* Punctuality Score */}
-            {yoy.punctuality_score && (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/70 dark:bg-zinc-900/40">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Punctuality Score</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">
-                    {yoy.punctuality_score.val_2026}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 line-through">
-                    {yoy.punctuality_score.val_2025}
-                  </span>
-                </div>
-                <div className={`text-[11px] font-semibold mt-1 flex items-center gap-0.5 ${yoy.punctuality_score.improved ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span>{yoy.punctuality_score.delta}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Late Days */}
-            {yoy.late_days && (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/70 dark:bg-zinc-900/40">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Late Arrival Swipes</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">
-                    {yoy.late_days.val_2026}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 line-through">
-                    {yoy.late_days.val_2025}
-                  </span>
-                </div>
-                <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-0.5">
-                  <ArrowDownRight className="w-3 h-3" />
-                  <span>{yoy.late_days.delta}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Overtime Hours */}
-            {yoy.overtime_hours && (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/70 dark:bg-zinc-900/40">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Overtime Hours</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">
-                    {yoy.overtime_hours.val_2026}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 line-through">
-                    {yoy.overtime_hours.val_2025}
-                  </span>
-                </div>
-                <div className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-0.5">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>{yoy.overtime_hours.delta}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Performance Rating */}
-            {yoy.performance_rating && (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/70 dark:bg-zinc-900/40">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Performance Rating</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-sm font-bold font-mono text-amber-500">
-                    ⭐ {yoy.performance_rating.val_2026}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 line-through">
-                    {yoy.performance_rating.val_2025}
-                  </span>
-                </div>
-                <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-0.5">
-                  <Award className="w-3 h-3" />
-                  <span>{yoy.performance_rating.delta} Gain</span>
-                </div>
-              </div>
-            )}
-
-            {/* Salary Progression */}
-            {yoy.salary_usd && (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50/70 dark:bg-zinc-900/40">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Compensation</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    {yoy.salary_usd.val_2026}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 line-through">
-                    {yoy.salary_usd.val_2025}
-                  </span>
-                </div>
-                <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1 truncate">
-                  {yoy.salary_usd.delta}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* 2. Visual Comparative Bar Chart (2025 vs 2026 Metrics) */}
-        {chartData.length > 0 && (
-          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-blue-500" />
-                  Year-over-Year Metric Comparison: 2025 Baseline vs 2026
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                  Side-by-side progression across attendance rate, punctuality, KPI delivery & overtime
-                </p>
-              </div>
-              <div className="flex items-center gap-3 text-xs font-mono">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-slate-400" />
-                  <span>2025</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-blue-600" />
-                  <span>2026</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="metric" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#18181b",
-                      borderColor: "rgba(255,255,255,0.1)",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Bar dataKey="y2025" name="2025 Historical" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="y2026" name="2026 Current" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+        {/* 2. Executive Takeaway Highlight */}
+        {data.insights && (
+          <div className="mx-4 sm:mx-5 mt-4 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300 flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              {data.insights}
+            </p>
           </div>
         )}
 
-        {/* 3. Biometric Discipline & Arrival Turnaround */}
-        {data.biometric_discipline && (
-          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-zinc-900/20">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-2 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-blue-500" />
-              Biometric Punch Turnaround & Arrival Discipline
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/5">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">2025 Avg Morning Check-in</span>
-                <div className="text-base font-bold font-mono text-slate-500 mt-0.5">
-                  {data.biometric_discipline.avg_arrival_2025}
-                </div>
-                <span className="text-[10px] text-amber-600 dark:text-amber-400">Regular morning delays</span>
-              </div>
-
-              <div className="p-3 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/5">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">2026 Avg Morning Check-in</span>
-                <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  {data.biometric_discipline.avg_arrival_2026}
-                </div>
-                <span className="text-[10px] text-emerald-600">On-time desk presence</span>
-              </div>
-
-              <div className="p-3 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 flex flex-col justify-between">
-                <span className="text-[10px] text-blue-600 dark:text-blue-300 uppercase font-semibold">HR Arrival Impact</span>
-                <p className="text-xs font-semibold text-blue-900 dark:text-blue-100">
-                  {data.biometric_discipline.improvement}
-                </p>
-                <span className="text-[10px] text-blue-500 font-mono">
-                  Biometric Badge Swipe Verified
+        {/* 3. The 3 Core High-Impact Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 sm:p-5">
+          {/* Card 1: Attendance Rate */}
+          {yoy.attendance_rate && (
+            <div className="p-3.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
+                Attendance Rate
+              </span>
+              <div className="flex items-baseline justify-between mt-1.5">
+                <span className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100">
+                  {yoy.attendance_rate.val_2026}
+                </span>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>{yoy.attendance_rate.delta}</span>
                 </span>
               </div>
+              <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 block">
+                was {yoy.attendance_rate.val_2025} in 2025
+              </span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 4. Supervisor Review Progression Notes (2025 vs 2026) */}
-        {rev25 && rev26 && (
-          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
-              Supervisor Evaluation & Trajectory Comparison
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-zinc-900/40">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-slate-700 dark:text-zinc-300">2025 Annual Review</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
-                    ⭐ {rev25.rating} / 5.0
-                  </span>
-                </div>
-                <p className="text-slate-600 dark:text-zinc-400 italic leading-relaxed">
-                  &ldquo;{rev25.notes}&rdquo;
-                </p>
+          {/* Card 2: Late Arrivals */}
+          {yoy.late_days && (
+            <div className="p-3.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
+                Late Check-ins
+              </span>
+              <div className="flex items-baseline justify-between mt-1.5">
+                <span className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100">
+                  {yoy.late_days.val_2026}
+                </span>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                  <ArrowDownRight className="w-3.5 h-3.5" />
+                  <span>{yoy.late_days.delta.split(" ")[0]}</span>
+                </span>
               </div>
-
-              <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-950/20">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-blue-900 dark:text-blue-200">2026 Executive Review</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-600 text-white font-bold">
-                    ⭐ {rev26.rating} / 5.0
-                  </span>
-                </div>
-                <p className="text-slate-700 dark:text-zinc-300 italic leading-relaxed">
-                  &ldquo;{rev26.notes}&rdquo;
-                </p>
-                {rev26.promotion_eligible && (
-                  <div className="mt-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Executive sign-off: Eligible for Senior Architect Promotion</span>
-                  </div>
-                )}
-              </div>
+              <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 block">
+                down from {yoy.late_days.val_2025}
+              </span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 5. Recent Biometric Swipes Log */}
-        {data.recent_punches && data.recent_punches.length > 0 && (
-          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              Recent Biometric Swipes Log (Sample Days)
-            </h4>
-            <div className="space-y-1.5">
-              {data.recent_punches.slice(0, 5).map((punch, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-50/40 dark:bg-zinc-900/30 flex items-center justify-between text-xs"
+          {/* Card 3: Executive Rating & Value */}
+          {yoy.performance_rating && (
+            <div className="p-3.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-800/30">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
+                Performance & Output
+              </span>
+              <div className="flex items-baseline justify-between mt-1.5">
+                <span className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100">
+                  {yoy.performance_rating.val_2026}
+                </span>
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-0.5">
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>{yoy.performance_rating.delta}</span>
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 block">
+                {data.human_capital_roi ? data.human_capital_roi.multiplier.split(" ")[0] + " Enterprise Output" : "Top Tier Review"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Primary Chart Section: Clean, Minimal, Directly Visible */}
+        <div className="px-4 sm:px-5 pb-5">
+          <div className="p-4 rounded-xl border border-slate-200/70 dark:border-zinc-800 bg-slate-50/20 dark:bg-zinc-850/40 space-y-3">
+            {/* Minimal Segmented Control */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                Visual Analytics
+              </span>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-[11px] font-medium">
+                <button
+                  onClick={() => setActiveChart("yoy")}
+                  className={`px-2.5 py-1 rounded-md transition ${activeChart === "yoy" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold" : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200"}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-slate-400 w-12">{punch.day}</span>
-                    <span className="font-medium text-slate-800 dark:text-zinc-200">
-                      {punch.first_punch} &rarr; {punch.last_punch}
-                    </span>
-                    <span className="text-[10px] text-slate-400 hidden sm:inline">
-                      Duration: {punch.total_hours} &bull; Overtime: {punch.overtime}
-                    </span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                    punch.status === "Present"
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "bg-amber-500/10 text-amber-600"
-                  }`}>
-                    {punch.status}
-                  </span>
-                </div>
-              ))}
+                  YoY Comparison
+                </button>
+                <button
+                  onClick={() => setActiveChart("trajectory")}
+                  className={`px-2.5 py-1 rounded-md transition ${activeChart === "trajectory" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold" : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200"}`}
+                >
+                  12-Month Trajectory
+                </button>
+                <button
+                  onClick={() => setActiveChart("allocation")}
+                  className={`px-2.5 py-1 rounded-md transition ${activeChart === "allocation" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold" : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200"}`}
+                >
+                  Time Allocation
+                </button>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* 6. Executive Action Footer */}
-        <div className="p-4 bg-slate-50 dark:bg-zinc-900/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="text-[11px] text-slate-500">
-            Supervisor Actions for {emp.name}:
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleAction(`Commendation recorded for ${emp.name} for +${yoy.attendance_rate?.delta} punctuality growth!`)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-medium transition"
-            >
-              Send Commendation
-            </button>
-            <button
-              onClick={() => onTriggerQuery?.(`Schedule 1:1 review meeting with ${emp.name}`)}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition shadow-xs"
-            >
-              Schedule 1:1 Review
-            </button>
+            {/* Chart 1: YoY Comparison Bars */}
+            {activeChart === "yoy" && yoyBarData.length > 0 && (
+              <div className="h-52 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={yoyBarData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.12} vertical={false} />
+                    <XAxis dataKey="metric" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#18181b",
+                        borderColor: "rgba(255,255,255,0.08)",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "4px" }} />
+                    <Bar dataKey="y2025" name="2025 Baseline" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={20} />
+                    <Bar dataKey="y2026" name="2026 Current" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Chart 2: 12-Month Trajectory Line */}
+            {activeChart === "trajectory" && monthlyLine.length > 0 && (
+              <div className="h-52 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyLine} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.12} vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#18181b",
+                        borderColor: "rgba(255,255,255,0.08)",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "4px" }} />
+                    <Line type="monotone" dataKey="attendance" name="Attendance %" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2.5 }} />
+                    <Line type="monotone" dataKey="punctuality" name="Punctuality %" stroke="#10b981" strokeWidth={2} dot={{ r: 2.5 }} />
+                    <Line type="monotone" dataKey="overtime" name="Overtime (h)" stroke="#8b5cf6" strokeWidth={1.8} strokeDasharray="3 3" dot={{ r: 2.5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Chart 3: Time Allocation Donut */}
+            {activeChart === "allocation" && timeAllocationPie.length > 0 && (
+              <div className="h-52 w-full pt-2 flex items-center justify-around">
+                <div className="h-full w-1/2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={timeAllocationPie}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        paddingAngle={3}
+                      >
+                        {timeAllocationPie.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#18181b",
+                          borderColor: "rgba(255,255,255,0.08)",
+                          borderRadius: "8px",
+                          color: "#fff",
+                          fontSize: "12px",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1.5 text-xs w-1/2 pl-2">
+                  {timeAllocationPie.map((slice) => (
+                    <div key={slice.name} className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.fill }} />
+                        <span className="truncate">{slice.name}</span>
+                      </div>
+                      <span className="font-mono font-medium text-slate-900 dark:text-zinc-200 ml-2">{slice.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* 5. Progressive Disclosure Accordion: Details on Demand */}
+        <div className="border-t border-slate-100 dark:border-zinc-800">
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="w-full py-2.5 px-4 sm:px-5 text-xs font-medium text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 flex items-center justify-between transition hover:bg-slate-50/50 dark:hover:bg-zinc-800/30"
+          >
+            <span>{showDetails ? "Hide Biometric Swipes & Reviews" : "Show Biometric Swipes & Reviews"}</span>
+            {showDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          <AnimatePresence>
+            {showDetails && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden px-4 sm:px-5 pb-4 space-y-3"
+              >
+                {/* Compact Recent Punches (Last 5 days) */}
+                {data.recent_punches && data.recent_punches.length > 0 && (
+                  <div className="space-y-1 text-xs">
+                    <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
+                      Recent Biometric Swipes (Last 5 Shifts)
+                    </span>
+                    {data.recent_punches.slice(0, 5).map((punch, idx) => (
+                      <div
+                        key={idx}
+                        className="py-1.5 px-2.5 rounded-lg border border-slate-200/50 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/20 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-slate-400 w-10 font-medium">{punch.day}</span>
+                          <span className="font-mono text-slate-700 dark:text-zinc-300">
+                            {punch.first_punch} &rarr; {punch.last_punch}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-mono text-slate-500">{punch.total_hours}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                            {punch.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Supervisor Notes */}
+                {rev26 && (
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/50 dark:border-zinc-800 text-xs">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block mb-0.5">
+                      Executive Review Notes &bull; 2026-Q4
+                    </span>
+                    <p className="text-slate-600 dark:text-zinc-300 italic">
+                      &ldquo;{rev26.notes}&rdquo;
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* 6. Subtle Footer */}
+        {telemetry && (
+          <div className="px-4 py-2 bg-slate-50/50 dark:bg-zinc-900/40 border-t border-slate-100 dark:border-zinc-800/60 flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-zinc-500">
+            <span>PostgreSQL 16 &bull; {telemetry.execution_time_ms}ms query</span>
+            <span>Supervisor Clearance Level-3</span>
+          </div>
+        )}
       </div>
     );
   }
 
   // =========================================================================
-  // VIEW B: CLEAN DEPARTMENT ROSTER AUDIT (When broad query is requested)
+  // VIEW B: CLEAN ROSTER AUDIT (When broad query is requested)
   // =========================================================================
   const employeesList = data.employees || [];
   return (
-    <div className="w-full my-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#18181b] shadow-sm overflow-hidden text-slate-900 dark:text-zinc-100 font-sans transition-all">
-      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-zinc-900/40 flex items-center justify-between">
+    <div className="w-full my-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-xs overflow-hidden text-slate-900 dark:text-zinc-100 font-sans transition-all">
+      <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            {data.title || "HRIS Attendance Roster Audit"}
+          <h3 className="text-base font-semibold text-slate-900 dark:text-zinc-100">
+            {data.title || "HRIS Attendance Roster"}
           </h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-            Tip: Ask for specific employee deep comparison with last year (e.g. &ldquo;Compare Ayesha Rahman with last year&rdquo;)
+            Click any employee to view their full Year-over-Year comparison
           </p>
         </div>
         {telemetry && (
-          <span className="font-mono text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-md border border-blue-200 dark:border-blue-900/40">
-            {telemetry.execution_time_ms}ms &bull; PostgreSQL 16
+          <span className="font-mono text-[11px] text-slate-400">
+            {telemetry.execution_time_ms}ms
           </span>
         )}
       </div>
 
-      <div className="p-4 overflow-x-auto">
-        <table className="w-full text-left text-xs text-slate-700 dark:text-zinc-300">
-          <thead className="bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200 dark:border-white/10 text-slate-500 uppercase text-[10px] font-semibold">
-            <tr>
-              <th className="py-2.5 px-3">Employee</th>
-              <th className="py-2.5 px-3">Department</th>
-              <th className="py-2.5 px-3 text-center">Attendance %</th>
-              <th className="py-2.5 px-3 text-center">Late Days</th>
-              <th className="py-2.5 px-3 text-center">Overtime (h)</th>
-              <th className="py-2.5 px-3 text-center">Rating</th>
-              <th className="py-2.5 px-3 text-right">YoY Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {employeesList.map((e) => (
-              <tr key={e.staff_id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition">
-                <td className="py-2.5 px-3">
-                  <div className="flex items-center gap-2">
-                    <img src={e.avatar} alt={e.name} className="w-7 h-7 rounded-full object-cover" />
-                    <div>
-                      <span className="font-semibold text-slate-900 dark:text-white">{e.name}</span>
-                      <span className="text-[10px] font-mono text-slate-400 block">{e.staff_id}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-2.5 px-3">{e.department}</td>
-                <td className="py-2.5 px-3 text-center font-mono font-bold">{e.attendance.attendance_rate}%</td>
-                <td className="py-2.5 px-3 text-center font-mono">{e.attendance.late_days}</td>
-                <td className="py-2.5 px-3 text-center font-mono">+{e.attendance.overtime_hours}h</td>
-                <td className="py-2.5 px-3 text-center font-mono text-amber-500">⭐ {e.performance.rating}</td>
-                <td className="py-2.5 px-3 text-right">
-                  <button
-                    onClick={() => onTriggerQuery?.(`Compare ${e.name} (${e.staff_id}) with last year`)}
-                    className="px-2.5 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 text-[11px] font-medium"
-                  >
-                    Compare YoY &rarr;
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="p-3 bg-slate-50 dark:bg-zinc-900/60 border-t border-slate-100 dark:border-white/5 flex items-center gap-2 overflow-x-auto text-xs">
-        <span className="text-slate-400 whitespace-nowrap">Deep YoY Queries:</span>
-        {[
-          "Compare Ayesha Rahman (EMP-1001) with last year",
-          "Compare Nusrat Jahan with last year",
-          "Compare Tanvir Hasan with last year",
-        ].map((p) => (
-          <button
-            key={p}
-            onClick={() => onTriggerQuery?.(p)}
-            className="px-2.5 py-1 rounded-md bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-blue-400 whitespace-nowrap text-slate-700 dark:text-zinc-300"
+      <div className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+        {employeesList.slice(0, 6).map((e: any) => (
+          <div
+            key={e.staff_id}
+            onClick={() => onTriggerQuery?.(`Compare ${e.name} (${e.staff_id}) with last year`)}
+            className="p-3 sm:px-5 flex items-center justify-between gap-3 hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 cursor-pointer transition"
           >
-            {p}
-          </button>
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src={e.avatar_url || e.avatar}
+                alt={e.name}
+                className="w-9 h-9 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-zinc-700 flex-shrink-0"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
+                    {e.name}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {e.staff_id}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
+                  {e.designation} &bull; {e.department}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-right flex-shrink-0">
+              <div>
+                <span className="text-[10px] text-slate-400 block">Attendance</span>
+                <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                  {e.attendance_rate || e.present_pct || "95.0%"}
+                </span>
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-[10px] text-slate-400 block">Rating</span>
+                <span className="text-xs font-mono font-medium text-slate-700 dark:text-zinc-300">
+                  ⭐ {e.performance_rating || "4.8"}
+                </span>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>

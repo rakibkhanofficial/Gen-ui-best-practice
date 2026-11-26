@@ -98,6 +98,16 @@ export function GeminiEmptyState({
   // Real, dynamic GenUI capabilities of our project
   const suggestions = [
     {
+      icon: Users,
+      label: "YoY Employee Comparison",
+      prompt: "Compare Ayesha Rahman (EMP-1001) attendance and performance with last year",
+    },
+    {
+      icon: Users,
+      label: "Punctuality & Burnout Risk",
+      prompt: "Evaluate burnout risk and attendance consistency for Nusrat Jahan (EMP-1002)",
+    },
+    {
       icon: Pill,
       label: "Napa & ACI Xcel",
       prompt: "Find Napa or ACI Xcel alternatives with dosage and pricing",
@@ -139,8 +149,8 @@ export function GeminiEmptyState({
     },
     {
       icon: Users,
-      label: "YoY Employee Deep Dive",
-      prompt: "Compare Ayesha Rahman (EMP-1001) attendance and performance with last year",
+      label: "Punctuality & Burnout Risk",
+      prompt: "Evaluate burnout risk and attendance consistency for Nusrat Jahan (EMP-1002)",
     },
     {
       icon: Plane,

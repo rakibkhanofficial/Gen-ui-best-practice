@@ -875,6 +875,31 @@ Formatting guidelines:
                 yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
                 await asyncio.sleep(0.015)
 
+        elif tool_name == "query_hris_attendance":
+            if component_data.get("mode") == "yoy_comparison":
+                emp_obj = component_data.get("employee", {})
+                emp_name = emp_obj.get("name", "the employee")
+                staff_id = emp_obj.get("staff_id", "")
+                yoy_metrics = component_data.get("yoy_metrics", {})
+                att_delta = yoy_metrics.get("attendance_rate", {}).get("delta", "+26.6%")
+                att_val = yoy_metrics.get("attendance_rate", {}).get("val_2026", "95.0%")
+                late_val = yoy_metrics.get("late_days", {}).get("val_2026", "1 day")
+                rating_val = yoy_metrics.get("performance_rating", {}).get("val_2026", "4.95 / 5.0")
+                explanation = (
+                    f"Here is the Year-over-Year evaluation for **{emp_name}** ({staff_id}). "
+                    f"Attendance reached **{att_val}** ({att_delta} YoY), "
+                    f"late arrivals decreased to **{late_val}**, and annual performance is rated at **{rating_val}**."
+                )
+            else:
+                total_emps = len(component_data.get("employees", []))
+                explanation = (
+                    f"Here is the attendance and performance roster breakdown across {total_emps} employees. "
+                    "Select any employee to view their full Year-over-Year comparison."
+                )
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
+
         else:
             explanation = f"I have prepared the requested interactive **{tool_name.replace('_', ' ').title()}** component below. You can interact directly with the cards, toggle parameters, or review metrics in real-time."
             
