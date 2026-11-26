@@ -258,6 +258,12 @@ export function GeminiEmptyState({
 
         <div className="relative w-full bg-white dark:bg-[#1e1f20] rounded-3xl border border-slate-200/90 dark:border-white/10 p-4 shadow-lg shadow-blue-500/5 transition-colors duration-200">
           {/* Active Attached File Pill inside Prompt Box */}
+          {isListening && (
+            <div className="flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold w-fit animate-pulse shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <span>Gemini 3.5 Transcribe Live (Real-Time WebSocket STT)</span>
+            </div>
+          )}
           {currentAttachment && (
             <div className="flex items-center gap-2 mb-3 p-1.5 pr-2.5 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/90 dark:border-white/10 w-fit text-xs text-slate-800 dark:text-zinc-200 shadow-2xs animate-in fade-in slide-in-from-bottom-1">
               {currentAttachment.fileType === "image" && currentAttachment.previewUrl ? (
@@ -461,10 +467,10 @@ export function GeminiEmptyState({
                 }`}
                 title={
                   isTranscribingAudio
-                    ? "Transcribing audio via CopilotKit Gemini Voice..."
+                    ? "Transcribing audio via Gemini 3.5 Transcribe Live..."
                     : isListening
-                    ? "Stop voice listening"
-                    : "Start voice input (Speech-to-Text)"
+                    ? "Stop voice listening (Gemini 3.5 Transcribe Live)"
+                    : "Start voice input with Gemini 3.5 Transcribe Live"
                 }
               >
                 {isTranscribingAudio ? (

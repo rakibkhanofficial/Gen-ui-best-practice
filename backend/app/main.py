@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel
@@ -8,7 +8,11 @@ import shutil
 import logging
 import asyncio
 import time
+import json
+import base64
 from datetime import datetime
+from google import genai
+from google.genai import types
 
 from app.config import settings
 from app.agent.antigravity_agent import (
@@ -247,6 +251,139 @@ def download_sample_excel():
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename="sample_enterprise_sales.xlsx"
     )
+
+
+@app.websocket("/api/ws/transcribe")
+@app.websocket("/ws/transcribe")
+async def websocket_transcribe(websocket: WebSocket):
+    """
+    Real-time streaming Speech-to-Text WebSocket endpoint powered by Gemini 3.5 Transcribe Live.
+    Takes client 16kHz PCM audio stream, forwards to gemini-3.5-transcribe-live,
+    and yields live interim and final transcripts directly back to the chat prompt.
+    """
+    await websocket.accept()
+    logger.info("WebSocket connected to /ws/transcribe STT stream")
+
+    if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "your_gemini_api_key_here":
+        await websocket.send_json({"type": "error", "message": "Gemini API key is not configured on server."})
+        await websocket.close()
+        return
+
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    config = types.LiveConnectConfig(
+        response_modalities=["TEXT"],
+        input_audio_transcription=types.AudioTranscriptionConfig(),
+    )
+
+    try:
+        async with client.aio.live.connect(model="gemini-3.5-transcribe-live", config=config) as session:
+            logger.info("Connected to Gemini 3.5 Transcribe Live session successfully!")
+            await websocket.send_json({"type": "ready", "model": "gemini-3.5-transcribe-live"})
+
+            stop_event = asyncio.Event()
+
+            async def client_to_gemini():
+                try:
+                    while not stop_event.is_set():
+                        message = await websocket.receive()
+                        if "bytes" in message and message["bytes"]:
+                            pcm_data = message["bytes"]
+                            await session.send_realtime_input(
+                                audio=types.Blob(data=pcm_data, mime_type="audio/pcm;rate=16000")
+                            )
+                        elif "text" in message and message["text"]:
+                            try:
+                                data = json.loads(message["text"])
+                                msg_type = data.get("type")
+                                if msg_type == "audio" and "data" in data:
+                                    pcm_bytes = base64.b64decode(data["data"])
+                                    await session.send_realtime_input(
+                                        audio=types.Blob(data=pcm_bytes, mime_type="audio/pcm;rate=16000")
+                                    )
+                                elif msg_type == "stop":
+                                    await session.send_realtime_input(audio_stream_end=True)
+                            except Exception as parse_err:
+                                logger.debug(f"JSON parse error on ws: {parse_err}")
+                except (WebSocketDisconnect, asyncio.CancelledError):
+                    pass
+                except Exception as e:
+                    logger.warning(f"Error in client_to_gemini: {e}")
+                finally:
+                    stop_event.set()
+
+            async def gemini_to_client():
+                try:
+                    async for response in session.receive():
+                        if stop_event.is_set():
+                            break
+                        content = response.server_content
+                        if content:
+                            if getattr(content, "input_transcription", None):
+                                it = content.input_transcription
+                                text = getattr(it, "text", "")
+                                finished = getattr(it, "finished", False)
+                                if text:
+                                    await websocket.send_json({
+                                        "type": "final" if finished else "interim",
+                                        "text": text,
+                                        "model": "gemini-3.5-transcribe-live"
+                                    })
+                            if getattr(content, "model_turn", None):
+                                for part in getattr(content.model_turn, "parts", []):
+                                    if getattr(part, "text", None):
+                                        await websocket.send_json({
+                                            "type": "final",
+                                            "text": part.text,
+                                            "model": "gemini-3.5-transcribe-live"
+                                        })
+                except (WebSocketDisconnect, asyncio.CancelledError):
+                    pass
+                except Exception as e:
+                    logger.warning(f"Error in gemini_to_client: {e}")
+                finally:
+                    stop_event.set()
+
+            in_task = asyncio.create_task(client_to_gemini())
+            out_task = asyncio.create_task(gemini_to_client())
+
+            done, pending = await asyncio.wait(
+                [in_task, out_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            for t in pending:
+                t.cancel()
+
+    except WebSocketDisconnect:
+        logger.info("Live transcribe client disconnected.")
+    except Exception as e:
+        logger.error(f"Live transcribe session error: {e}", exc_info=True)
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except:
+            pass
+
+
+@app.post("/api/transcribe")
+@app.post("/api/copilotkit/transcribe")
+async def transcribe_audio_file(audio: UploadFile = File(...)):
+    """Transcribes an uploaded audio file using Gemini 3.5."""
+    try:
+        content_bytes = await audio.read()
+        mime_type = audio.content_type or "audio/webm"
+
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=[
+                types.Part.from_bytes(data=content_bytes, mime_type=mime_type),
+                "Transcribe this speech accurately into text without any conversational additions or commentary. Only return the transcribed words.",
+            ]
+        )
+        transcribed_text = response.text.strip() if response and response.text else ""
+        return {"text": transcribed_text, "model": settings.GEMINI_MODEL}
+    except Exception as e:
+        logger.error(f"Error transcribing audio file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Audio transcription failed: {e}")
 
 
 @app.post("/api/chat/stream")

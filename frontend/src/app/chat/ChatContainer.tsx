@@ -140,6 +140,12 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Real-Time Gemini 3.5 Transcribe Live WebSocket Streaming Refs
+  const liveWsRef = useRef<WebSocket | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+
   // Continual Learning & Behavioral Memory Store
   const [learnedMemory, setLearnedMemory] = useState<{
     preferredDepartureCity: string;
@@ -659,94 +665,167 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
     }
   }, []);
 
-  const toggleVoiceInput = async () => {
-    // 1. Live browser SpeechRecognition (streaming transcription while speaking)
-    if (speechSupported && recognitionRef.current) {
-      if (isListening) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
-        setIsListening(false);
-      } else {
-        try {
-          baseInputRef.current = input;
-          recognitionRef.current.start();
-          setIsListening(true);
-        } catch {
-          setIsListening(false);
+  const stopLiveVoice = useCallback(() => {
+    if (liveWsRef.current) {
+      try {
+        if (liveWsRef.current.readyState === WebSocket.OPEN) {
+          liveWsRef.current.send(JSON.stringify({ type: "stop" }));
+          liveWsRef.current.close();
         }
-      }
-      return;
+      } catch {}
+      liveWsRef.current = null;
     }
+    if (audioProcessorRef.current) {
+      try { audioProcessorRef.current.disconnect(); } catch {}
+      audioProcessorRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch {}
+      audioContextRef.current = null;
+    }
+    if (micStreamRef.current) {
+      try { micStreamRef.current.getTracks().forEach((t) => t.stop()); } catch {}
+      micStreamRef.current = null;
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      try { mediaRecorderRef.current.stop(); } catch {}
+      mediaRecorderRef.current = null;
+    }
+    setIsListening(false);
+    setIsTranscribingAudio(false);
+  }, []);
 
-    // 2. Cross-browser MediaRecorder fallback with CopilotKit Gemini Transcription
-    if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-      if (isListening && mediaRecorderRef.current) {
-        try {
-          mediaRecorderRef.current.stop();
-        } catch {}
-        setIsListening(false);
-        return;
-      }
+  useEffect(() => {
+    return () => {
+      stopLiveVoice();
+    };
+  }, [stopLiveVoice]);
 
+  const fallbackToBrowserSpeech = useCallback(() => {
+    if (speechSupported && recognitionRef.current) {
       try {
         baseInputRef.current = input;
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioChunksRef.current = [];
-        const recorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = recorder;
-
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        recorder.onstop = async () => {
-          stream.getTracks().forEach((track) => track.stop());
-
-          if (audioChunksRef.current.length > 0) {
-            setIsTranscribingAudio(true);
-            try {
-              const audioBlob = new Blob(audioChunksRef.current, {
-                type: recorder.mimeType || "audio/webm",
-              });
-              const formData = new FormData();
-              formData.append("audio", audioBlob, "voice-input.webm");
-
-              const res = await fetch("/api/copilotkit/transcribe", {
-                method: "POST",
-                body: formData,
-              });
-
-              if (res.ok) {
-                const data = await res.json();
-                if (data.text?.trim()) {
-                  const base = baseInputRef.current ? baseInputRef.current.trim() : "";
-                  setInput(base ? `${base} ${data.text.trim()}` : data.text.trim());
-                  setSyncStatus("Voice transcribed via CopilotKit Gemini Voice Service");
-                  recordLearnedSkill("CopilotKit Gemini Voice Input");
-                }
-              }
-            } catch (err) {
-              console.error("Audio transcription error:", err);
-            } finally {
-              setIsTranscribingAudio(false);
-            }
-          }
-        };
-
-        recorder.start();
+        recognitionRef.current.start();
         setIsListening(true);
-      } catch (err) {
-        console.error("Microphone permission error:", err);
-        alert("Microphone access was denied or is not supported. Please verify browser permissions.");
+        setSyncStatus("Listening via browser SpeechRecognition fallback");
+      } catch {
         setIsListening(false);
       }
+    } else {
+      setIsListening(false);
+      alert("Microphone permission was denied or not supported in this browser.");
+    }
+  }, [speechSupported, input]);
+
+  const toggleVoiceInput = async () => {
+    // 1. If currently listening, stop immediately
+    if (isListening) {
+      stopLiveVoice();
+      setSyncStatus("Voice input completed");
       return;
     }
 
-    alert("Voice input is not supported in this browser. Please use Chrome, Edge, Safari, or a WebRTC-capable browser.");
+    baseInputRef.current = input;
+    setIsListening(true);
+    setSyncStatus("Connecting to Gemini 3.5 Transcribe Live (WebSocket STT)...");
+
+    // 2. Real-Time WebSocket Streaming via Gemini 3.5 Transcribe Live
+    try {
+      if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: 16000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        micStreamRef.current = stream;
+
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsHost = window.location.hostname || "localhost";
+        const wsUrl = `${wsProtocol}//${wsHost}:8000/api/ws/transcribe`;
+        const ws = new WebSocket(wsUrl);
+        liveWsRef.current = ws;
+
+        ws.onopen = () => {
+          setSyncStatus("Gemini 3.5 Transcribe Live active — listening to speech...");
+          recordLearnedSkill("Gemini 3.5 Transcribe Live WebSocket STT");
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "ready") {
+              setSyncStatus("Gemini 3.5 Transcribe Live ready — speak now");
+            } else if (data.type === "interim" && data.text) {
+              const base = baseInputRef.current ? baseInputRef.current.trim() : "";
+              const candidate = base ? `${base} ${data.text.trim()}` : data.text.trim();
+              setInput(candidate);
+            } else if (data.type === "final" && data.text) {
+              const base = baseInputRef.current ? baseInputRef.current.trim() : "";
+              const candidate = base ? `${base} ${data.text.trim()}` : data.text.trim();
+              setInput(candidate);
+              baseInputRef.current = candidate;
+            } else if (data.type === "error") {
+              console.warn("Live transcribe error:", data.message);
+            }
+          } catch (err) {
+            console.warn("Failed to parse live transcribe payload:", err);
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.warn("WebSocket error, switching to browser speech recognition fallback:", err);
+          stopLiveVoice();
+          fallbackToBrowserSpeech();
+        };
+
+        ws.onclose = () => {
+          setIsListening(false);
+        };
+
+        // Initialize Web Audio API to stream 16kHz 16-bit linear PCM chunks
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const audioCtx = new AudioContextClass({ sampleRate: 16000 });
+        audioContextRef.current = audioCtx;
+        const sourceNode = audioCtx.createMediaStreamSource(stream);
+
+        // 4096 samples at 16kHz = ~256ms chunk buffer
+        const processorNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        audioProcessorRef.current = processorNode;
+
+        processorNode.onaudioprocess = (e) => {
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
+          const inputData = e.inputBuffer.getChannelData(0);
+
+          // Convert Float32 to 16-bit PCM (little endian Int16Array)
+          const pcmBuffer = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            const s = Math.max(-1, Math.min(1, inputData[i]));
+            pcmBuffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+
+          try {
+            ws.send(pcmBuffer.buffer);
+          } catch {}
+        };
+
+        sourceNode.connect(processorNode);
+        processorNode.connect(audioCtx.destination);
+        return;
+      }
+    } catch (err) {
+      console.warn("Live WebSocket mic setup failed, falling back to browser recognition:", err);
+      fallbackToBrowserSpeech();
+      return;
+    }
+
+    fallbackToBrowserSpeech();
   };
 
   // 8. Text-to-Speech (TTS) Readout
@@ -1897,6 +1976,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                   </AnimatePresence>
                 </div>
 
+                {/* Live STT Gemini 3.5 Transcribe Live active banner */}
+                {isListening && (
+                  <div className="absolute -top-7 left-3 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-semibold animate-pulse shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                    <span>Live STT: Gemini 3.5 Transcribe Live</span>
+                  </div>
+                )}
+
                 {/* Center: Clean vertically-aligned auto-resizing input without internal scrollbar */}
                 <textarea
                   ref={textareaRef}
@@ -1930,10 +2017,10 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
                     }`}
                     title={
                       isTranscribingAudio
-                        ? "Transcribing audio..."
+                        ? "Transcribing audio via Gemini 3.5 Transcribe Live..."
                         : isListening
-                        ? "Stop listening"
-                        : "Voice input"
+                        ? "Stop listening (Gemini 3.5 Transcribe Live)"
+                        : "Voice input with Gemini 3.5 Transcribe Live"
                     }
                   >
                     {isTranscribingAudio ? (
