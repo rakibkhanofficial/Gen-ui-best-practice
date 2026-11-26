@@ -11,7 +11,19 @@ import {
   Layers,
   Lightbulb,
   Sigma,
+  Activity,
+  LineChart as ChartIcon
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ReferenceLine
+} from "recharts";
 import { MathView } from "./MathView";
 
 export interface MathStep {
@@ -187,6 +199,53 @@ export function MathSolverCard({ data }: MathSolverCardProps) {
             ))}
           </div>
         </div>
+
+        {/* Dynamic Interactive Function Curve Plot */}
+        {graph_coordinates && graph_coordinates.length > 0 && (
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02]">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <ChartIcon className="w-3.5 h-3.5 text-purple-500" />
+                <span>Interactive Function Parabola Curve & Roots</span>
+              </h4>
+              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                f(x) vs x
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+              Parabolic curve intersecting the y = 0 axis at the solved mathematical roots.
+            </p>
+            <div className="h-44 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={graph_coordinates} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#88888820" />
+                  <XAxis dataKey="x" tick={{ fontSize: 10 }} stroke="#888888" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#888888" />
+                  <ReferenceLine y={0} stroke="#EF4444" strokeDasharray="4 4" label={{ value: "y = 0", position: "insideBottomRight", fontSize: 10, fill: "#EF4444" }} />
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(24, 24, 27, 0.95)",
+                      borderColor: "#3f3f46",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "#fff",
+                    }}
+                    formatter={(val: any) => [val, "f(x)"]}
+                    labelFormatter={(label) => `x = ${label}`}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="y"
+                    stroke="#8B5CF6"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: "#8B5CF6" }}
+                    activeDot={{ r: 6, fill: "#A78BFA" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
         {/* Core Formula Identity Theorem */}
         {formula_identity && (

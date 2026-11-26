@@ -31,6 +31,7 @@ from app.agent.tools.news_tool import search_news
 from app.agent.tools.silo_tool import explore_silo_storage
 from app.agent.tools.hris_tool import query_hris_attendance
 from app.agent.tools.inventory_pos_tool import query_inventory_pos
+from app.agent.tools.productivity_tool import query_employee_productivity
 
 logger = logging.getLogger("genui.agent")
 
@@ -62,6 +63,7 @@ TOOL_REGISTRY = {
     "explore_silo_storage": explore_silo_storage,
     "query_hris_attendance": query_hris_attendance,
     "query_inventory_pos": query_inventory_pos,
+    "query_employee_productivity": query_employee_productivity,
 }
 
 
@@ -349,6 +351,23 @@ def get_available_tools_schema() -> List[Dict[str, Any]]:
                     }
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_employee_productivity",
+                "description": "Analyzes background workstation telemetry (desktop daemon/Chrome extension), employee productivity, idle vs fakibaji/slacking, upskilling, and predicts monthly financial payroll loss.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Query context or employee name"},
+                        "staff_id": {"type": "string", "description": "Specific employee staff ID (e.g. EMP-1008)"},
+                        "department": {"type": "string", "description": "Department filter"},
+                        "filter_type": {"type": "string", "description": "Filter ('all', 'critical_fakibaji', 'high_upskilling', 'top_performers')"},
+                        "mode": {"type": "string", "description": "View mode ('employee_deep_dive', 'department_loss_overview', 'loss_prediction')"}
+                    }
+                }
+            }
         }
     ]
 
@@ -378,6 +397,7 @@ class ToolCallDecision(BaseModel):
         "explore_silo_storage",
         "query_hris_attendance",
         "query_inventory_pos",
+        "query_employee_productivity",
         "none"
     ]
     query: Optional[str] = None
@@ -595,7 +615,52 @@ def route_intent_heuristically(prompt: str) -> Optional[Dict[str, Any]]:
             }
         }
 
-    # -2. HRIS, Employee Attendance, Punch Timelines, Deep Query & YoY Comparisons
+    # -2. Employee Productivity, Idle Time, Fakibaji / Slacking, Workstation Telemetry & Payroll Loss Prediction
+    if (
+        re.search(r"\b(productivity|productive|fakibaji|slacking|slack\s*off|idle|afk|sleep\s*time|wiggler|mouse\s*wiggler|upskilling|learning\s*time|screen\s*time|workstation|desktop\s*application|desktop\s*app|chrome\s*extension|telemetry|payroll\s*loss|lost\s*salary|wasted\s*payroll|loss\s*prediction|predict\s*loss|cost\s*of\s*slacking|what\s*(is\s*he|he\s*is|are\s*they)\s*doing)\b", p) or
+        (re.search(r"\b(track|detect|monitor|check|audit|inspect)\b", p) and re.search(r"\b(pc|screen|workstation|productivity|idle|fakibaji|slacking|activity|background|telemetry)\b", p))
+    ):
+        staff_id = None
+        s_match = re.search(r"\b(emp-\d{4})\b", p)
+        if s_match:
+            staff_id = s_match.group(1).upper()
+        else:
+            name_mappings = {
+                "ayesha": "EMP-1001",
+                "nusrat": "EMP-1002",
+                "tanvir": "EMP-1003",
+                "sadia": "EMP-1004",
+                "zubair": "EMP-1005",
+                "mahfuz": "EMP-1006",
+                "kazi": "EMP-1006",
+                "farhana": "EMP-1007",
+                "rafiqul": "EMP-1008",
+                "sabrina": "EMP-1009",
+                "asif": "EMP-1010",
+            }
+            for name_token, s_id in name_mappings.items():
+                if name_token in p:
+                    staff_id = s_id
+                    break
+
+        filt = "all"
+        if any(w in p for w in ["fakibaji", "slacking", "wiggler", "critical", "risk"]):
+            filt = "critical_fakibaji"
+        elif any(w in p for w in ["learning", "upskilling", "study", "research"]):
+            filt = "high_upskilling"
+        elif any(w in p for w in ["top", "best", "highest"]):
+            filt = "top_performers"
+
+        return {
+            "tool": "query_employee_productivity",
+            "args": {
+                "query": prompt,
+                "staff_id": staff_id,
+                "filter_type": filt,
+            }
+        }
+
+    # -3. HRIS, Employee Attendance, Punch Timelines, Deep Query & YoY Comparisons
     if (
         re.search(r"\b(hris|attendance|attendence|punch|first\s*punch|last\s*punch|overtime|late\s*punch|late\s*days|absent|absenteeism|present|staff\s*id|employee\s*id|employee\s*attendance|staff\s*attendance|employee\s*performance|evaluate\s*employee|attendance\s*report)\b", p) or
         (re.search(r"\b(employees?|staff|workers?|workforce|ayesha|nusrat|tanvir|sadia|zubair)\b", p) and re.search(r"\b(attendance|present|absent|late|hours|overtime|performance|evaluate|rating|salary|timeline|last\s*year|compare|yoy|2025|growth|trajectory)\b", p)) or

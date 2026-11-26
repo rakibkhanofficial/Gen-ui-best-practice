@@ -74,6 +74,7 @@ import { NewsCard } from "@/components/gen-ui/NewsCard";
 import { SiloStorageCard } from "@/components/gen-ui/SiloStorageCard";
 import { HrisAttendanceCard } from "@/components/gen-ui/HrisAttendanceCard";
 import { InventoryPosCard } from "@/components/gen-ui/InventoryPosCard";
+import { ProductivityTelemetryCard } from "@/components/gen-ui/ProductivityTelemetryCard";
 
 export interface AttachmentInfo {
   filename: string;
@@ -1347,6 +1348,14 @@ export function ChatContainer({ initialChatId }: ChatContainerProps) {
           <InventoryPosCard
             data={genui.data}
             onTriggerQuery={(q: string) => handleSendMessage(q)}
+          />
+        );
+      case "query_employee_productivity":
+      case "employee_productivity_telemetry":
+        return (
+          <ProductivityTelemetryCard
+            data={genui.data}
+            onSelectEmployee={(staffId: string) => handleSendMessage(`deep dive into ${staffId} workstation telemetry`)}
           />
         );
       default:

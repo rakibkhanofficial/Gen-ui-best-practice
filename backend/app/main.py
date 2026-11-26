@@ -461,6 +461,43 @@ async def chat_handler(payload: ChatRequest):
                     f"**{crit} critical SKUs** require immediate replenishment (led by {top_item}). "
                     f"Pending reorder budget is **{kpis.get('pending_reorder_budget', '$0.00')}** with a daily POS sales runrate of **{kpis.get('daily_sales_runrate', '$0/day')}**."
                 )
+        elif tool_name == "query_employee_productivity":
+            prod_mode = data.get("mode", "department_loss_overview")
+            if prod_mode == "employee_deep_dive":
+                emp_info = data.get("employee", {})
+                fl = data.get("financial_loss", {})
+                ws = data.get("workstation", {})
+                wiggler = "⚠️ Synthetic Mouse Wiggler Detected" if data.get("wiggler_detected") else "Clean input telemetry"
+                assistant_content = (
+                    f"Here is the Workstation Background Telemetry for **{emp_info.get('name')}** ({emp_info.get('staff_id')}) "
+                    f"on host `{ws.get('hostname')}` ({ws.get('os')}). "
+                    f"Productivity Score is **{emp_info.get('productivity_score')}%** with **{emp_info.get('risk_level')} Risk**. "
+                    f"{wiggler}. Estimated monthly payroll leakage: **{fl.get('monthly_payroll_loss')}** ({fl.get('wasted_hours_30d')} non-work)."
+                )
+            elif prod_mode == "loss_prediction":
+                kpis = data.get("kpis", {})
+                assistant_content = (
+                    f"Here is the Workstation Payroll Leakage & Loss Predictor. "
+                    f"Across **{kpis.get('monitored_workstations')} monitored endpoints**, direct monthly payroll loss from non-work/slacking is **{kpis.get('total_monthly_payroll_loss')}** "
+                    f"(**{kpis.get('total_annual_projected_loss')} annualized**, representing **{kpis.get('payroll_leakage_pct')}** of gross payroll). "
+                    f"**{kpis.get('high_risk_headcount')} workstations** exhibit critical avoidance or hardware wiggler activity."
+                )
+            else:
+                kpis = data.get("kpis", {})
+                assistant_content = (
+                    f"Here is the Workstation Telemetry & Productivity Overview across **{kpis.get('monitored_workstations')} endpoints**. "
+                    f"Organization average productivity is **{kpis.get('avg_productivity_score')}**, with **{kpis.get('learning_rate')}** dedicated to upskilling "
+                    f"and a **{kpis.get('slacking_rate')}** slacking/fakibaji rate (totaling **{kpis.get('monthly_payroll_loss')}/mo** in wasted payroll)."
+                )
+        elif tool_name == "solve_math_problem":
+            prob_title = data.get("problem_title", "Mathematical Solution")
+            inp = data.get("input_expression", "")
+            sol_summary = data.get("solution_summary", "")
+            assistant_content = (
+                f"Here is the step-by-step mathematical derivation for **{prob_title}**.\n\n"
+                f"• **Problem:** `{inp}`\n"
+                f"• **Solution:** {sol_summary}"
+            )
         else:
             assistant_content = f"I have prepared the interactive **{tool_name.replace('_', ' ').title()}** component below."
 

@@ -568,6 +568,11 @@ class MathStep(BaseModel):
     latex_expression: str
 
 
+class MathCoordinate(BaseModel):
+    x: float
+    y: float
+
+
 class MathSolverData(BaseModel):
     problem_title: str
     problem_type: str  # "Algebra", "Calculus", "Trigonometry", "Financial Math", "Geometry"
@@ -576,7 +581,7 @@ class MathSolverData(BaseModel):
     solution_latex: str
     solution_summary: str
     steps: List[MathStep]
-    graph_coordinates: Optional[List[Dict[str, float]]] = None
+    graph_coordinates: Optional[List[MathCoordinate]] = None
     formula_identity: Optional[str] = None
     practical_application: str
 

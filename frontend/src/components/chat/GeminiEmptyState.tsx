@@ -32,6 +32,7 @@ import {
   HardDrive,
   Users,
   Boxes,
+  Laptop,
 } from "lucide-react";
 
 export interface AttachmentInfo {
@@ -98,6 +99,11 @@ export function GeminiEmptyState({
 
   // Real, dynamic GenUI capabilities of our project
   const suggestions = [
+    {
+      icon: Laptop,
+      label: "Workstation Telemetry & Loss",
+      prompt: "Track employees productivity, idle, fakibaji and predict payroll loss from unmonitored slacking",
+    },
     {
       icon: Boxes,
       label: "POS Demand & Restock",

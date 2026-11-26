@@ -128,6 +128,32 @@ def resolve_sources_for_query(
             },
         ]
 
+    # 1e. Workstation Telemetry, Productivity & Payroll Loss
+    if tool_name == "query_employee_productivity" or any(k in p for k in ["productivity", "idle", "fakibaji", "slacking", "telemetry", "wiggler", "sleep time", "desktop app", "chrome extension", "payroll loss"]):
+        return [
+            {
+                "name": "Antigravity Pulse Workstation Daemon v2.4",
+                "domain": "antigravity.corp",
+                "favicon": "https://www.google.com/s2/favicons?domain=github.com&sz=128",
+                "url": "https://antigravity.corp/pulse-agent",
+                "status": "OS Window & Mouse Activity Telemetry",
+            },
+            {
+                "name": "Pulse Browser Focus Extension",
+                "domain": "chrome.google.com",
+                "favicon": "https://www.google.com/s2/favicons?domain=google.com&sz=128",
+                "url": "https://chromewebstore.google.com",
+                "status": "Domain Categorization & Tab Time Log",
+            },
+            {
+                "name": "PostgreSQL Telemetry Ledger",
+                "domain": "postgresql.org",
+                "favicon": "https://www.google.com/s2/favicons?domain=postgresql.org&sz=128",
+                "url": "https://www.postgresql.org",
+                "status": "Encrypted Payroll & Avoidance Ledger",
+            },
+        ]
+
     # 2. Tool-specific verified sources
     if tool_name == "search_youtube_videos" or any(k in p for k in ["youtube", "video", "watch"]):
         sources = [
@@ -750,6 +776,7 @@ async def stream_agent_reasoning(
             "explore_silo_storage": "Connecting to Silo MinIO S3 object storage & indexing files",
             "query_hris_attendance": "Auditing HRIS attendance records, punch timelines & evaluation scores",
             "query_inventory_pos": "Forecasting stockout dates, POS demand velocity & replenishment schedules",
+            "query_employee_productivity": "Analyzing background workstation telemetry, idle vs fakibaji hours & predicting payroll loss",
         }
         friendly_detail = friendly_action_map.get(tool_name, f"Executing {tool_name.replace('_', ' ')}")
 
@@ -961,6 +988,51 @@ Formatting guidelines:
                     f"**{crit} critical SKUs** require immediate replenishment (led by {top_item}). "
                     f"Pending reorder budget is **{kpis.get('pending_reorder_budget', '$0.00')}** with a daily POS sales runrate of **{kpis.get('daily_sales_runrate', '$0/day')}**."
                 )
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
+
+        elif tool_name == "query_employee_productivity":
+            prod_mode = component_data.get("mode", "department_loss_overview")
+            if prod_mode == "employee_deep_dive":
+                emp_info = component_data.get("employee", {})
+                fl = component_data.get("financial_loss", {})
+                ws = component_data.get("workstation", {})
+                wiggler = "⚠️ Synthetic Mouse Wiggler Detected" if component_data.get("wiggler_detected") else "Clean input telemetry"
+                explanation = (
+                    f"Here is the Workstation Background Telemetry for **{emp_info.get('name')}** ({emp_info.get('staff_id')}) "
+                    f"on host `{ws.get('hostname')}` ({ws.get('os')}). "
+                    f"Productivity Score is **{emp_info.get('productivity_score')}%** with **{emp_info.get('risk_level')} Risk**. "
+                    f"{wiggler}. Estimated monthly payroll leakage: **{fl.get('monthly_payroll_loss')}** ({fl.get('wasted_hours_30d')} non-work)."
+                )
+            elif prod_mode == "loss_prediction":
+                kpis = component_data.get("kpis", {})
+                explanation = (
+                    f"Here is the Workstation Payroll Leakage & Loss Predictor. "
+                    f"Across **{kpis.get('monitored_workstations')} monitored endpoints**, direct monthly payroll loss from non-work/slacking is **{kpis.get('total_monthly_payroll_loss')}** "
+                    f"(**{kpis.get('total_annual_projected_loss')} annualized**, representing **{kpis.get('payroll_leakage_pct')}** of gross payroll). "
+                    f"**{kpis.get('high_risk_headcount')} workstations** exhibit critical avoidance or hardware wiggler activity."
+                )
+            else:
+                kpis = component_data.get("kpis", {})
+                explanation = (
+                    f"Here is the Workstation Telemetry & Productivity Overview across **{kpis.get('monitored_workstations')} endpoints**. "
+                    f"Organization average productivity is **{kpis.get('avg_productivity_score')}**, with **{kpis.get('learning_rate')}** dedicated to upskilling "
+                    f"and a **{kpis.get('slacking_rate')}** slacking/fakibaji rate (totaling **{kpis.get('monthly_payroll_loss')}/mo** in wasted payroll)."
+                )
+            for word in explanation.split(" "):
+                yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.015)
+
+        elif tool_name == "solve_math_problem":
+            prob_title = component_data.get("problem_title", "Mathematical Solution")
+            inp = component_data.get("input_expression", "")
+            sol_summary = component_data.get("solution_summary", "")
+            explanation = (
+                f"Here is the step-by-step mathematical derivation for **{prob_title}**.\n\n"
+                f"• **Problem:** `{inp}`\n"
+                f"• **Solution:** {sol_summary}"
+            )
             for word in explanation.split(" "):
                 yield f"data: {json.dumps({'event': 'delta', 'text': word + ' '})}\n\n"
                 await asyncio.sleep(0.015)
